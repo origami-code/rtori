@@ -1,0 +1,11 @@
+[package]
+name = "rtori"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fold = {path = "../fold"}
+itertools = "0.13.0"
+nalgebra = "0.33.0"
+simba = { version = "0.9.0", features = ["portable_simd"] }
+#wgpu = "22.1.0"
