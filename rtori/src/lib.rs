@@ -12,6 +12,8 @@
 // per "edge" - every two dirrectly connected nodes, they are all beams
 // per "crease" - a subselection of edges who are of (M)ontain, (V)alley or (F) typ
 // per "face" - a face is made up of three node index
-#![feature(iter_array_chunks)]
+/*#![feature(iter_array_chunks)]
 #![feature(portable_simd)]
-mod cpu;
+mod simd;*/
+
+mod wgpu;

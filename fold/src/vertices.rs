@@ -30,6 +30,10 @@ pub struct PerVertexInformation<'a> {
 }
 
 impl VertexInformation {
+    pub fn count(&self) -> usize {
+        self.coords.as_ref().map(|c| c.len()).unwrap_or(0)
+    }
+
     pub fn query(&self, index: VertexIndex) -> PropertyResult<PerVertexInformation> {
         let coords = match self.coords.as_ref().and_then(|v| v.get(index as usize)) {
             Some(coords) => coords,

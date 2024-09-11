@@ -3,6 +3,7 @@ use nalgebra::{self as na, SimdPartialOrd, SimdValue};
 use simba::simd;
 
 type SimdVector3 = na::Vector3<simd::f32x8>;
+
 pub struct Nodes {
     pub position_base: Vec<SimdVector3>,
     pub position_offset: Vec<SimdVector3>,

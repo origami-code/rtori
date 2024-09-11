@@ -1,3 +1,5 @@
+use std::{borrow::Cow, ops::Deref};
+
 use super::*;
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -49,4 +51,13 @@ pub struct NonKeyFrame {
 pub enum Frame<'a> {
     Key(&'a FrameCore),
     NonKey(&'a NonKeyFrame),
+}
+
+impl<'a> Frame<'a> {
+    pub fn get(&'a self) -> Cow<'a, FrameCore> {
+        match *self {
+            Self::Key(core) => Cow::Borrowed(core),
+            Self::NonKey(nk) => unimplemented!()
+        }
+    }
 }
