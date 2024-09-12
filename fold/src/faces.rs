@@ -5,6 +5,7 @@ use itertools::{Either, Itertools};
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize, serde::Serialize,
 )]
+#[cfg_attr(feature = "bytemuck", derive(bytemuck::AnyBitPattern, bytemuck::NoUninit))]
 #[repr(transparent)]
 pub struct Face(pub [VertexIndex; 3]);
 

@@ -1,6 +1,6 @@
 use tinyvec::TinyVec;
 
-pub type SmallVec<T: tinyvec::Array> = TinyVec<T>;
+pub type SmallVec<T> = TinyVec<T>;
 
 #[derive(Debug, Clone)]
 pub struct PropertyNotMatchingError {
@@ -54,3 +54,10 @@ pub fn get_property<'a, T: tinyvec::Array>(
         })
         .map_or(Ok(None), |v| v.map(Some))
 }
+
+
+
+// The goal is to put in the vertexInformation type declaration in there
+/*macro_rules! create_type {
+
+}*/

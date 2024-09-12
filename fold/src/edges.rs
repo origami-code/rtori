@@ -3,6 +3,7 @@ use super::indices::*;
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize, serde::Serialize,
 )]
+#[cfg_attr(feature = "bytemuck", derive(bytemuck::AnyBitPattern, bytemuck::NoUninit))]
 #[repr(transparent)]
 pub struct EdgeVertexIndices(pub [VertexIndex; 2]);
 
@@ -45,11 +46,15 @@ pub struct EdgeInformation {
     pub faces: Option<Vec<EdgeVertexIndices>>,
 
     #[serde(rename = "edges_assignment")]
-    pub assginments: Option<Vec<EdgeAssignment>>,
+    pub assignments: Option<Vec<EdgeAssignment>>,
 
     #[serde(rename = "edges_foldAngle")]
     pub fold_angles: Option<Vec<f32>>,
 
     #[serde(rename = "edges_length")]
     pub length: Option<Vec<f32>>,
+}
+
+pub struct PerEdgeInformation<'a> {
+    // TODO
 }

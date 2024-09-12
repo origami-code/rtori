@@ -1,0 +1,9 @@
+[package]
+name = "rtori-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rtori-core-wgpu = {path="../rtori-core-wgpu"}
+wgpu = {version = "22.1.0"}
+tokio = {version = "1.40.0", features = ["full"]}

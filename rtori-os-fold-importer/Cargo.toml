@@ -1,0 +1,8 @@
+[package]
+name = "rtori-os-fold-importer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytemuck = "1.18.0"
+fold = {path = "../fold", features=["bytemuck"]}

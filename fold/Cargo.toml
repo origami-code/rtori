@@ -9,3 +9,4 @@ serde = { version = "1.0.207", features = ["derive", "std"] }
 serde_json = "1.0.125"
 serde_repr = "0.1.19"
 tinyvec = { version = "1.8.0", features = ["alloc", "serde", "std"] }
+bytemuck = { version= "1.18.0", features = ["derive"], optional = true}
