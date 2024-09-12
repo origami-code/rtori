@@ -33,7 +33,7 @@ pub enum EdgeAssignment {
     F,
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct EdgeInformation {
     /// For each edge, an array [u, v] of two vertex IDs for the two endpoints of the edge.
     /// This effectively defines the orientation of the edge, from u to v.
@@ -53,8 +53,4 @@ pub struct EdgeInformation {
 
     #[serde(rename = "edges_length")]
     pub length: Option<Vec<f32>>,
-}
-
-pub struct PerEdgeInformation<'a> {
-    // TODO
 }

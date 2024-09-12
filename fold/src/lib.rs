@@ -25,6 +25,8 @@ pub use frame::*;
 
 mod frame_classes;
 
+pub mod macros;
+
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct FileMetadata {
     #[serde(rename = "file_spec")]

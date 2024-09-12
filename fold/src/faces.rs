@@ -67,19 +67,14 @@ impl FaceInformation {
     }
 
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = PerFaceInformation<'a>> {
-        izip!(
-            self.vertices.iter().flatten(),
-            self.edges.as_ref().map_or_else(
-                || Either::Right(std::iter::repeat(None)),
-                |v| Either::Left(v.iter().map(|i| Some(i)))
-            ),
-            self.faces.as_ref().map_or_else(
-                || Either::Right(std::iter::repeat(None)),
-                |v| Either::Left(v.iter().map(|i| Some(i)))
-            )
+        crate::macros::iter_partial_longest!(
+            self,
+            vertices,
+            edges,
+            faces
         )
         .map(|(vertices, edges, faces)| PerFaceInformation {
-            vertices,
+            vertices: vertices.unwrap(),
             edges,
             faces,
         })
