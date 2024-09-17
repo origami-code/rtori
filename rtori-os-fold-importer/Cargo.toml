@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 bytemuck = "1.18.0"
 fold = {path = "../fold", features=["bytemuck"]}
+glam = "0.29.0"

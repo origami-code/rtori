@@ -8,7 +8,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
             compatible_surface: None,
-            force_fallback_adapter: false
+            force_fallback_adapter: false,
         })
         .await
         .unwrap();
@@ -20,16 +20,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor{
-            required_limits: minimum_limits,
-            ..Default::default()
-        }, None)
+        .request_device(
+            &wgpu::DeviceDescriptor {
+                required_limits: minimum_limits,
+                ..Default::default()
+            },
+            None,
+        )
         .await
         .unwrap();
 
     let mut runner = rtori_core_wgpu::Runner::create(&device);
-    runner.prepare(&device, &rtori_core_wgpu::ModelSize { node_count: 6, crease_count: 12, face_count: 10, node_beam_count: 16, node_crease_count: 14, node_face_count: 19 });
-    
+    runner.prepare(
+        &device,
+        &rtori_core_wgpu::ModelSize {
+            node_count: 6,
+            crease_count: 12,
+            face_count: 10,
+            node_beam_count: 16,
+            node_crease_count: 14,
+            node_face_count: 19,
+        },
+    );
 
     thread::sleep(Duration::from_secs(15));
     Ok(())

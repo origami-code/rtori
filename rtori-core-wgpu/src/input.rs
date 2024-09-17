@@ -1,3 +1,1 @@
-pub trait Input {
-
-}
+pub trait Input {}

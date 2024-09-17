@@ -57,7 +57,7 @@ impl<'a> Frame<'a> {
     pub fn get(&'a self) -> Cow<'a, FrameCore> {
         match *self {
             Self::Key(core) => Cow::Borrowed(core),
-            Self::NonKey(nk) => unimplemented!()
+            Self::NonKey(nk) => unimplemented!(),
         }
     }
 }

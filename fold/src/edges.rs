@@ -1,9 +1,14 @@
+use crate::common;
+
 use super::indices::*;
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize, serde::Serialize,
 )]
-#[cfg_attr(feature = "bytemuck", derive(bytemuck::AnyBitPattern, bytemuck::NoUninit))]
+#[cfg_attr(
+    feature = "bytemuck",
+    derive(bytemuck::AnyBitPattern, bytemuck::NoUninit)
+)]
 #[repr(transparent)]
 pub struct EdgeVertexIndices(pub [VertexIndex; 2]);
 
@@ -43,7 +48,7 @@ pub struct EdgeInformation {
     pub vertices: Option<Vec<EdgeVertexIndices>>,
 
     #[serde(rename = "edges_faces")]
-    pub faces: Option<Vec<EdgeVertexIndices>>,
+    pub faces: Option<Vec<common::SmallVec<[VertexIndex; 3]>>>,
 
     #[serde(rename = "edges_assignment")]
     pub assignments: Option<Vec<EdgeAssignment>>,

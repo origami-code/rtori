@@ -1,11 +1,9 @@
 use super::common::*;
 use super::indices::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, serde::Deserialize, serde::Serialize)]
-#[cfg_attr(feature = "bytemuck", derive(bytemuck::AnyBitPattern, bytemuck::NoUninit))]
+#[derive(Debug, Clone, PartialEq, PartialOrd, serde::Deserialize, serde::Serialize)]
 #[repr(transparent)]
-pub struct Vertex(pub [f32; 3]);
-
+pub struct Vertex(pub SmallVec<[f32; 3]>);
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct VertexInformation {
@@ -23,8 +21,6 @@ pub struct VertexInformation {
     #[serde(rename = "vertices_faces")]
     pub faces: Option<Vec<SmallVec<[Option<FaceIndex>; 8]>>>,
 }
-
-
 
 pub struct PerVertexInformation<'a> {
     pub coords: &'a Vertex,

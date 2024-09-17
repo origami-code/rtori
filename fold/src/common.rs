@@ -55,8 +55,6 @@ pub fn get_property<'a, T: tinyvec::Array>(
         .map_or(Ok(None), |v| v.map(Some))
 }
 
-
-
 // The goal is to put in the vertexInformation type declaration in there
 /*macro_rules! create_type {
 

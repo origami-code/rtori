@@ -2,12 +2,10 @@ use super::common::*;
 use super::indices::*;
 use itertools::izip;
 use itertools::{Either, Itertools};
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize, serde::Serialize,
-)]
-#[cfg_attr(feature = "bytemuck", derive(bytemuck::AnyBitPattern, bytemuck::NoUninit))]
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize, serde::Serialize)]
 #[repr(transparent)]
-pub struct Face(pub [VertexIndex; 3]);
+pub struct Face(pub SmallVec<[VertexIndex; 4]>);
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct FaceInformation {
@@ -67,16 +65,12 @@ impl FaceInformation {
     }
 
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = PerFaceInformation<'a>> {
-        crate::macros::iter_partial_longest!(
-            self,
-            vertices,
-            edges,
-            faces
+        crate::macros::iter_partial_optional!(self, vertices, edges, faces).map(
+            |(vertices, edges, faces)| PerFaceInformation {
+                vertices: vertices.unwrap(),
+                edges,
+                faces,
+            },
         )
-        .map(|(vertices, edges, faces)| PerFaceInformation {
-            vertices: vertices.unwrap(),
-            edges,
-            faces,
-        })
     }
 }
