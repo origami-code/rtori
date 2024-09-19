@@ -1,4 +1,6 @@
-use crate::common;
+use crate::common::{self};
+use crate::Lockstep;
+use crate::Handful;
 
 use super::indices::*;
 
@@ -45,17 +47,23 @@ pub struct EdgeInformation {
     /// (This orientation choice is arbitrary, but is used to define the ordering of edges_faces.)
     /// Recommended in frames having any edges_... property (e.g., to represent mountain-valley assignment).
     #[serde(rename = "edges_vertices")]
-    pub vertices: Option<Vec<EdgeVertexIndices>>,
+    pub vertices: Lockstep<EdgeVertexIndices>,
 
     #[serde(rename = "edges_faces")]
-    pub faces: Option<Vec<common::SmallVec<[VertexIndex; 3]>>>,
+    pub faces: Lockstep<Handful<[VertexIndex; 3]>>,
 
     #[serde(rename = "edges_assignment")]
-    pub assignments: Option<Vec<EdgeAssignment>>,
+    pub assignments: Lockstep<EdgeAssignment>,
 
     #[serde(rename = "edges_foldAngle")]
-    pub fold_angles: Option<Vec<f32>>,
+    pub fold_angles: Lockstep<f32>,
 
     #[serde(rename = "edges_length")]
-    pub length: Option<Vec<f32>>,
+    pub length: Lockstep<f32>,
+
+    #[serde(rename = "rtori:edges_creaseStiffness")]
+    pub crease_stiffness: Lockstep<Option<f32>>,
+
+    #[serde(rename = "rtori:edges_axialStiffness")]
+    pub axial_stiffness: Lockstep<Option<f32>>,
 }

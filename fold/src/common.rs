@@ -1,6 +1,4 @@
-use tinyvec::TinyVec;
-
-pub type SmallVec<T> = TinyVec<T>;
+use crate::Handful;
 
 #[derive(Debug, Clone)]
 pub struct PropertyNotMatchingError {
@@ -34,11 +32,11 @@ pub struct DebugInfo {
     pub queried_property_name: &'static str,
 }
 
-pub fn get_property<'a, T: tinyvec::Array>(
-    o: &'a Option<Vec<SmallVec<T>>>,
+pub fn get_property<'a, T>(
+    o: &'a Option<Vec<T>>,
     idx: usize,
     debug_info: Option<DebugInfo>,
-) -> PropertyResult<&'a SmallVec<T>> {
+) -> PropertyResult<&'a T> {
     o.as_ref()
         .map(|v| {
             v.get(idx as usize).ok_or_else(|| PropertyNotMatchingError {

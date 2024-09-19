@@ -1,6 +1,7 @@
 use super::pass::Pass;
 use std::borrow::Cow;
 
+#[derive(Debug)]
 pub struct PassPerCreasePhysics(pub Pass);
 
 impl PassPerCreasePhysics {

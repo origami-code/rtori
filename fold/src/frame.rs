@@ -1,5 +1,7 @@
 use std::{borrow::Cow, ops::Deref};
 
+use crate::Lockstep;
+
 use super::*;
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -36,6 +38,8 @@ pub struct FrameCore {
 
     #[serde(flatten)]
     pub layering: LayerInformation,
+
+    pub uvs: Lockstep<[f32; 2]>
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]

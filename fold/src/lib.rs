@@ -6,6 +6,12 @@
 mod indices;
 pub use indices::*;
 
+mod handful;
+use handful::Handful;
+
+mod lockstep;
+use lockstep::Lockstep;
+
 mod common;
 
 mod vertices;
@@ -22,8 +28,6 @@ pub use layers::*;
 
 mod frame;
 pub use frame::*;
-
-mod frame_classes;
 
 pub mod macros;
 

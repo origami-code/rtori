@@ -1,11 +1,13 @@
 use super::common::*;
 use super::indices::*;
+use crate::Handful;
+
 use itertools::izip;
 use itertools::{Either, Itertools};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize, serde::Serialize)]
 #[repr(transparent)]
-pub struct Face(pub SmallVec<[VertexIndex; 4]>);
+pub struct Face(pub Handful<[VertexIndex; 4]>);
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct FaceInformation {
@@ -17,7 +19,7 @@ pub struct FaceInformation {
     /// so that faces_edges[f][i] is the edge connecting faces_vertices[f][i]
     /// and faces_vertices[f][(i+1)%d] where d is the degree of face f.
     #[serde(rename = "faces_edges")]
-    pub edges: Option<Vec<SmallVec<[EdgeIndex; 8]>>>,
+    pub edges: Option<Vec<Handful<[EdgeIndex; 8]>>>,
 
     /// For each face, an array of face IDs for the faces sharing edges around the face, possibly including nulls.
     /// If the frame is a manifold, the faces should be listed in counterclockwise order and in the same linear order as faces_edges (if it is specified):
@@ -25,13 +27,13 @@ pub struct FaceInformation {
     ///     unless that edge has no face on the other side, in which case faces_faces[f][i] should be null.
     /// Optimized for no more than 8 faces sharing edges with each face
     #[serde(rename = "faces_faces")]
-    pub faces: Option<Vec<SmallVec<[Option<FaceIndex>; 8]>>>,
+    pub faces: Option<Vec<Handful<[Option<FaceIndex>; 8]>>>,
 }
 
 pub struct PerFaceInformation<'a> {
     pub vertices: &'a Face,
-    pub edges: Option<&'a SmallVec<[EdgeIndex; 8]>>,
-    pub faces: Option<&'a SmallVec<[Option<FaceIndex>; 8]>>,
+    pub edges: Option<&'a Handful<[EdgeIndex; 8]>>,
+    pub faces: Option<&'a Handful<[Option<FaceIndex>; 8]>>,
 }
 
 impl FaceInformation {

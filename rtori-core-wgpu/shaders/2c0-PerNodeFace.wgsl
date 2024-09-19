@@ -28,8 +28,7 @@ var<storage, read_write> node_velocity: array<vec3<f32>>;
 
 struct NodeFaceSpec {
     node_index: u32,
-    face_index: u32,
-    angles: vec3<f32>
+    face_index: u32
 }
 
 @group(1)
@@ -61,7 +60,7 @@ fn compute_face_constraint(
     var err = 0.0;
 
     var node_face_spec: NodeFaceSpec = node_faces[node_face_index];
-
+    // TODO
     return ConstraintResult(force_acc, err);
 }
 

@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 
 use super::pass::Pass;
+
+#[derive(Debug)]
 pub struct PassPerCreaseFoldAngle(pub Pass);
 
 impl PassPerCreaseFoldAngle {

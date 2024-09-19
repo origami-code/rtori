@@ -3,6 +3,7 @@ use std::num::NonZeroU64;
 use super::parameters::Parameters;
 use super::storage_bindings::StorageBindings;
 
+#[derive(Debug)]
 pub struct BackingStorageBuffer {
     pub buffer: wgpu::Buffer,
     pub parameters: Parameters,

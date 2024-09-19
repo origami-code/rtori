@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct StorageBindings<'backing> {
     /// cpy-src
     pub node_positions_offset: wgpu::BufferBinding<'backing>,

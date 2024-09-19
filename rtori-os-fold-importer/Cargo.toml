@@ -7,3 +7,4 @@ edition = "2021"
 bytemuck = "1.18.0"
 fold = {path = "../fold", features=["bytemuck"]}
 glam = "0.29.0"
+itertools = "0.13.0"

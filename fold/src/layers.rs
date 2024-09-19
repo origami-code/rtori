@@ -1,5 +1,5 @@
-use super::common::*;
 use super::indices::*;
+use super::Lockstep;
 
 #[derive(
     Debug,
@@ -36,8 +36,8 @@ pub struct EdgeOrder {
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct LayerInformation {
     #[serde(rename = "faceOrders")]
-    pub face_orders: Option<Vec<FaceOrder>>,
+    pub face_orders: Lockstep<FaceOrder>,
 
     #[serde(rename = "edgeOrders")]
-    pub edge_orders: Option<Vec<EdgeOrder>>,
+    pub edge_orders: Lockstep<EdgeOrder>,
 }

@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, Copy)]
 pub struct CreaseFace {
     pub face_index: u32,
@@ -35,15 +34,8 @@ pub struct ExtractCreasesIteratorError {
     pub kind: ExtractCreasesIteratorErrorKind,
 }
 
-/// foldAngles is not provided,
-pub fn extract_creases(
-    input: &fold::FrameCore,
-) -> Result<
-    impl Iterator<Item = Result<Crease, ExtractCreasesIteratorError>> + use<'_>,
-    ExtractCreasesError,
-> {
-    let default_mountain_fold_angle = -180.0;
-    let default_valley_fold_angle = 180.0;
+/*
+
 
     if input.edges.vertices.is_none() {
         return Err(ExtractCreasesError::EdgeVerticesMissing);
@@ -61,17 +53,79 @@ pub fn extract_creases(
         optional(fold_angles)
     )
     .expect("required fields have already been checked");
+*/
 
-    let faces_vertices = input.faces.vertices.as_ref().unwrap().as_slice();
+use crate::{
+    fold_input::{FoldAssignment, Proxy, Vector2U, Vector3U},
+    ImportInput,
+};
 
-    let processed = iterator
+crate::fold_input::subclass! {
+    ExtractCreasesInput {
+        edges_vertices -> (req, EdgeVertices, Vector2U);
+        edges_faces -> (req, EdgeFaces, &'a [u32]);
+        edges_assignment -> (req, EdgeAssignment, FoldAssignment);
+        edges_fold_angles -> (opt, EdgeFoldAngles, f32);
+        faces_vertices -> (req, FaceVertices, Vector3U);
+    }
+}
+
+pub fn iter_edges<'a, FI: ExtractCreasesInput>(
+    fi: &'a FI,
+) -> impl Iterator<Item = (Vector2U, &'a [u32], FoldAssignment, Option<f32>)> + use<'a, FI> {
+    let edges_vertices = fi.edges_vertices();
+    let edges_faces = fi.edges_faces();
+    let edges_assignment = fi.edges_assignment();
+    let edges_fold_angles = fi.edges_fold_angles();
+
+    let vit = edges_vertices.iter();
+    let faces_it = edges_faces.iter();
+    let ait = edges_assignment.iter();
+    let fit = edges_fold_angles
+        .as_ref()
+        .map_or_else(
+            // No such field
+            || itertools::Either::Right(std::iter::repeat(None)),
+            // Such a field
+            |v| itertools::Either::Left(v.iter().map(|i| Some(i))),
+        )
+        .into_iter();
+
+    itertools::izip!(vit, faces_it, ait, fit)
+}
+
+pub fn count_creases<'a, FI: ExtractCreasesInput>(input: &'a FI) -> usize {
+    input
+        .edges_assignment()
+        .iter()
+        .filter(|ea| {
+            matches!(
+                ea,
+                FoldAssignment::Facet | FoldAssignment::Mountain | FoldAssignment::Valley
+            )
+        })
+        .count()
+}
+
+/// foldAngles is not provided,
+pub fn extract_creases<'a, FI: ExtractCreasesInput>(
+    input: &'a FI,
+) -> impl Iterator<Item = Result<Crease, ExtractCreasesIteratorError>> + use<'a, FI> {
+    let default_mountain_fold_angle = -180.0;
+    let default_valley_fold_angle = 180.0;
+
+    let iterator = iter_edges(input);
+
+    let faces_vertices = input.faces_vertices();
+
+    iterator
         // Filter out the irrelevant folds (non-mountain, valley or facet)
         .filter_map(move |(vertex, faces, assignment, fold_angles)| {
             match (assignment, fold_angles) {
-                (fold::EdgeAssignment::M | fold::EdgeAssignment::V | fold::EdgeAssignment::F, Some(a)) => Some(*a),
-                (fold::EdgeAssignment::M, None) => Some(default_mountain_fold_angle),
-                (fold::EdgeAssignment::V, None) => Some(default_valley_fold_angle),
-                (fold::EdgeAssignment::F, None) => Some(0.0),
+                (FoldAssignment::Facet | FoldAssignment::Mountain | FoldAssignment::Valley, Some(a)) => Some(a),
+                (FoldAssignment::Mountain, None) => Some(default_mountain_fold_angle),
+                (FoldAssignment::Valley, None) => Some(default_valley_fold_angle),
+                (FoldAssignment::Facet, None) => Some(0.0),
                 _ => None
             }.map(|fold_angle| (
                 vertex,
@@ -93,7 +147,7 @@ pub fn extract_creases(
 
             let per_face = |face_number| {
                 let face_index = usize::try_from(faces[face_number]).unwrap();
-                let indices = faces_vertices[face_index].0.as_slice();
+                let indices: Vector3U = faces_vertices.get(face_index).unwrap();
                 if indices.len() != 3 {
                     return Err(ExtractCreasesIteratorError{
                         edge_index,
@@ -103,8 +157,8 @@ pub fn extract_creases(
 
                 // Now we know indices countains three elements
                 // We find which one of the face's vertices isn't on the edge
-                let vertex_0_index = indices.iter().position(|face_vertex_index| *face_vertex_index == vertex.0[0]);
-                let vertex_1_index = indices.iter().position(|face_vertex_index| *face_vertex_index == vertex.0[1]);
+                let vertex_0_index = indices.iter().position(|face_vertex_index| *face_vertex_index == vertex[0]);
+                let vertex_1_index = indices.iter().position(|face_vertex_index| *face_vertex_index == vertex[1]);
                 let (v0_idx, v1_idx) = match (vertex_0_index, vertex_1_index) {
                     (Some(a), Some(b)) => (a,b),
                     _ => return Err(ExtractCreasesIteratorError{
@@ -120,9 +174,9 @@ pub fn extract_creases(
                     });
                 }
 
-                let complement_vertex_index = *indices
-                    .iter()
-                    .find(|face_vertex_index| usize::try_from(**face_vertex_index).unwrap() != v0_idx && usize::try_from(**face_vertex_index).unwrap() != v1_idx)
+                let complement_vertex_index = indices
+                    .into_iter()
+                    .find(|face_vertex_index| usize::try_from(*face_vertex_index).unwrap() != v0_idx && usize::try_from(*face_vertex_index).unwrap() != v1_idx)
                     .expect("Should find the complement given we checked every conceivable reason it wouldn't give it");
 
                 let result = CreaseFace {
@@ -149,7 +203,5 @@ pub fn extract_creases(
                 edge_index: edge_index as u32,
                 fold_angle
             })
-        });
-
-    Ok(processed)
+        })
 }

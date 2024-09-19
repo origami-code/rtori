@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Pass {
     pub bind_group_layout: wgpu::BindGroupLayout,
     pub compute_pipeline: wgpu::ComputePipeline,

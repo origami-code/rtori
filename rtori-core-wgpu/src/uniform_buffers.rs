@@ -1,5 +1,6 @@
 use std::num::NonZeroU64;
 
+#[derive(Debug, Clone)]
 pub struct UniformBindings<'backing> {
     pub crease_percentage: wgpu::BufferBinding<'backing>,
     pub dt: wgpu::BufferBinding<'backing>,
@@ -9,6 +10,7 @@ impl UniformBindings<'_> {
     pub const COUNT: usize = 2;
 }
 
+#[derive(Debug)]
 pub struct BackingUniformBuffer {
     buffer: wgpu::Buffer,
     uniform_alignment: u64,

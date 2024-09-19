@@ -1,3 +1,5 @@
+pub use wgpu;
+
 mod layout;
 use layout::PipelineSetLayout;
 
@@ -15,12 +17,38 @@ use state::State;
 mod input;
 pub use input::Input;
 
+#[derive(Debug)]
 pub struct Runner {
     layout: PipelineSetLayout,
     state: Option<State>,
 }
 
 impl Runner {
+    pub const WGPU_FEATURES_REQUIRED: wgpu::Features = wgpu::Features::empty();
+    pub const WGPU_FEATURES_OPTIMIZED: wgpu::Features =
+        Self::WGPU_FEATURES_REQUIRED;
+        //| wgpu::Features::MAPPABLE_PRIMARY_BUFFERS
+        //| wgpu::Features::PUSH_CONSTANTS
+        //| wgpu::Features::SHADER_I16;
+
+    pub const WGPU_LIMITS_REQUIRED: wgpu::Limits = {
+        let mut limits = wgpu::Limits::downlevel_defaults();
+        limits.max_storage_buffers_per_shader_stage = 9;
+        limits
+    };
+
+    pub const fn optimize_limits(supported: wgpu::Limits, base: Option<wgpu::Limits>) -> Result<wgpu::Limits, ()> {
+        if supported.max_storage_buffers_per_shader_stage < 9 {
+            return Err(());
+        } 
+
+        
+        let mut result = if let Some(base) = base { base} else {Self::WGPU_LIMITS_REQUIRED};
+        result.min_storage_buffer_offset_alignment = supported.min_storage_buffer_offset_alignment;
+        result.min_uniform_buffer_offset_alignment = supported.min_uniform_buffer_offset_alignment;
+        Ok(result)
+    }
+
     pub fn create(device: &wgpu::Device) -> Self {
         Self {
             layout: PipelineSetLayout::new(device),

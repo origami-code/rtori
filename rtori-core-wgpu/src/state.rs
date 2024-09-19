@@ -17,6 +17,7 @@ use super::{
     bind_groups::BindGroups, layout::PipelineSetLayout, storage_buffers, uniform_buffers, ModelSize,
 };
 
+#[derive(Debug)]
 pub struct State {
     params: ModelSize,
     bind_groups: BindGroups,

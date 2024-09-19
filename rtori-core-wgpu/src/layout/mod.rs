@@ -23,6 +23,7 @@ use pass_per_node_face::PassPerNodeFace;
 mod pass_per_node_accumulate;
 use pass_per_node_accumulate::PassPerNodeAccumulate;
 
+#[derive(Debug)]
 pub struct PipelineSetLayout {
     // Out-of-pass BGL
     pub bgl_positions_ro: wgpu::BindGroupLayout,

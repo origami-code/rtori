@@ -1,5 +1,5 @@
 use super::{layout::PipelineSetLayout, storage_buffers, uniform_buffers};
-
+#[derive(Debug)]
 pub struct BindGroups {
     pub bg_positions_ro: wgpu::BindGroup,
     pub bg_per_face: wgpu::BindGroup,

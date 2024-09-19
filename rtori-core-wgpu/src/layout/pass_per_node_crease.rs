@@ -1,6 +1,7 @@
 use super::pass::Pass;
 use std::borrow::Cow;
 
+#[derive(Debug)]
 pub struct PassPerNodeCrease(pub Pass);
 
 impl PassPerNodeCrease {

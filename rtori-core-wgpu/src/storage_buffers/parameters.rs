@@ -1,17 +1,15 @@
-use std::num::NonZeroU64;
-
 use encase::ShaderSize;
-use wgpu::Buffer;
 
 use super::ModelSize;
 
-#[derive(encase::ShaderType)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, encase::ShaderType)]
 pub struct NodeFaceSpec {
     node_index: u32,
     face_index: u32,
     angles: [f32; 3],
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Parameters {
     pub parameters: ModelSize,
     pub min_storage_alignment: u32,
