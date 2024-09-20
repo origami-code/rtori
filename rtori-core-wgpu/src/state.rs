@@ -11,22 +11,83 @@
  * - crease_state (gpu-only intermediate [theta, thetaDiff])
  */
 
-use std::{borrow::Cow, num::NonZeroU64};
+use std::{borrow::Cow, fmt::Debug, num::NonZeroU64};
+
+use wgpu::BufferAsyncError;
+
+use crate::{extractor::ExtractorMappedTarget, loader, storage_buffers::Parameters};
 
 use super::{
     bind_groups::BindGroups, layout::PipelineSetLayout, storage_buffers, uniform_buffers, ModelSize,
 };
 
+bitflags::bitflags!{
+    #[derive(Debug, Copy, Clone, PartialEq)]
+    pub struct ExtractFlags: u8 {
+        const NodePositions = 1 << 0;
+        const NodeError = 1 << 1;
+        const Everything = (1 << 0) | (1 << 1);
+    }
+}
+
 #[derive(Debug)]
-pub struct State {
+pub struct State<'state> {
+    device: &'state wgpu::Device,
     params: ModelSize,
     bind_groups: BindGroups,
     backing_storage_buffer: storage_buffers::BackingStorageBuffer,
     backing_uniform_buffer: uniform_buffers::BackingUniformBuffer,
+    
+    /// for tuning parameters (small chunks)
+    tuning_belt: wgpu::util::StagingBelt,
+
+    /// This is a cpu-resident buffer
+    download_buffer: Option<wgpu::Buffer>,
+
+    loaded: bool
 }
 
-impl State {
-    pub fn create(device: &wgpu::Device, params: ModelSize, layout: &PipelineSetLayout) -> Self {
+
+impl<'state> State<'state> {
+    /// returns true if there is a need to refill the data now
+    /// even if we didn't reallocate, if the parameters change, the buffer bindings are incorrect and thus garbage data's flying around
+    pub fn recreate(
+        &mut self,
+        params: ModelSize,
+        layout: &PipelineSetLayout) -> bool {
+        if self.params == params {
+            return false;
+        }
+
+        let limits = self.device.limits();
+
+        // Uniforms don't change (for now)
+        let changed = self.backing_storage_buffer.reallocate_if_needed(
+            self.device,
+            storage_buffers::Parameters {
+                parameters: params,
+                min_storage_alignment: limits.min_storage_buffer_offset_alignment,
+            },
+        );
+        self.loaded = false;
+
+        if let Some(buf) = changed {
+            // TODO: reuse buffers ?
+            buf.destroy();
+
+            // Recreate the bind groups
+            self.bind_groups = BindGroups::create(
+                self.device,
+                layout,
+                &self.backing_storage_buffer.bindings().0,
+                &self.backing_uniform_buffer.bindings(),
+            );
+        }
+
+        true
+    }
+
+    pub fn create(device: &'state wgpu::Device, params: ModelSize, layout: &PipelineSetLayout) -> Self {
         let limits = device.limits();
 
         let backing_storage_buffer = storage_buffers::BackingStorageBuffer::allocate(
@@ -49,11 +110,19 @@ impl State {
             &backing_uniform_buffer.bindings(),
         );
 
+        let tuning_belt = wgpu::util::StagingBelt::new(64); // Fix with proper size
+
+        let download_buffer = None;
+
         Self {
+            device,
             params,
             bind_groups,
             backing_storage_buffer,
             backing_uniform_buffer,
+            tuning_belt,
+            download_buffer,
+            loaded: false
         }
     }
 
@@ -101,5 +170,66 @@ impl State {
 
     pub fn clear(&mut self) {
         todo!()
+    }
+
+    pub fn load(&mut self) -> Result<StateLoader<'_>, ()> {
+        if self.loaded {
+            return Err(());
+        }
+
+        Ok(StateLoader {
+            loader: self.backing_storage_buffer.load_mapped()
+        })
+    }
+
+    pub fn mark_loaded(&mut self) {
+        if self.loaded {
+            panic!("got marked loaded even though we already were");
+        }
+
+        // Unmap
+        self.backing_storage_buffer.unmap();
+        self.loaded = true;
+    }
+
+    pub fn extract(
+        &mut self,
+        queue: &wgpu::Queue,
+        kind: ExtractFlags,
+        callback: impl FnOnce(Result<ExtractorMappedTarget<'_>, BufferAsyncError>) + wgpu::WasmNotSend + 'static
+    ) -> Result<bool, ()>
+    {
+        if !self.loaded {
+            // cannot extract a non-loaded thing
+            return Err(());
+        }
+
+        let required_size = self.backing_storage_buffer.extract_map_size(kind);
+
+        let buffer = self.download_buffer.take().unwrap_or_else(|| self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("rtori-extract-buffer"),
+            size: required_size,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false
+        }));
+
+        self.backing_storage_buffer.extract_map(
+            &self.device,
+            &queue,
+            &buffer,
+            kind,
+            callback
+        )
+    }
+}
+
+#[repr(transparent)]
+pub struct StateLoader<'a> {
+    pub loader: loader::LoaderMappedTarget<'a>
+}
+
+impl<'a> StateLoader<'a> {
+    pub fn finish(self, state: &mut State) {
+        state.mark_loaded();
     }
 }

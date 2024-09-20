@@ -8,94 +8,7 @@ pub mod creases;
 pub mod fold_input;
 pub mod triangulation;
 use fold_input::ImportInput;
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct NodeConfig {
-    pub mass: f32,
-    pub fixed: bool,
-}
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct NodePointer {
-    pub offset: u32,
-    pub count: u16,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct NodeGeometry {
-    pub crease: NodePointer,
-    pub beam: NodePointer,
-    pub face: NodePointer,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct CreaseGeometryFace {
-    pub face_index: u32,
-    pub complement_vertex_index: u32,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct CreaseGeometry {
-    pub faces: [CreaseGeometryFace; 2],
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct CreaseParameters {
-    pub k: f32,
-    pub d: f32,
-    pub target_fold_angle: f32,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct NodeCreaseSpec {
-    pub crease_index: u32,
-    pub node_number: u32,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct NodeBeamSpec {
-    pub node_index: u32,
-    pub k: f32,
-    pub d: f32,
-    pub length: f32,
-    pub neighbour_index: u32,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct NodeFaceSpec {
-    pub node_index: u32,
-    pub face_index: u32,
-}
-
-pub trait Output {
-    fn set_node_position(&mut self, idx: usize, pos: [f32; 3]);
-    fn set_node_external_forces(&mut self, idx: usize, pos: [f32; 3]);
-    fn set_node_config(&mut self, idx: usize, config: NodeConfig);
-    fn set_node_geometry(&mut self, idx: usize, geometry: NodeGeometry);
-
-    fn set_crease_geometry(&mut self, idx: usize, geometry: CreaseGeometry);
-    fn set_crease_parameters(&mut self, idx: usize, parameters: CreaseParameters);
-
-    fn set_face_indices(&mut self, idx: usize, parameters: [u32; 3]);
-    fn set_face_nominal_angles(&mut self, idx: usize, parameters: [f32; 3]);
-
-    fn set_node_crease(&mut self, idx: usize, spec: NodeCreaseSpec);
-    fn set_node_beam(&mut self, idx: usize, spec: NodeBeamSpec);
-    fn set_node_face(&mut self, idx: usize, spec: NodeFaceSpec); // Unfinished
-}
-
-pub trait OutputFactory {
-    type O: Output;
-
-    fn create(
-        &mut self,
-        vertices_count: usize,
-        crease_count: usize,
-        faces_count: usize,
-        node_beam_count: usize,
-        node_creases_count: usize,
-        node_faces_count: usize,
-    ) -> Self::O;
-}
 
 use crate::fold_input::Proxy;
 
@@ -118,12 +31,16 @@ pub enum ImportError {
 }
 
 #[derive(Default, Clone, Copy)]
-pub struct SetupConfig {
+pub struct ImportConfig {
     pub default_axial_stiffness: f32,
     pub default_crease_stiffness: f32
 }
 
-fn setup<'a, O: Output, FI: ImportInput>(output: &mut O, input: &FI, config: SetupConfig) -> Result<(), ImportError> {
+pub fn import<'a, O: Output, FI: ImportInput>(
+    output: &mut O,
+    input: &FI,
+    config: ImportConfig
+) -> Result<(), ImportError> {
     for i in 0..input.vertices_coords().count() {
         output.set_node_config(
             i,

@@ -57,10 +57,13 @@ impl GPURunner {
         }).await;
 
         if let Some(adapter) = adapter {
+            let limits = os_wgpu::Runner::optimize_limits(adapter.limits(), None).unwrap();
+            let features = os_wgpu::Runner::optimize_features(adapter.features(), None, &adapter.get_info());
+
             let res = adapter.request_device(&wgpu::DeviceDescriptor {
                 label: Some("rtori-core-os-solver"),
-                required_features: os_wgpu::Runner::WGPU_FEATURES_REQUIRED,
-                required_limits: os_wgpu::Runner::WGPU_LIMITS_REQUIRED,
+                required_features: features,
+                required_limits: limits,
                 memory_hints: Default::default()
             }, None).await;
 
@@ -73,27 +76,6 @@ impl GPURunner {
             }).map_err(|_e| ())
         } else {
             Err(()) 
-        }
-    }
-
-    #[cfg(feature = "dx12_interop")]
-    async unsafe fn create_from_dx12(
-        adapter: windows::Win32::Foundation::LUID, // vendor id, device id
-        queue: wgpu::hal::dx12::Queue
-    ) {
-        use wgpu::hal::Instance as hal_instance;
-
-        let dx12_instance = <wgpu::hal::dx12::Instance as hal_instance>::init(&wgpu::hal::InstanceDescriptor {
-            name: "rtori-core-imported",
-            flags: Default::default(),
-            dx12_shader_compiler: wgpu::Dx12Compiler::Dxc { dxil_path: Some(PathBuf::from("dxil.dll")), dxc_path: Some(PathBuf::from("dxcompiler.dll")) },
-            gles_minor_version: Default::default(),
-        });
-
-        let dx12_instance = dx12_instance.unwrap(); // TODO
-        let dx12_adapters = dx12_instance.enumerate_adapters(None);
-        for adapter in dx12_adapters.iter().map(|exposed| exposed.adapter.raw_adapter()) {
-            // check against the adapter's description with the LUID
         }
     }
 }
@@ -116,15 +98,19 @@ impl Solver {
                 os_wgpu::wgpu::Backends::all()
             } else {
                 let mut output = os_wgpu::wgpu::Backends::empty();
+                #[cfg(feature = "dx12")]
                 if backends.contains(BackendFlags::GPU_DX12) {
                     output |= os_wgpu::wgpu::Backends::DX12;
                 }
+                #[cfg(feature = "vulkan")]
                 if backends.contains(BackendFlags::GPU_VULKAN) {
                     output |= os_wgpu::wgpu::Backends::VULKAN;
                 }
+                #[cfg(feature = "metal")]
                 if backends.contains(BackendFlags::GPU_METAL) {
                     output |= os_wgpu::wgpu::Backends::METAL;
                 }
+                #[cfg(feature = "webgpu")]
                 if backends.contains(BackendFlags::GPU_WEBGPU) {
                     output |= os_wgpu::wgpu::Backends::BROWSER_WEBGPU;
                 }

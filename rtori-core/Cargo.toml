@@ -6,22 +6,23 @@ edition = "2021"
 [features]
 cpu = ["dep:rtori-core-simd"]
 
-gpu_vulkan = ["rtori-core-wgpu/vulkan"]
-gpu_metal = ["rtori-core-wgpu/metal"]
-gpu_dx12 = ["rtori-core-wgpu/dx12"]
-dx12_interop = ["gpu_dx12", "dep:windows", "windows/Win32_Graphics_Dxgi_Common"]
-
-gpu_native = ["gpu", "gpu_vulkan", "gpu_metal", "gpu_dx12"]
-gpu_web = ["gpu"]
+# GPU-specific
+vulkan = ["gpu", "rtori-core-wgpu/vulkan"]
+metal = ["gpu", "rtori-core-wgpu/metal"]
+dx12 = ["gpu", "rtori-core-wgpu/dx12"]
+webgpu = ["gpu", "rtori-core-wgpu/webgpu"]
+gpu_native = ["gpu", "vulkan", "metal", "dx12"]
+gpu_web = ["gpu", "webgpu"]
 gpu = ["dep:rtori-core-wgpu"]
 
-default = ["gpu_native", "dx12_interop"] #, "cpu"]
+default = ["gpu_native"] #, "cpu"]
 
 [dependencies]
 fold = {path = "../fold"}
 rtori-core-simd = {path = "../rtori-core-simd", optional = true}
 rtori-core-wgpu = {path = "../rtori-core-wgpu", optional = true}
 bitflags = "2.6.0"
-windows = {version = "0.58", default-features = false, optional = true}
 
 # for dx12_interop
+# windows = {version = "0.58", default-features = false, optional = true}
+

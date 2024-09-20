@@ -1,0 +1,13 @@
+[package]
+name = "rtori-os-model"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+define_proxy = ["bytemuck", "dep:static_assertions"]
+bytemuck = ["dep:bytemuck"]
+default = ["bytemuck", "define_proxy"]
+
+[dependencies]
+bytemuck = {version = "1.18.0", optional = true, features = ["derive", "min_const_generics"], default-features = false}
+static_assertions = {version = "1.1.0", optional = true}

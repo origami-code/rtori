@@ -18,10 +18,10 @@ impl<A: Allocator> Context<A> {
 }
 
 impl<A> Context<A> {
-    pub fn create_os_solver(
+    pub async fn create_os_solver(
         &self,
         backends: os_solver::BackendFlags
     ) -> Result<os_solver::Solver, ()> {
-        os_solver::Solver::create(backends)
+        os_solver::Solver::create(backends).await
     }
 }
