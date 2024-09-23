@@ -12,42 +12,66 @@
  * prior written permission from Derivative.
  */
 
-#ifndef __GeneratorSOP__
-#define __GeneratorSOP__
+#ifndef __SimulateSOP__
+#define __SimulateSOP__
 
 #include "SOP_CPlusPlusBase.h"
+#include <atomic>
+#include <mutex>
+#include <thread>
+#include <vector>
 
-/*
-This example implements a SOP which takes the following parameters:
-        - Shape: One of [Point, Line, Square, Cube] which is the shape this SOP
-outputs.
-        - Color: The color applied to the shape.
-        - GPU Direct: Whether the shape is loaded to the GPU.
+#include "Input.hpp"
+#include "Output.hpp"
 
-This SOP is a generator and it takes no input.
-*/
+using namespace rtori_td;
 
-// Check methods [getNumInfoCHOPChans, getInfoCHOPChan, getInfoDATSize,
-// getInfoDATEntries] if you want to output values to the Info CHOP/DAT
+/// This SOP is a generator and it takes no input, though it does take a lot of parameters
+class SimulateSOP : public TD::SOP_CPlusPlusBase {
+  public:
+	SimulateSOP(const TD::OP_NodeInfo* info);
+	virtual ~SimulateSOP();
 
-// To get more help about these functions, look at SOP_CPlusPlusBase.h
-class GeneratorSOP : public TD::SOP_CPlusPlusBase {
-public:
-  GeneratorSOP(const TD::OP_NodeInfo *info);
-  virtual ~GeneratorSOP();
+	virtual void getGeneralInfo(TD::SOP_GeneralInfo*, const TD::OP_Inputs*, void*) override;
 
-  virtual void getGeneralInfo(TD::SOP_GeneralInfo *, const TD::OP_Inputs *,
-                              void *) override;
+	virtual void execute(TD::SOP_Output*, const TD::OP_Inputs*, void*) override;
 
-  virtual void execute(TD::SOP_Output *, const TD::OP_Inputs *,
-                       void *) override;
+	virtual void executeVBO(TD::SOP_VBOOutput*, const TD::OP_Inputs*, void*) override;
 
-  virtual void executeVBO(TD::SOP_VBOOutput *, const TD::OP_Inputs *,
-                          void *) override;
+	virtual void setupParameters(TD::OP_ParameterManager*, void*) override;
 
-  virtual void setupParameters(TD::OP_ParameterManager *, void *) override;
+	virtual int32_t getNumInfoCHOPChans(void* reserved1) override;
 
-private:
+	virtual void getInfoCHOPChan(int32_t index,
+								 TD::OP_InfoCHOPChan* chan,
+								 void* reserved1) override;
+
+	virtual bool getInfoDATSize(TD::OP_InfoDATSize* infoSize, void* reserved1) override;
+
+	virtual void getInfoDATEntries(int32_t index,
+								   int32_t nEntries,
+								   TD::OP_InfoDATEntries* entries,
+								   void* reserved1) override;
+
+	virtual void getErrorString(TD::OP_String* error, void* reserved1) override;
+
+	virtual void getInfoPopupString(TD::OP_String* info, void* reserved1) override;
+
+  private:
+	Input consolidateParameters(const TD::OP_Inputs* inputs) const;
+
+	/// The thread _actually_ running the simulation
+	std::thread m_simulationThread;
+
+	std::mutex m_mutex;
+	Input m_input;
+	Output m_output;
+
+	std::atomic_flag m_shouldCook;
+	std::condition_variable m_threadSignaller;
+
+	/// A flag for the thread to exit
+	std::atomic_flag m_simulationThreadExitFlag;
 };
 
-#endif // !__GeneratorSOP__
+#endif // !__SimulateSOP__
