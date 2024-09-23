@@ -180,26 +180,30 @@ impl BackingStorageBuffer {
         }
     }
 
+    /// Extracts the map size - in bytes
     pub fn extract_map_size(
         &self,
         kind: ExtractFlags
     ) -> u64 {
         let mut acc = 0;
+
         if kind.contains(ExtractFlags::NodePositions) {
-            acc += todo!():
+            acc += u64::from(self.parameters.parameters.node_count) * 3 * u64::try_from(std::mem::size_of::<f32>()).unwrap();
         }
-        if kind.contains(ExtractFlags::NodePositions) {
-            acc += todo!()
+
+        if kind.contains(ExtractFlags::NodeError) {
+            acc += u64::from(self.parameters.parameters.node_count) * 1 * u64::try_from(std::mem::size_of::<f32>()).unwrap();
         }
+        
         acc
         
     }
 
-    pub fn extract_map<'a>(
-        &'a self,
+    pub fn extract_map(
+        &self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        mappable_buffer: &wgpu::Buffer,
+        mappable_buffer: std::sync::arcwgpu::Buffer,
         kind: ExtractFlags,
         callback: impl FnOnce(Result<crate::extractor::ExtractorMappedTarget<'_>, wgpu::BufferAsyncError>) + wgpu::WasmNotSend + 'static
     )-> Result<bool, ()> {
@@ -259,7 +263,9 @@ impl BackingStorageBuffer {
         let command_buffer = encoder.finish();
         queue.submit(Some(command_buffer));
         
+        let mappable_buffer = std::sync::Arc::new(mappable_buffer);
         mappable_buffer
+            .clone()
             .slice(..required_size)
             .map_async(wgpu::MapMode::Read, move |result| {
                 if let Err(e) = result {

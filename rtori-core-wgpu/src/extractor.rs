@@ -16,8 +16,8 @@ pub(crate) struct ExtractorMappedTarget<'a> {
 
 macro_rules! define_map_field {
     ($func:ident, $field:ident) => {
-        pub fn $func(&'a self) -> wgpu::BufferView<'a> {
-            self.map_inner(self.map.$field)
+        pub fn $func(&'a self) -> Option<wgpu::BufferView<'a>> {
+            self.map.$field.map(|range| self.map_inner(range))
         }
     };
 }
@@ -46,8 +46,8 @@ type Proxy<'a, T> = rtori_os_model::proxy::Proxy<wgpu::BufferView<'a>, T>;
 macro_rules! define_mappable_pair{
     ($associated_type:ident, $inner_type:ty, $fn_name:ident) => {
         type $associated_type<'a> = Proxy<'a, $inner_type> where Self: 'a, 'a: 'container;
-        fn $fn_name<'call>(&'call self) -> Self::$associated_type<'call> where 'call: 'container  {
-            Proxy::new(self.$fn_name())
+        fn $fn_name<'call>(&'call self) -> Option<Self::$associated_type<'call>> where 'call: 'container  {
+            self.$fn_name().map(|inner| Proxy::new(inner))
         }
     };
 }

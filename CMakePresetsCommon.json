@@ -28,6 +28,9 @@
                     "type": "STRING",
                     "value": "sccache"
                 }
+            },
+            "environment": {
+                "RUSTC_WRAPPER": "sccache"
             }
         }
     ]

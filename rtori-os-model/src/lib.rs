@@ -173,10 +173,10 @@ pub trait MappedDestination<'container> {
 
 pub trait MappedResults<'container> {
     type NodePositionOffsetMap<'a>: Deref<Target = [Vector3F]> + 'a where Self: 'a, 'a: 'container;
-    fn map_node_position_offset<'call>(&'call self) -> Self::NodePositionOffsetMap<'call> where 'call: 'container;
+    fn map_node_position_offset<'call>(&'call self) -> Option<Self::NodePositionOffsetMap<'call>> where 'call: 'container;
 
     type NodeErrorMap<'a>: Deref<Target = [f32]> + 'a where Self: 'a, 'a: 'container;
-    fn map_node_error<'call>(&'call self) -> Self::NodeErrorMap<'call> where 'call: 'container;
+    fn map_node_error<'call>(&'call self) -> Option<Self::NodeErrorMap<'call>> where 'call: 'container;
 }
 
 #[cfg(feature = "define_proxy")]
