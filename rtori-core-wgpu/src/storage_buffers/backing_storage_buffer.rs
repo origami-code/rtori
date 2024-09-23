@@ -3,6 +3,7 @@ use std::num::NonZeroU64;
 use wgpu::BufferViewMut;
 
 use crate::extractor::ExtractorRanges;
+use crate::extractor_gpu::ExtractorGPUTarget;
 use crate::loader::{LoadRanges, Loader, LoaderMappedTarget, LoaderRange, LoaderStagingBelt};
 
 use super::parameters::Parameters;
@@ -12,7 +13,7 @@ use crate::state::ExtractFlags;
 #[derive(Debug)]
 pub struct ReusableBuffer {
     pub buffer: wgpu::Buffer,
-    pub mapped: bool
+    pub mapped: bool,
 }
 
 impl ReusableBuffer {
@@ -26,14 +27,15 @@ impl ReusableBuffer {
 pub struct BackingStorageBuffer {
     pub buffer: wgpu::Buffer,
     pub parameters: Parameters,
-    mapped: bool
+    mapped: bool,
 }
 
 impl BackingStorageBuffer {
     const BUFFER_USAGE: wgpu::BufferUsages = wgpu::BufferUsages::from_bits_truncate(
         wgpu::BufferUsages::COPY_SRC.bits()
             | wgpu::BufferUsages::COPY_DST.bits()
-            | wgpu::BufferUsages::STORAGE.bits());
+            | wgpu::BufferUsages::STORAGE.bits(),
+    );
 
     const fn craft_buffer_descriptor(size: NonZeroU64) -> wgpu::BufferDescriptor<'static> {
         wgpu::BufferDescriptor {
@@ -45,13 +47,17 @@ impl BackingStorageBuffer {
     }
 
     pub fn would_reallocate(&self, parameters: Parameters) -> bool {
-         let previous_min_size = self.buffer.size();
-         let new_min_size = parameters.min_size();
-         new_min_size.get() > previous_min_size
+        let previous_min_size = self.buffer.size();
+        let new_min_size = parameters.min_size();
+        new_min_size.get() > previous_min_size
     }
 
     /// returns the previous buffer if it reallocated
-    pub fn reallocate_if_needed(&mut self, device: &wgpu::Device, parameters: Parameters) -> Option<ReusableBuffer> {
+    pub fn reallocate_if_needed(
+        &mut self,
+        device: &wgpu::Device,
+        parameters: Parameters,
+    ) -> Option<ReusableBuffer> {
         let previous_min_size = self.buffer.size();
         let new_min_size = parameters.min_size();
         if new_min_size.get() <= previous_min_size {
@@ -61,7 +67,7 @@ impl BackingStorageBuffer {
         let new_buffer = device.create_buffer(&Self::craft_buffer_descriptor(new_min_size));
         let previous = ReusableBuffer {
             buffer: std::mem::replace(&mut self.buffer, new_buffer),
-            mapped: std::mem::replace(&mut self.mapped, true)
+            mapped: std::mem::replace(&mut self.mapped, true),
         };
 
         Some(previous)
@@ -71,7 +77,11 @@ impl BackingStorageBuffer {
         let min_size = parameters.min_size();
         let buffer = device.create_buffer(&Self::craft_buffer_descriptor(min_size));
 
-        Self { buffer, parameters, mapped: true }
+        Self {
+            buffer,
+            parameters,
+            mapped: true,
+        }
     }
 
     pub fn bindings(&self) -> (StorageBindings, NonZeroU64) {
@@ -82,10 +92,10 @@ impl BackingStorageBuffer {
                 let mut idx = 0;
                 let g = move || {
                     let (offset, size) = bindings_ranges[idx];
-                    let binding = wgpu::BufferBinding{
+                    let binding = wgpu::BufferBinding {
                         buffer: &self.buffer,
                         offset,
-                        size: Some(size)
+                        size: Some(size),
                     };
                     *(&mut idx) += 1;
                     return binding;
@@ -122,14 +132,13 @@ impl BackingStorageBuffer {
         )
     }
 
-    fn craft_load_ranges<'cur>(&'cur self) -> LoadRanges
-    {
+    fn craft_load_ranges<'cur>(&'cur self) -> LoadRanges {
         let ranges = self.parameters.binding_ranges().0;
         let range_for_order = |order: usize| {
             let range = ranges[order];
             LoaderRange {
                 offset: range.0,
-                size: range.1
+                size: range.1,
             }
         };
 
@@ -144,7 +153,7 @@ impl BackingStorageBuffer {
             face_nominal_angles: range_for_order(Parameters::ORDER_FACE_NOMINAL_TRIANGLES),
             node_creases: range_for_order(Parameters::ORDER_NODE_CREASES),
             node_beams: range_for_order(Parameters::ORDER_NODE_BEAMS),
-            node_faces: range_for_order(Parameters::ORDER_NODE_FACES)
+            node_faces: range_for_order(Parameters::ORDER_NODE_FACES),
         }
     }
 
@@ -156,57 +165,120 @@ impl BackingStorageBuffer {
         &'a mut self,
         encoder: &'a mut wgpu::CommandEncoder,
         staging_belt: &'a mut wgpu::util::StagingBelt,
-        device: &'a wgpu::Device
+        device: &'a wgpu::Device,
     ) -> LoaderStagingBelt<'a> {
-       LoaderStagingBelt::new(
-        &self.buffer,
-        encoder,
-        staging_belt,
-        device,
-        self.craft_load_ranges()
-       )
+        LoaderStagingBelt::new(
+            &self.buffer,
+            encoder,
+            staging_belt,
+            device,
+            self.craft_load_ranges(),
+        )
     }
 
     /// If the buffer is mapped, then it returns a Loader::Mapped, otherwise it uses the supplied staging belt and returns a Loader::StagingBelt
-    pub fn load_optimal<'a>(&'a mut self, staging: (&'a mut wgpu::CommandEncoder, &'a mut wgpu::util::StagingBelt, &'a wgpu::Device)) -> Loader<'a> {
+    pub fn load_optimal<'a>(
+        &'a mut self,
+        staging: (
+            &'a mut wgpu::CommandEncoder,
+            &'a mut wgpu::util::StagingBelt,
+            &'a wgpu::Device,
+        ),
+    ) -> Loader<'a> {
         if self.mapped {
-            Loader::Mapped(
-                self.load_mapped()
-            )
+            Loader::Mapped(self.load_mapped())
         } else {
-            Loader::StagingBelt(
-                self.load_staging(staging.0, staging.1, staging.2)
-            )
+            Loader::StagingBelt(self.load_staging(staging.0, staging.1, staging.2))
         }
     }
 
     /// Extracts the map size - in bytes
-    pub fn extract_map_size(
-        &self,
-        kind: ExtractFlags
-    ) -> u64 {
+    pub fn extract_map_size(&self, kind: ExtractFlags) -> u64 {
         let mut acc = 0;
 
         if kind.contains(ExtractFlags::NodePositions) {
-            acc += u64::from(self.parameters.parameters.node_count) * 3 * u64::try_from(std::mem::size_of::<f32>()).unwrap();
+            acc += u64::from(self.parameters.parameters.node_count)
+                * 3
+                * u64::try_from(std::mem::size_of::<f32>()).unwrap();
         }
 
         if kind.contains(ExtractFlags::NodeError) {
-            acc += u64::from(self.parameters.parameters.node_count) * 1 * u64::try_from(std::mem::size_of::<f32>()).unwrap();
+            acc += u64::from(self.parameters.parameters.node_count)
+                * 1
+                * u64::try_from(std::mem::size_of::<f32>()).unwrap();
         }
-        
+
         acc
-        
+    }
+
+    pub fn extract_to_buffer<'a>(
+        &'a self,
+        device: &'a wgpu::Device,
+        target: ExtractorGPUTarget<'a>,
+    ) -> Result<wgpu::CommandBuffer, ()> {
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("rtori-extract-encoder-gpu"),
+        });
+
+        if let (None, None, None) = (
+            &target.node_position_offset,
+            &target.node_error,
+            &target.node_velocity,
+        ) {
+            return Ok(encoder.finish());
+        }
+
+        let bindings: [(u64, std::num::NonZero<u64>); _] = self.parameters.binding_ranges().0;
+
+        if let Some(node_positions_offset_target) = &target.node_position_offset {
+            let (offset, size) = bindings[Parameters::ORDER_NODE_POSITIONS_OFFSETS];
+
+            encoder.copy_buffer_to_buffer(
+                &self.buffer,
+                offset,
+                node_positions_offset_target.buffer,
+                node_positions_offset_target.offset,
+                NonZeroU64::min(size, node_positions_offset_target.length).get(),
+            );
+        }
+
+        if let Some(node_error_target) = &target.node_error {
+            let (offset, size) = bindings[Parameters::ORDER_NODE_ERROR];
+
+            encoder.copy_buffer_to_buffer(
+                &self.buffer,
+                offset,
+                node_error_target.buffer,
+                node_error_target.offset,
+                NonZeroU64::min(size, node_error_target.length).get(),
+            );
+        }
+
+        if let Some(node_velocity_target) = &target.node_velocity {
+            let (offset, size) = bindings[Parameters::ORDER_NODE_POSITIONS_OFFSETS];
+
+            encoder.copy_buffer_to_buffer(
+                &self.buffer,
+                offset,
+                node_velocity_target.buffer,
+                node_velocity_target.offset,
+                NonZeroU64::min(size, node_velocity_target.length).get(),
+            );
+        }
+
+        Ok(encoder.finish())
     }
 
     pub fn extract_map(
         &self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        mappable_buffer: std::sync::arcwgpu::Buffer,
+        mappable_buffer: std::sync::Arc<wgpu::Buffer>,
         kind: ExtractFlags,
-        callback: impl FnOnce(Result<crate::extractor::ExtractorMappedTarget<'_>, wgpu::BufferAsyncError>) + wgpu::WasmNotSend + 'static
-    )-> Result<bool, ()> {
+        callback: impl FnOnce(Result<crate::extractor::ExtractorMappedTarget<'_>, wgpu::BufferAsyncError>)
+            + wgpu::WasmNotSend
+            + 'static,
+    ) -> Result<bool, ()> {
         if kind.is_empty() {
             return Ok(false);
         }
@@ -218,11 +290,11 @@ impl BackingStorageBuffer {
         }
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("rtori-extract-encoder")
+            label: Some("rtori-extract-encoder"),
         });
 
-        let bindings = self.parameters.binding_ranges().0;
-        
+        let bindings: [(u64, std::num::NonZero<u64>); _] = self.parameters.binding_ranges().0;
+
         let mut dst_offset = 0;
 
         let node_positions_offset_range = if kind.contains(ExtractFlags::NodePositions) {
@@ -233,7 +305,7 @@ impl BackingStorageBuffer {
                 offset,
                 &mappable_buffer,
                 dst_offset,
-                size.get()
+                size.get(),
             );
 
             Some((dst_offset + offset, size))
@@ -241,7 +313,7 @@ impl BackingStorageBuffer {
             None
         };
         dst_offset += node_positions_offset_range.map(|r| r.1.get()).unwrap_or(0);
-        
+
         let node_error_range = if kind.contains(ExtractFlags::NodePositions) {
             let (offset, size) = bindings[Parameters::ORDER_NODE_ERROR];
 
@@ -250,9 +322,8 @@ impl BackingStorageBuffer {
                 offset,
                 &mappable_buffer,
                 dst_offset,
-                size.get()
+                size.get(),
             );
-            dst_offset + size.get();
 
             Some(((dst_offset + offset), size))
         } else {
@@ -262,34 +333,29 @@ impl BackingStorageBuffer {
 
         let command_buffer = encoder.finish();
         queue.submit(Some(command_buffer));
-        
-        let mappable_buffer = std::sync::Arc::new(mappable_buffer);
-        mappable_buffer
-            .clone()
-            .slice(..required_size)
-            .map_async(wgpu::MapMode::Read, move |result| {
+
+        mappable_buffer.clone().slice(..required_size).map_async(
+            wgpu::MapMode::Read,
+            move |result| {
                 if let Err(e) = result {
                     callback(Err(e));
                     return;
                 }
 
                 let mapped = crate::extractor::ExtractorMappedTarget::new(
-                    mappable_buffer,
+                    &mappable_buffer,
                     crate::extractor::ExtractorRanges {
-                        node_position_offset: node_positions_offset_range.map(|(offset, size)| LoaderRange{
-                            offset,
-                            size
-                        }),
-                        node_error: node_error_range.map(|(offset, size)| LoaderRange {
-                            offset,
-                            size
-                        })
-                    }
+                        node_position_offset: node_positions_offset_range
+                            .map(|(offset, size)| LoaderRange { offset, size }),
+                        node_error: node_error_range
+                            .map(|(offset, size)| LoaderRange { offset, size }),
+                    },
                 );
 
                 callback(Ok(mapped))
-            });
-        
+            },
+        );
+
         Ok(true)
     }
 

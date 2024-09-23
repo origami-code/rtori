@@ -17,7 +17,6 @@ pub struct Parameters {
     pub min_storage_alignment: u32,
 }
 
-
 impl Parameters {
     pub const ORDER_NODE_POSITIONS_OFFSETS: usize = 0;
     pub const ORDER_NODE_POSITIONS_UNCHANGING: usize = 1;
@@ -33,12 +32,12 @@ impl Parameters {
     pub const ORDER_FACE_INDICES: usize = 11;
     pub const ORDER_FACE_NORMALS: usize = 12;
     pub const ORDER_FACE_NOMINAL_TRIANGLES: usize = 13;
-    pub const ORDER_NODE_CREASES : usize = 14;
-    pub const ORDER_NODE_CREASES_CONSTRAINT_FORCES : usize = 15;
-    pub const ORDER_NODE_BEAMS : usize = 16;
-    pub const ORDER_NODE_BEAMS_CONSTRAINT_FORCES : usize = 17;
-    pub const ORDER_NODE_FACES : usize = 18;
-    pub const ORDER_NODE_FACES_CONSTRAINT_FORCES : usize = 19;
+    pub const ORDER_NODE_CREASES: usize = 14;
+    pub const ORDER_NODE_CREASES_CONSTRAINT_FORCES: usize = 15;
+    pub const ORDER_NODE_BEAMS: usize = 16;
+    pub const ORDER_NODE_BEAMS_CONSTRAINT_FORCES: usize = 17;
+    pub const ORDER_NODE_FACES: usize = 18;
+    pub const ORDER_NODE_FACES_CONSTRAINT_FORCES: usize = 19;
 
     const STRIDE_VEC3: u64 = 4 /* f32 */ * 3 /* x, y, z */;
     const STRIDE_VEC4: u64 = 4 /* f32 */ * 4 /* x, y, z, error */;
@@ -78,31 +77,35 @@ impl Parameters {
         Self::align_address(cursor, self.min_storage_alignment as u64)
     }
 
-    pub fn binding_ranges(&self) -> ([(u64, NonZeroU64); super::StorageBindings::COUNT], NonZeroU64)
-    {
+    pub fn binding_ranges(
+        &self,
+    ) -> (
+        [(u64, NonZeroU64); super::StorageBindings::COUNT],
+        NonZeroU64,
+    ) {
         let mut ranges: [Option<(u64, NonZeroU64)>; super::StorageBindings::COUNT] =
             [const { None }; super::StorageBindings::COUNT];
-        
+
         let mut f = {
             let mut idx = 0;
-            
+
             let mut append = move |offset, size| {
                 (&mut ranges)[idx] = Some((offset, size));
                 *(&mut idx) += 1;
             };
 
-            let compute_and_append
-                = move |order: usize, cur: u64, count: u16, stride: u64| -> u64 {
-                if idx != order {
-                    panic!("invalid order");
-                }
+            let compute_and_append =
+                move |order: usize, cur: u64, count: u16, stride: u64| -> u64 {
+                    if idx != order {
+                        panic!("invalid order");
+                    }
 
-                let offset = self.align_storage(cur);
-                let size = u64::from(count) * stride;
-                
-                append(offset, NonZeroU64::new(size).unwrap());
-                offset + size
-            };
+                    let offset = self.align_storage(cur);
+                    let size = u64::from(count) * stride;
+
+                    append(offset, NonZeroU64::new(size).unwrap());
+                    offset + size
+                };
 
             compute_and_append
         };
@@ -110,24 +113,52 @@ impl Parameters {
         let cur = 0;
 
         let mut f_nodes = |order, cur, stride| f(order, cur, self.parameters.node_count, stride);
-        let cur = f_nodes(Self::ORDER_NODE_POSITIONS_OFFSETS, cur, Self::STRIDE_NODE_POSITIONS_OFFSETS);
-        let cur = f_nodes(Self::ORDER_NODE_POSITIONS_UNCHANGING, cur, Self::STRIDE_NODE_POSITIONS_UNCHANGING);
+        let cur = f_nodes(
+            Self::ORDER_NODE_POSITIONS_OFFSETS,
+            cur,
+            Self::STRIDE_NODE_POSITIONS_OFFSETS,
+        );
+        let cur = f_nodes(
+            Self::ORDER_NODE_POSITIONS_UNCHANGING,
+            cur,
+            Self::STRIDE_NODE_POSITIONS_UNCHANGING,
+        );
         let cur = f_nodes(Self::ORDER_NODE_VELOCITY, cur, Self::STRIDE_NODE_VELOCITY);
         let cur = f_nodes(Self::ORDER_NODE_ERROR, cur, Self::STRIDE_NODE_ERROR);
-        let cur = f_nodes(Self::ORDER_NODE_EXTERNAL_FORCES, cur, Self::STRIDE_NODE_EXTERNAL_FORCES);
+        let cur = f_nodes(
+            Self::ORDER_NODE_EXTERNAL_FORCES,
+            cur,
+            Self::STRIDE_NODE_EXTERNAL_FORCES,
+        );
         let cur = f_nodes(Self::ORDER_NODE_CONFIGS, cur, Self::STRIDE_NODE_CONFIGS);
         let cur = f_nodes(Self::ORDER_NODE_GEOMETRY, cur, Self::STRIDE_NODE_GEOMETRY);
 
         let mut f_crease = |order, cur, stride| f(order, cur, self.parameters.crease_count, stride);
-        let cur = f_crease(Self::ORDER_CREASE_GEOMETRY, cur, Self::STRIDE_CREASE_GEOMETRY);
-        let cur = f_crease(Self::ORDER_CREASE_FOLD_ANGLES, cur, Self::STRIDE_CREASE_FOLD_ANGLES);
+        let cur = f_crease(
+            Self::ORDER_CREASE_GEOMETRY,
+            cur,
+            Self::STRIDE_CREASE_GEOMETRY,
+        );
+        let cur = f_crease(
+            Self::ORDER_CREASE_FOLD_ANGLES,
+            cur,
+            Self::STRIDE_CREASE_FOLD_ANGLES,
+        );
         let cur = f_crease(Self::ORDER_CREASE_PHYSICS, cur, Self::STRIDE_CREASE_PHYSICS);
-        let cur = f_crease(Self::ORDER_CREASE_PARAMETERS, cur, Self::STRIDE_CREASE_PARAMETERS);
+        let cur = f_crease(
+            Self::ORDER_CREASE_PARAMETERS,
+            cur,
+            Self::STRIDE_CREASE_PARAMETERS,
+        );
 
         let mut f_faces = |order, cur, stride| f(order, cur, self.parameters.face_count, stride);
         let cur = f_faces(Self::ORDER_FACE_INDICES, cur, Self::STRIDE_FACE_INDICES);
         let cur = f_faces(Self::ORDER_FACE_NORMALS, cur, Self::STRIDE_FACE_NORMALS);
-        let cur = f_faces(Self::ORDER_FACE_NOMINAL_TRIANGLES, cur, Self::STRIDE_FACE_NOMINAL_TRIANGLES);
+        let cur = f_faces(
+            Self::ORDER_FACE_NOMINAL_TRIANGLES,
+            cur,
+            Self::STRIDE_FACE_NOMINAL_TRIANGLES,
+        );
 
         let cur = f(
             Self::ORDER_NODE_CREASES,
@@ -169,7 +200,7 @@ impl Parameters {
         );
 
         let unwrapped = ranges.map(|opt| opt.unwrap());
-        let total_size =NonZeroU64::new(cur).unwrap();
+        let total_size = NonZeroU64::new(cur).unwrap();
 
         (unwrapped, total_size)
     }

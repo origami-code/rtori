@@ -21,7 +21,7 @@ use super::{
     bind_groups::BindGroups, layout::PipelineSetLayout, storage_buffers, uniform_buffers, ModelSize,
 };
 
-bitflags::bitflags!{
+bitflags::bitflags! {
     #[derive(Debug, Copy, Clone, PartialEq)]
     pub struct ExtractFlags: u8 {
         const NodePositions = 1 << 0;
@@ -37,24 +37,20 @@ pub struct State<'state> {
     bind_groups: BindGroups,
     backing_storage_buffer: storage_buffers::BackingStorageBuffer,
     backing_uniform_buffer: uniform_buffers::BackingUniformBuffer,
-    
+
     /// for tuning parameters (small chunks)
     tuning_belt: wgpu::util::StagingBelt,
 
     /// This is a cpu-resident buffer
-    download_buffer: Option<wgpu::Buffer>,
+    download_buffer: Option<std::sync::Arc<wgpu::Buffer>>,
 
-    loaded: bool
+    loaded: bool,
 }
-
 
 impl<'state> State<'state> {
     /// returns true if there is a need to refill the data now
     /// even if we didn't reallocate, if the parameters change, the buffer bindings are incorrect and thus garbage data's flying around
-    pub fn recreate(
-        &mut self,
-        params: ModelSize,
-        layout: &PipelineSetLayout) -> bool {
+    pub fn recreate(&mut self, params: ModelSize, layout: &PipelineSetLayout) -> bool {
         if self.params == params {
             return false;
         }
@@ -87,7 +83,11 @@ impl<'state> State<'state> {
         true
     }
 
-    pub fn create(device: &'state wgpu::Device, params: ModelSize, layout: &PipelineSetLayout) -> Self {
+    pub fn create(
+        device: &'state wgpu::Device,
+        params: ModelSize,
+        layout: &PipelineSetLayout,
+    ) -> Self {
         let limits = device.limits();
 
         let backing_storage_buffer = storage_buffers::BackingStorageBuffer::allocate(
@@ -122,7 +122,7 @@ impl<'state> State<'state> {
             backing_uniform_buffer,
             tuning_belt,
             download_buffer,
-            loaded: false
+            loaded: false,
         }
     }
 
@@ -147,7 +147,11 @@ impl<'state> State<'state> {
 
                 pass.set_pipeline(&layout.pass_per_node_crease.0.compute_pipeline);
                 pass.set_bind_group(2, &self.bind_groups.bg_per_node_crease, &[]);
-                pass.dispatch_workgroups(u32::div_ceil(self.params.node_crease_count.into(), 64), 1, 1);
+                pass.dispatch_workgroups(
+                    u32::div_ceil(self.params.node_crease_count.into(), 64),
+                    1,
+                    1,
+                );
             }
 
             pass.set_pipeline(&layout.pass_per_node_beam.0.compute_pipeline);
@@ -178,7 +182,7 @@ impl<'state> State<'state> {
         }
 
         Ok(StateLoader {
-            loader: self.backing_storage_buffer.load_mapped()
+            loader: self.backing_storage_buffer.load_mapped(),
         })
     }
 
@@ -196,9 +200,10 @@ impl<'state> State<'state> {
         &mut self,
         queue: &wgpu::Queue,
         kind: ExtractFlags,
-        callback: impl FnOnce(Result<ExtractorMappedTarget<'_>, BufferAsyncError>) + wgpu::WasmNotSend + 'static
-    ) -> Result<bool, ()>
-    {
+        callback: impl FnOnce(Result<ExtractorMappedTarget<'_>, BufferAsyncError>)
+            + wgpu::WasmNotSend
+            + 'static,
+    ) -> Result<bool, ()> {
         if !self.loaded {
             // cannot extract a non-loaded thing
             return Err(());
@@ -206,26 +211,23 @@ impl<'state> State<'state> {
 
         let required_size = self.backing_storage_buffer.extract_map_size(kind);
 
-        let buffer = self.download_buffer.take().unwrap_or_else(|| self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("rtori-extract-buffer"),
-            size: required_size,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false
-        }));
+        let buffer = self.download_buffer.take().unwrap_or_else(|| {
+            std::sync::Arc::new(self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("rtori-extract-buffer"),
+                size: required_size,
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            }))
+        });
 
-        self.backing_storage_buffer.extract_map(
-            &self.device,
-            &queue,
-            &buffer,
-            kind,
-            callback
-        )
+        self.backing_storage_buffer
+            .extract_map(&self.device, &queue, buffer, kind, callback)
     }
 }
 
 #[repr(transparent)]
 pub struct StateLoader<'a> {
-    pub loader: loader::LoaderMappedTarget<'a>
+    pub loader: loader::LoaderMappedTarget<'a>,
 }
 
 impl<'a> StateLoader<'a> {
