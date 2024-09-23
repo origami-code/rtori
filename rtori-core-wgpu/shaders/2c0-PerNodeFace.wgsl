@@ -64,10 +64,15 @@ fn compute_face_constraint(
     return ConstraintResult(force_acc, err);
 }
 
+const workgroup_size: i32 = 64; // @id(0) override workgroup_size: i32 = 64;
+
 @compute
-@workgroup_size(1)
+@workgroup_size(workgroup_size)
 fn per_node_face(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var node_face_index = global_id.x;
+    if (node_face_index > arrayLength(&node_faces)) {
+        return;
+    }
 
     var constraint_results = compute_face_constraint(
         node_face_index

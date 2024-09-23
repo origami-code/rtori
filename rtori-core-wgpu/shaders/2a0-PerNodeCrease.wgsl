@@ -146,10 +146,15 @@ fn compute_crease_constraint(node_crease_index: u32) -> vec3<f32> {
 }
 
 
+const workgroup_size: i32 = 64; // @id(0) override workgroup_size: i32 = 64;
+
 @compute
-@workgroup_size(1)
+@workgroup_size(workgroup_size)
 fn per_node_crease(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var node_crease_index = global_id.x;
+    if (node_crease_index > arrayLength(&node_creases)) {
+        return;
+    }
 
     var constraint_force = compute_crease_constraint(
         node_crease_index

@@ -22,10 +22,16 @@ var<storage, read> face_indices: array<vec3<u32>>;
 @binding(1)
 var<storage, read_write> face_normals: array<vec3<f32>>;
 
+const workgroup_size: i32 = 64; // @id(0) override workgroup_size: i32 = 64;
+
 @compute
-@workgroup_size(1)
+@workgroup_size(workgroup_size)
 fn per_face_calculate_normal(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var face_index: u32 = global_id.x;
+    if (face_index > arrayLength(&face_indices)) {
+        return;
+    }
+
     var face: vec3<u32> = face_indices[face_index];
     
     var a: vec3<f32> = get_position(face.x);

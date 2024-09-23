@@ -132,36 +132,36 @@ impl<'state> State<'state> {
         {
             pass.set_pipeline(&layout.pass_per_face.0.compute_pipeline);
             pass.set_bind_group(1, &self.bind_groups.bg_per_face, &[]);
-            pass.dispatch_workgroups(self.params.face_count.into(), 1, 1);
+            pass.dispatch_workgroups(u32::div_ceil(self.params.face_count.into(), 64), 1, 1);
 
             pass.set_bind_group(1, &self.bind_groups.bg_per_crease_common, &[]);
 
             {
                 pass.set_pipeline(&layout.pass_per_crease_fold_angle.0.compute_pipeline);
                 pass.set_bind_group(2, &self.bind_groups.bg_per_crease_fold_angles, &[]);
-                pass.dispatch_workgroups(self.params.crease_count.into(), 1, 1);
+                pass.dispatch_workgroups(u32::div_ceil(self.params.crease_count.into(), 64), 1, 1);
 
                 pass.set_pipeline(&layout.pass_per_crease_physics.0.compute_pipeline);
                 pass.set_bind_group(2, &self.bind_groups.bg_per_crease_physics, &[]);
-                pass.dispatch_workgroups(self.params.crease_count.into(), 1, 1);
+                pass.dispatch_workgroups(u32::div_ceil(self.params.crease_count.into(), 64), 1, 1);
 
                 pass.set_pipeline(&layout.pass_per_node_crease.0.compute_pipeline);
                 pass.set_bind_group(2, &self.bind_groups.bg_per_node_crease, &[]);
-                pass.dispatch_workgroups(self.params.node_crease_count.into(), 1, 1);
+                pass.dispatch_workgroups(u32::div_ceil(self.params.node_crease_count.into(), 64), 1, 1);
             }
 
             pass.set_pipeline(&layout.pass_per_node_beam.0.compute_pipeline);
             pass.set_bind_group(1, &self.bind_groups.bg_per_node_beam, &[]);
-            pass.dispatch_workgroups(self.params.node_beam_count.into(), 1, 1);
+            pass.dispatch_workgroups(u32::div_ceil(self.params.node_beam_count.into(), 64), 1, 1);
 
             pass.set_pipeline(&layout.pass_per_node_face.0.compute_pipeline);
             pass.set_bind_group(1, &self.bind_groups.bg_per_node_face, &[]);
-            pass.dispatch_workgroups(self.params.node_face_count.into(), 1, 1);
+            pass.dispatch_workgroups(u32::div_ceil(self.params.node_face_count.into(), 64), 1, 1);
         }
 
         pass.set_pipeline(&layout.pass_per_node_accumulate.0.compute_pipeline);
         pass.set_bind_group(0, &self.bind_groups.bg_per_node_accumulate, &[]);
-        pass.dispatch_workgroups(self.params.node_count.into(), 1, 1);
+        pass.dispatch_workgroups(u32::div_ceil(self.params.node_count.into(), 64), 1, 1);
     }
 
     pub fn params(&self) -> &ModelSize {

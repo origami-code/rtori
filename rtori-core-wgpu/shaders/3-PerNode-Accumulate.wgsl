@@ -71,22 +71,24 @@ var<storage, read> node_external_forces: array<vec3<f32>>;
 @binding(9)
 var<uniform> dt: f32;
 
+
 struct ConstraintResult {
     force: vec3<f32>,
-    error_accor: f32
+    error: f32
 }
 
-
-fn compute_force(node_index: u32) -> ConstraintResult {
-    var external_force = node_external_forces[node_index];
-
+fn compute_force(
+    node_index: u32,
+    local_offset: u32,
+    local_chunk_size: u32
+) -> ConstraintResult {
     var geometry: NodeGeometry = node_geometry[node_index];
 
-    var force_acc: vec3<f32> = external_force;
+    var force_acc: vec3<f32> = vec3<f32>(0.0, 0.0, 0.0);
     var error_acc: f32 = 0.0;
 
     // Beam constraints
-    for (var b: u32; b < geometry.beam_count; b++) {
+    for (var b: u32 = local_offset; b < min(geometry.beam_count, local_offset + local_chunk_size); b++) {
         var node_beam_index = geometry.beam_offset + b;
 
         var constraint_result = node_beam_constraint_forces[node_beam_index];
@@ -95,7 +97,7 @@ fn compute_force(node_index: u32) -> ConstraintResult {
     }
 
     // Crease Constraints
-    for (var c: u32; c < geometry.crease_count; c++) {
+    for (var c: u32 = local_offset; c < min(geometry.crease_count, local_offset + local_chunk_size); c++) {
         var node_beam_index = geometry.crease_offset + c;
         
         var constraint_result = node_crease_constraint_forces[node_beam_index];
@@ -103,7 +105,7 @@ fn compute_force(node_index: u32) -> ConstraintResult {
     }
 
     // Face Constraints
-    for (var f: u32; f < geometry.face_count; f++) {
+    for (var f: u32  = local_offset; f < min(geometry.face_count, local_offset + local_chunk_size); f++) {
         var node_beam_index = geometry.face_offset + f;
 
         var constraint_result = node_faces_constraint_forces[node_beam_index];
@@ -118,17 +120,51 @@ fn compute_force(node_index: u32) -> ConstraintResult {
     );
 }
 
+// workgroup_size * chunk_size should be larger than any of:
+// - crease per node count
+// - beam per node count
+// - face per node count
+//
+// And at a minimum (for performance), workgroup_size should be 64
+const workgroup_size: i32 = 64; // @id(0) override workgroup_size: i32 = 64;
+
+// The number of 'crease', 'beam' or 'face' processed per local invocation
+// @id(1) override chunk_size: i32 = 1;
+
 @compute
-@workgroup_size(1)
-fn per_node_accumulate(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    var node_index = global_id.x;
+@workgroup_size(workgroup_size)
+fn per_node_accumulate(
+    @builtin(global_invocation_id) global_id: vec3<u32>,
+    //@builtin(local_invocation_index) local_index: u32
+) {
+    let node_index: u32 = global_id.x;// - local_index;
+    if (node_index > arrayLength(&node_configs)) {
+        return;
+    }
 
     var current_velocity = node_velocity[node_index];
     var config = node_configs[node_index];
 
-    var constraint_results = compute_force(node_index);
+    // Workgroup synchronisation: we take the accumulated resut
+    var result: ConstraintResult = compute_force(
+        node_index,
+        u32(0),//local_index * chunk_size,
+        u32(100)
+    );
+    //atomicAdd(force_acc, result.force);
+    //atomicAdd(error_acc, result.error_accor);
+    //workgroupBarrier();
 
-    var force = constraint_results.force;
+    // We only let index 0 write to the final destination
+    // if (local_index != 0) {
+    //     return;
+    // }
+    
+    let force_acc = result.force;
+    let error_acc = result.error;
+
+    var external_force = node_external_forces[node_index];
+    var force = external_force + force_acc;
     var new_velocity = force * dt / config.mass + current_velocity;
     node_velocity[node_index] = new_velocity;
 
@@ -138,6 +174,8 @@ fn per_node_accumulate(@builtin(global_invocation_id) global_id: vec3<u32>) {
         node_error[node_index] = 0.0;
     } else {
         node_position_offset[node_index] += new_velocity * dt;
-        node_error[node_index] = constraint_results.error_accor;
+
+        var error = error_acc;
+        node_error[node_index] = error;
     }
 }

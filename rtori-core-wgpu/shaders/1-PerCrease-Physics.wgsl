@@ -94,9 +94,15 @@ fn update_crease_phyics(crease_index: u32) {
     crease_physics[crease_index] = output;
 }
 
+const workgroup_size: i32 = 64; // @id(0) override workgroup_size: i32 = 64;
+
 @compute
-@workgroup_size(1)
+@workgroup_size(workgroup_size)
 fn per_crease_physics(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    var edge_index: u32 = global_id.x;
-    update_crease_phyics(edge_index);
+    var crease_index: u32 = global_id.x;
+    if (crease_index > arrayLength(&crease_geometry)) {
+        return;
+    }
+
+    update_crease_phyics(crease_index);
 }

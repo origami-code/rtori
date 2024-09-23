@@ -90,10 +90,16 @@ fn compute_beam_constraint(
     return ConstraintResult(force, delta_p_result.err);
 }
 
+const workgroup_size: i32 = 64; // @id(0) override workgroup_size: i32 = 64;
+
 @compute
-@workgroup_size(1)
+@workgroup_size(workgroup_size)
 fn per_node_beam(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var node_beam_index = global_id.x;
+    if (node_beam_index > arrayLength(&node_beams)) {
+        return;
+    }
+
     var node_beam: BeamSpec = node_beams[node_beam_index];
     var node_index = node_beam.node_index;
 

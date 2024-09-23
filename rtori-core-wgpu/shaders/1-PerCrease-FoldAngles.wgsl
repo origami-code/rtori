@@ -34,6 +34,7 @@ var<storage, read> face_normals: array<vec3<f32>>;
 @binding(1)
 var<storage, read_write> crease_fold_angles: array<f32>;
 
+
 fn update_fold_angle(crease_index: u32) {
     var spec: CreaseGeometry = crease_geometry[crease_index];
 
@@ -71,9 +72,15 @@ fn update_fold_angle(crease_index: u32) {
     crease_fold_angles[crease_index] = fold_angle_corrected;
 }
 
+const workgroup_size: i32 = 64; // @id(0) override workgroup_size: i32 = 64;
+
 @compute
-@workgroup_size(1)
+@workgroup_size(workgroup_size)
 fn per_crease_fold_angles(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var crease_index: u32 = global_id.x;
+    if (crease_index > arrayLength(&crease_geometry)) {
+        return;
+    }
+
     update_fold_angle(crease_index);
 }
