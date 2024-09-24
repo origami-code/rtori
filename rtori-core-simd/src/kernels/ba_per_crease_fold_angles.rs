@@ -1,9 +1,5 @@
-use super::{
-    algebra::algebrize,
-    gather::{gather_vec3f_1},
-    position,
-};
-use crate::model::CreaseGeometry;
+use super::{algebra::algebrize, gather::gather_vec3f_1, position};
+use crate::model::CreaseGeometryLens;
 use crate::simd_atoms::*;
 use nalgebra::SimdRealField;
 use nalgebra::{SimdPartialOrd, SimdValue};
@@ -12,7 +8,7 @@ pub struct PerCreaseFoldAngleInput<'backer> {
     node_positions_offset: &'backer [SimdVec3F],
     node_positions_unchanging: &'backer [SimdVec3F],
     face_normals: &'backer [SimdVec3F],
-    crease_geometry: &'backer [CreaseGeometry],
+    crease_geometry: &'backer [CreaseGeometryLens],
     crease_fold_angle: &'backer [SimdF32],
 }
 
