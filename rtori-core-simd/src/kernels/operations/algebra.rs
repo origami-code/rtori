@@ -1,9 +1,15 @@
-use crate::simd_atoms::{SimdF32, SimdVec3F};
+use core::simd::{LaneCount, SupportedLaneCount};
+
 use nalgebra as na;
 
 #[inline(always)]
-pub fn algebrize(input: SimdVec3F) -> na::Vector3<simba::simd::Simd<SimdF32>> {
-    na::Vector3::<simba::simd::Simd<SimdF32>>::new(
+pub fn algebrize<const N: usize>(
+    input: [core::simd::Simd<f32, N>; 3],
+) -> na::Vector3<simba::simd::Simd<core::simd::Simd<f32, N>>>
+where
+    LaneCount<N>: SupportedLaneCount,
+{
+    na::Vector3::<simba::simd::Simd<core::simd::Simd<f32, N>>>::new(
         simba::simd::Simd(input[0]),
         simba::simd::Simd(input[1]),
         simba::simd::Simd(input[1]),

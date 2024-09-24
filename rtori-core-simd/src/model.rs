@@ -1,5 +1,3 @@
-use rtori_os_model::NodeGeometry;
-
 use crate::simd_atoms::*;
 
 pub struct Nodes<'backer> {
@@ -9,8 +7,14 @@ pub struct Nodes<'backer> {
     external_forces: &'backer [SimdVec3F],
     mass: &'backer [SimdF32],
     fixed: &'backer [SimdMask],
-    geometry: &'backer [NodeGeometry],
+    geometry: &'backer NodeGeometries<'backer>,
     velocity: &'backer mut [SimdVec3F],
+}
+
+pub struct NodeGeometries<'backer> {
+    node_crease_pointer: [&'backer [SimdU32]; 2],
+    node_beam_pointer: [&'backer [SimdU32]; 2],
+    node_face_pointer: [&'backer [SimdU32]; 2],
 }
 
 pub struct CreaseGeometryLens {
@@ -64,12 +68,8 @@ impl CreasesPhysicsLens {
 
         let zero = SimdF32::splat(0.0);
 
-        self
-            .a_height
-            .simd_le(zero)
+        self.a_height.simd_le(zero)
     }
-
-
 }
 
 pub struct CreasePhysics<'backer> {
@@ -85,7 +85,6 @@ pub struct Faces<'backer> {
     indices_b: &'backer [SimdU32],
     nominal_angles: &'backer [SimdVec3F],
 }
-
 
 pub struct NodeCreases<'backer> {
     crease_indices: &'backer [SimdU32],

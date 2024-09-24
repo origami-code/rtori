@@ -1,48 +1,32 @@
 use core::simd;
 
+pub type SimdU32N<const N: usize> = simd::Simd<u32, { N }>;
+pub type SimdF32N<const N: usize> = simd::Simd<f32, { N }>;
+pub type SimdVec3FN<const N: usize> = [SimdF32N<N>; 3];
+
 #[allow(dead_code)]
 mod config_16 {
-    use super::simd;
     pub const CHUNK_SIZE: usize = 16;
-    pub type SimdF32 = simd::f32x16;
-    pub type SimdU32 = simd::u32x16;
-    pub type SimdMask = simd::Mask<i32, 32>;
 }
 
 #[allow(dead_code)]
 mod config_8 {
-    use super::simd;
     pub const CHUNK_SIZE: usize = 8;
-    pub type SimdF32 = simd::f32x8;
-    pub type SimdU32 = simd::u32x8;
-    pub type SimdMask = simd::Mask<i32, CHUNK_SIZE>;
 }
 
 #[allow(dead_code)]
 mod config_4 {
-    use super::simd;
     pub const CHUNK_SIZE: usize = 4;
-    pub type SimdF32 = simd::f32x4;
-    pub type SimdU32 = simd::u32x4;
-    pub type SimdMask = simd::Mask<i32, 4>;
 }
 
 #[allow(dead_code)]
 mod config_2 {
-    use super::simd;
     pub const CHUNK_SIZE: usize = 2;
-    pub type SimdF32 = simd::f32x2;
-    pub type SimdU32 = simd::u32x2;
-    pub type SimdMask = simd::Mask<i32, 2>;
 }
 
 #[allow(dead_code)]
 mod config_1 {
-    use super::simd;
     pub const CHUNK_SIZE: usize = 1;
-    pub type SimdF32 = simd::f32x1;
-    pub type SimdU32 = simd::u32x1;
-    pub type SimdMask = simd::Mask<i32, 1>;
 }
 
 cfg_if::cfg_if! {
@@ -83,5 +67,8 @@ cfg_if::cfg_if! {
     }
 }
 
+pub type SimdF32 = SimdF32N<{ CHUNK_SIZE }>;
+pub type SimdU32 = SimdU32N<{ CHUNK_SIZE }>;
+pub type SimdMask = simd::Mask<i32, { CHUNK_SIZE }>;
 pub type SimdVec3F = [SimdF32; 3];
 pub type SimdVec3U = [SimdU32; 3];
