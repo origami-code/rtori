@@ -1268,8 +1268,11 @@ dependencies = [
 name = "rtori-core-simd"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
+ "cfg-if",
  "itertools",
  "nalgebra",
+ "rtori-os-model",
  "simba",
 ]
 

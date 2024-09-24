@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, ops::{Deref, DerefMut}};
+use core::{marker::PhantomData, ops::{Deref, DerefMut}};
 
 pub struct Proxy<Collection, InnerType> {
     collection: Collection,

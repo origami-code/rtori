@@ -1,6 +1,6 @@
 
-use std::ops::{Deref, DerefMut};
-
+#![no_std]
+use core::ops::{Deref, DerefMut};
 
 #[cfg(feature = "define_proxy")]
 pub mod proxy;
@@ -187,7 +187,7 @@ mod proxy_sa {
     macro_rules! check_proxy{
         ($t:ty) => {
             sa::assert_impl_all!(
-                Proxy<&'_ mut [u8], $t>: std::ops::DerefMut<Target=[$t]>
+                Proxy<&'_ mut [u8], $t>: core::ops::DerefMut<Target=[$t]>
             );
         }
     }
