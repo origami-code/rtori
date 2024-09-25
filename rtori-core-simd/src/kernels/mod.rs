@@ -1,6 +1,8 @@
 mod operations;
 use operations::{algebra, gather, position};
 
+mod input_iterator;
+
 mod a_per_face;
 mod ba_per_crease_fold_angles;
 mod bb_per_crease_physics;

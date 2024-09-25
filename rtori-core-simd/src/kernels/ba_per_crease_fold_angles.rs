@@ -5,11 +5,14 @@ use nalgebra::SimdRealField;
 use nalgebra::{SimdPartialOrd, SimdValue};
 
 pub struct PerCreaseFoldAngleInput<'backer> {
-    node_positions_offset: &'backer [SimdVec3F],
-    node_positions_unchanging: &'backer [SimdVec3F],
-    face_normals: &'backer [SimdVec3F],
-    crease_geometry: &'backer [CreaseGeometryLens],
-    crease_fold_angle: &'backer [SimdF32],
+    pub crease_geometry: &'backer [CreaseGeometryLens<{ CHUNK_SIZE }>],
+    pub crease_fold_angle: &'backer [SimdF32],
+    pub crease_count: usize,
+
+    pub node_positions_offset: &'backer [SimdVec3F],
+    pub node_positions_unchanging: &'backer [SimdVec3F],
+
+    pub face_normals: &'backer [SimdVec3F],
 }
 
 pub struct PerCreaseFoldAngleOutput<'backer> {

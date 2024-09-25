@@ -3,9 +3,11 @@ use crate::simd_atoms::*;
 use nalgebra as na;
 
 pub struct PerFaceInputs<'backer> {
-    face_node_indices: &'backer [SimdVec3U],
-    node_positions_offset: &'backer [SimdVec3F],
-    node_positions_unchanging: &'backer [SimdVec3F],
+    pub face_node_indices: &'backer [SimdVec3U],
+    pub face_count: usize,
+
+    pub node_positions_offset: &'backer [SimdVec3F],
+    pub node_positions_unchanging: &'backer [SimdVec3F],
 }
 
 pub struct PerFaceOutputs<'backer> {

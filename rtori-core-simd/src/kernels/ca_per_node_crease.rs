@@ -3,13 +3,18 @@ use core::simd::cmp::SimdPartialOrd;
 
 use super::algebra::algebrize;
 use crate::kernels::operations::gather::{gather_f32, gather_scalar, gather_vec3f_1};
-use crate::model::{CreaseGeometries, CreasePhysics};
-use crate::{model::CreasesPhysicsLens, simd_atoms::*};
+use crate::model::{CreaseGeometryLens, CreasesPhysicsLens};
+use crate::simd_atoms::*;
 
 pub struct PerNodeCreaseInput<'backer> {
+    /* per node-crease */
+    pub node_crease_indices: &'backer [SimdU32],
+    pub node_crease_node_number: &'backer [SimdU32],
+    pub node_crease_count: usize,
+
     /* per-crease */
     pub crease_fold_angles: &'backer [SimdF32],
-    pub crease_physics: &'backer CreasePhysics<'backer>,
+    pub crease_physics: &'backer [CreasesPhysicsLens<{ CHUNK_SIZE }>],
     pub crease_k: &'backer [SimdF32],
     //pub crease_d: &'backer [SimdF32],
     pub crease_target_fold_angle: &'backer [SimdF32],
@@ -18,11 +23,6 @@ pub struct PerNodeCreaseInput<'backer> {
     /* per-face */
     pub face_indices: &'backer [SimdVec3U],
     pub face_normals: &'backer [SimdVec3F],
-
-    /* per node-crease */
-    pub node_crease_indices: &'backer [SimdU32],
-    pub node_crease_node_number: &'backer [SimdU32],
-
     /* parameters */
     pub crease_percentage: f32,
 }
@@ -36,23 +36,22 @@ pub fn calculate_node_crease_forces<'a>(
         |(crease_indices, node_number)| {
             let [
             crease_current_fold_angle,
-            crease_physics_a_height,
-            crease_physics_a_coef,
-            crease_physics_b_height,
-            crease_physics_b_coef,
             crease_k,
             //crease_d,
             crease_target_fold_angle
         ] = gather_f32([
                 &inputs.crease_fold_angles,
-                &inputs.crease_physics.a_height,
-                &inputs.crease_physics.a_coef,
-                &inputs.crease_physics.b_height,
-                &inputs.crease_physics.b_coef,
                 &inputs.crease_k,
                 //&inputs.crease_d,
                 &inputs.crease_target_fold_angle
             ], *crease_indices);
+
+            // TODO: gather the crease physics
+            
+            let crease_physics_a_height: SimdF32N<{CHUNK_SIZE}> = todo!();
+            let crease_physics_a_coef: SimdF32N<{CHUNK_SIZE}> = todo!();
+            let crease_physics_b_height: SimdF32N<{CHUNK_SIZE}>= todo!();
+            let crease_physics_b_coef: SimdF32N<{CHUNK_SIZE}>= todo!();
 
             let invalid_physics = crease_physics_a_height.simd_le(SimdF32::splat(0.0));
             if invalid_physics.all() {

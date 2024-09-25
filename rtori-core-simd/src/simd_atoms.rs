@@ -3,6 +3,7 @@ use core::simd;
 pub type SimdU32N<const N: usize> = simd::Simd<u32, { N }>;
 pub type SimdF32N<const N: usize> = simd::Simd<f32, { N }>;
 pub type SimdVec3FN<const N: usize> = [SimdF32N<N>; 3];
+pub type SimdMaskN<const N: usize> = simd::Mask<i32, { N }>;
 
 #[allow(dead_code)]
 mod config_16 {
@@ -69,6 +70,6 @@ cfg_if::cfg_if! {
 
 pub type SimdF32 = SimdF32N<{ CHUNK_SIZE }>;
 pub type SimdU32 = SimdU32N<{ CHUNK_SIZE }>;
-pub type SimdMask = simd::Mask<i32, { CHUNK_SIZE }>;
+pub type SimdMask = SimdMaskN<{ CHUNK_SIZE }>;
 pub type SimdVec3F = [SimdF32; 3];
 pub type SimdVec3U = [SimdU32; 3];

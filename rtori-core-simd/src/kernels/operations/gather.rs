@@ -1,14 +1,14 @@
-use crate::simd_atoms::{SimdF32N, SimdU32N, SimdVec3F, SimdVec3FN};
+use crate::simd_atoms::{SimdF32N, SimdU32N, SimdVec3FN};
 use core::simd::{num::SimdUint, LaneCount, SimdElement, SupportedLaneCount};
 
 #[inline]
-pub fn indices_to_vec_as_scalar_indices<const N: usize>(
-    indices: core::simd::Simd<u32, N>,
-) -> [core::simd::Simd<u32, N>; 3]
+pub fn indices_to_vec_as_scalar_indices<const L: usize>(
+    indices: core::simd::Simd<u32, L>,
+) -> [core::simd::Simd<u32, L>; 3]
 where
-    LaneCount<N>: SupportedLaneCount,
+    LaneCount<L>: SupportedLaneCount,
 {
-    let chunk_size = u32::try_from(N).unwrap();
+    let chunk_size = u32::try_from(L).unwrap();
 
     // We load X, Y, Z from that
     let index_to_vector_start = indices * SimdU32N::splat(3 * chunk_size);

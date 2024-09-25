@@ -3,13 +3,13 @@ use core::simd::{LaneCount, SupportedLaneCount};
 use nalgebra as na;
 
 #[inline(always)]
-pub fn algebrize<const N: usize>(
-    input: [core::simd::Simd<f32, N>; 3],
-) -> na::Vector3<simba::simd::Simd<core::simd::Simd<f32, N>>>
+pub fn algebrize<const L: usize>(
+    input: [core::simd::Simd<f32, L>; 3],
+) -> na::Vector3<simba::simd::Simd<core::simd::Simd<f32, L>>>
 where
-    LaneCount<N>: SupportedLaneCount,
+    LaneCount<L>: SupportedLaneCount,
 {
-    na::Vector3::<simba::simd::Simd<core::simd::Simd<f32, N>>>::new(
+    na::Vector3::<simba::simd::Simd<core::simd::Simd<f32, L>>>::new(
         simba::simd::Simd(input[0]),
         simba::simd::Simd(input[1]),
         simba::simd::Simd(input[1]),

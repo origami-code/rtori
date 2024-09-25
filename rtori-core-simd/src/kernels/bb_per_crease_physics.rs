@@ -8,16 +8,18 @@ use crate::model::CreaseGeometryLens;
 use crate::{model::CreasesPhysicsLens, simd_atoms::*};
 
 pub struct PerCreasePhysicsInput<'backer> {
-    node_positions_unchanging: &'backer [SimdVec3F],
-    node_positions_offset: &'backer [SimdVec3F],
-    crease_geometry: &'backer [CreaseGeometryLens],
+    pub crease_geometry: &'backer [CreaseGeometryLens<{ CHUNK_SIZE }>],
+    pub crease_count: usize,
+
+    pub node_positions_unchanging: &'backer [SimdVec3F],
+    pub node_positions_offset: &'backer [SimdVec3F],
 }
 
 const TOL: f32 = 0.000001;
 
 pub fn calculate_crease_physics<'a>(
     inputs: &'a PerCreasePhysicsInput<'a>,
-) -> impl ExactSizeIterator<Item = CreasesPhysicsLens> + use<'a> {
+) -> impl ExactSizeIterator<Item = CreasesPhysicsLens<{ CHUNK_SIZE }>> + use<'a> {
     // First check
     let tol = simba::simd::Simd(SimdF32::splat(TOL));
 

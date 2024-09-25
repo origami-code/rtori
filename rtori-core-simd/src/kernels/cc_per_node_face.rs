@@ -8,10 +8,14 @@ use super::algebra::algebrize;
 use super::operations::gather::gather_vec3f;
 use super::position;
 use crate::kernels::operations::gather::{gather_f32, gather_scalar, gather_vec3f_1};
-use crate::model::{CreaseGeometries, CreasePhysics};
-use crate::{model::CreasesPhysicsLens, simd_atoms::*};
+use crate::model::{CreaseGeometryLens, CreasesPhysicsLens};
+use crate::simd_atoms::*;
 
 pub struct PerNodeFaceInput<'backer> {
+    pub node_face_node_index: &'backer [SimdU32],
+    pub node_face_face_index: &'backer [SimdU32],
+    pub node_face_count: usize,
+
     pub node_positions_unchanging: &'backer [SimdVec3F],
     pub node_positions_offset: &'backer [SimdVec3F],
     pub node_velocity: &'backer [SimdVec3F],
@@ -19,10 +23,6 @@ pub struct PerNodeFaceInput<'backer> {
     pub face_node_indices: &'backer [SimdVec3U],
     pub face_normals: &'backer [SimdVec3F],
     pub face_nominal_angles: &'backer [SimdVec3F],
-
-    /* per-node-beam */
-    pub node_face_node_index: &'backer [SimdU32],
-    pub node_face_face_index: &'backer [SimdU32],
 
     pub face_stiffness: f32,
 }

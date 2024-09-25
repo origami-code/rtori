@@ -12,16 +12,17 @@ use crate::model::{CreaseGeometries, CreasePhysics};
 use crate::{model::CreasesPhysicsLens, simd_atoms::*};
 
 pub struct PerNodeBeamInput<'backer> {
-    pub node_positions_unchanging: &'backer [SimdVec3F],
-    pub node_positions_offset: &'backer [SimdVec3F],
-    pub node_velocity: &'backer [SimdVec3F],
-
     /* per-node-beam */
     pub beam_node_index: &'backer [SimdU32],
     pub beam_k: &'backer [SimdF32],
     pub beam_d: &'backer [SimdF32],
     pub beam_length: &'backer [SimdF32],
     pub beam_neighbour_index: &'backer [SimdU32],
+    pub beam_count: usize,
+
+    pub node_positions_unchanging: &'backer [SimdVec3F],
+    pub node_positions_offset: &'backer [SimdVec3F],
+    pub node_velocity: &'backer [SimdVec3F],
 }
 
 const TAU: f32 = 6.283185307179586476925286766559;
