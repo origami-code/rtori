@@ -9,10 +9,10 @@ use nalgebra as na;
 
 #[inline]
 pub fn get_positions_for_indices<const L: usize>(
-    positions_unchanging: &[SimdVec3FN<L>],
-    positions_offsets: &[SimdVec3FN<L>],
-    indices: SimdU32N<L>,
-) -> na::Vector3<simba::simd::Simd<SimdF32N<L>>>
+    positions_unchanging: &[SimdVec3F<L>],
+    positions_offsets: &[SimdVec3F<L>],
+    indices: SimdU32<L>,
+) -> na::Vector3<simba::simd::Simd<SimdF32<L>>>
 where
     LaneCount<L>: SupportedLaneCount,
     simba::simd::Simd<core::simd::Simd<f32, L>>: num_traits::Num + num_traits::NumAssign,

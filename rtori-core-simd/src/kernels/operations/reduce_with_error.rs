@@ -10,26 +10,26 @@ where
     LaneCount<L>: SupportedLaneCount,
 {
     // Per node
-    pub offset: &'backer [SimdU32N<L>],
-    pub count: &'backer [SimdU32N<L>],
+    pub offset: &'backer [SimdU32<L>],
+    pub count: &'backer [SimdU32<L>],
 
     // Per node-crease
-    pub force: &'backer [SimdVec3FN<L>],
-    pub error: &'backer [SimdF32N<L>],
+    pub force: &'backer [SimdVec3F<L>],
+    pub error: &'backer [SimdF32<L>],
 }
 
 pub fn reduce_with_error<'a, const L: usize>(
     inputs: &'a ReduceWithErrorInput<'a, L>,
-) -> impl ExactSizeIterator<Item = (SimdVec3FN<L>, SimdF32N<L>)> + use<'a, L>
+) -> impl ExactSizeIterator<Item = (SimdVec3F<L>, SimdF32<L>)> + use<'a, L>
 where
     LaneCount<L>: SupportedLaneCount,
     simba::simd::Simd<core::simd::Simd<f32, L>>: num_traits::Num + num_traits::NumAssign,
 {
-    let zero = simba::simd::Simd(SimdF32N::splat(0.0));
+    let zero = simba::simd::Simd(SimdF32::splat(0.0));
     let zero_force = nalgebra::Vector3::new(zero, zero, zero);
 
     itertools::izip!(inputs.offset, inputs.count).map(move |(offset, count)| {
-        let mut cursor = SimdU32N::splat(0);
+        let mut cursor = SimdU32::splat(0);
 
         let mut force = zero_force;
         let mut error = zero.0;
@@ -49,7 +49,7 @@ where
             force += super::select(mask, current_force, zero_force);
             error += mask.select(current_error, zero.0);
 
-            cursor += SimdU32N::splat(1);
+            cursor += SimdU32::splat(1);
         }
 
         ([force.x.0, force.y.0, force.z.0], error)

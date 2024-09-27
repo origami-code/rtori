@@ -1,34 +1,11 @@
 use core::simd;
 
-pub type SimdU32N<const N: usize> = simd::Simd<u32, { N }>;
-pub type SimdF32N<const N: usize> = simd::Simd<f32, { N }>;
-pub type SimdVec3FN<const N: usize> = [SimdF32N<N>; 3];
-pub type SimdMaskN<const N: usize> = simd::Mask<i32, { N }>;
+pub type SimdU32<const N: usize> = simd::Simd<u32, { N }>;
+pub type SimdF32<const N: usize> = simd::Simd<f32, { N }>;
+pub type SimdVec3F<const N: usize> = [SimdF32<N>; 3];
+pub type SimdVec3U<const N: usize> = [SimdU32<N>; 3];
+pub type SimdMask<const N: usize> = simd::Mask<i32, { N }>;
 
-#[allow(dead_code)]
-mod config_16 {
-    pub const CHUNK_SIZE: usize = 16;
-}
-
-#[allow(dead_code)]
-mod config_8 {
-    pub const CHUNK_SIZE: usize = 8;
-}
-
-#[allow(dead_code)]
-mod config_4 {
-    pub const CHUNK_SIZE: usize = 4;
-}
-
-#[allow(dead_code)]
-mod config_2 {
-    pub const CHUNK_SIZE: usize = 2;
-}
-
-#[allow(dead_code)]
-mod config_1 {
-    pub const CHUNK_SIZE: usize = 1;
-}
 
 cfg_if::cfg_if! {
     if #[cfg(
@@ -37,14 +14,14 @@ cfg_if::cfg_if! {
             target_feature="avx512f"
         )
     )] {
-        pub use config_16::*;
+        const PREFERRED_WIDTH: usize = 16;
     } else if #[cfg(
         all(
             any(target_arch = "x86", target_arch = "x86_64"),
             target_feature="avx"
         )
     )] {
-        pub use config_8::*;
+        const PREFERRED_WIDTH: usize = 8;
     } else if #[cfg(
         any(
             all(
@@ -62,14 +39,32 @@ cfg_if::cfg_if! {
             )
         )
     )] {
-        pub use config_4::*;
+        const PREFERRED_WIDTH: usize = 4;
     } else {
-        pub use config_1::*;
+        const PREFERRED_WIDTH: usize = 1;
     }
 }
 
-pub type SimdF32 = SimdF32N<{ CHUNK_SIZE }>;
-pub type SimdU32 = SimdU32N<{ CHUNK_SIZE }>;
-pub type SimdMask = SimdMaskN<{ CHUNK_SIZE }>;
-pub type SimdVec3F = [SimdF32; 3];
-pub type SimdVec3U = [SimdU32; 3];
+pub fn preferred_width() -> usize {
+    
+cfg_if::cfg_if! {
+    if #[cfg(
+        all(target_arch = "aarch64", target_feature = "sve")
+    )] {
+        let res: u64 = unsafe {
+            let mut res: u64 = 0;
+            asm!(
+                "cntb {x}, ALL"
+                x = inout(reg) res
+            );
+            res
+        };
+        usize::try_from(res).unwrap()
+    } else {
+        PREFERRED_WIDTH
+    }
+}
+}
+
+
+

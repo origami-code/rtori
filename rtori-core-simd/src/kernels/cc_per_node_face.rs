@@ -1,37 +1,55 @@
 use core::ops::BitOr;
 use core::simd::cmp::SimdPartialEq;
 use core::simd::cmp::SimdPartialOrd;
+use core::simd::LaneCount;
+use core::simd::SupportedLaneCount;
+use nalgebra::RealField;
 use nalgebra::SimdComplexField;
 use nalgebra::SimdValue;
 
 use super::algebra::algebrize;
 use super::operations::gather::gather_vec3f;
 use super::position;
-use crate::kernels::operations::gather::{gather_f32, gather_scalar, gather_vec3f_1};
-use crate::model::{CreaseGeometryLens, CreasesPhysicsLens};
 use crate::simd_atoms::*;
 
-pub struct PerNodeFaceInput<'backer> {
-    pub node_face_node_index: &'backer [SimdU32],
-    pub node_face_face_index: &'backer [SimdU32],
-    pub node_face_count: usize,
+#[derive(Debug)]
+pub struct PerNodeFaceInput<'backer, const L: usize>
+where
+    LaneCount<L>: SupportedLaneCount,
+{
+    pub node_face_node_index: &'backer [SimdU32<L>],
+    pub node_face_face_index: &'backer [SimdU32<L>],
 
-    pub node_positions_unchanging: &'backer [SimdVec3F],
-    pub node_positions_offset: &'backer [SimdVec3F],
-    pub node_velocity: &'backer [SimdVec3F],
+    pub node_positions_unchanging: &'backer [SimdVec3F<L>],
+    pub node_positions_offset: &'backer [SimdVec3F<L>],
+    pub node_velocity: &'backer [SimdVec3F<L>],
 
-    pub face_node_indices: &'backer [SimdVec3U],
-    pub face_normals: &'backer [SimdVec3F],
-    pub face_nominal_angles: &'backer [SimdVec3F],
+    pub face_node_indices: &'backer [SimdVec3U<L>],
+    pub face_normals: &'backer [SimdVec3F<L>],
+    pub face_nominal_angles: &'backer [SimdVec3F<L>],
 
     pub face_stiffness: f32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct PerNodeFaceOutput<const L: usize>
+where
+    LaneCount<L>: SupportedLaneCount,
+{
+    pub force: SimdVec3F<L>,
+    pub error: SimdF32<L>,
+}
+
 const TAU: f32 = 6.283185307179586476925286766559;
 const TOL: f32 = 0.0000001;
-pub fn calculate_node_face_forces<'a>(
-    inputs: &'a PerNodeFaceInput<'a>,
-) -> impl ExactSizeIterator<Item = (SimdVec3F, SimdF32)> + use<'a> {
+
+pub fn calculate_node_face_forces<'a, const L: usize>(
+    inputs: &'a PerNodeFaceInput<'a, L>,
+) -> impl ExactSizeIterator<Item = PerNodeFaceOutput<L>> + use<'a, L>
+where
+    LaneCount<L>: SupportedLaneCount,
+    simba::simd::Simd<core::simd::Simd<f32, L>>: RealField,
+{
     let tol = simba::simd::Simd(SimdF32::splat(TOL));
     let face_stiffness = simba::simd::Simd(SimdF32::splat(inputs.face_stiffness));
     let zero = simba::simd::Simd(SimdF32::splat(0.0));
@@ -144,7 +162,11 @@ pub fn calculate_node_face_forces<'a>(
 
             let force = force_a + force_b + force_c;
             let error = zero;
-            ([force.x.0, force.y.0, force.z.0], error.0)
+
+            PerNodeFaceOutput {
+                force: [force.x.0, force.y.0, force.z.0],
+                error: error.0,
+            }
         },
     )
 }

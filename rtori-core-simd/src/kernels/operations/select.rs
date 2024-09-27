@@ -5,9 +5,9 @@ use crate::simd_atoms::*;
 #[inline]
 pub fn select<const L: usize>(
     mask: core::simd::Mask<i32, L>,
-    true_values: nalgebra::Vector3<simba::simd::Simd<SimdF32N<L>>>,
-    false_values: nalgebra::Vector3<simba::simd::Simd<SimdF32N<L>>>,
-) -> nalgebra::Vector3<simba::simd::Simd<SimdF32N<L>>>
+    true_values: nalgebra::Vector3<simba::simd::Simd<SimdF32<L>>>,
+    false_values: nalgebra::Vector3<simba::simd::Simd<SimdF32<L>>>,
+) -> nalgebra::Vector3<simba::simd::Simd<SimdF32<L>>>
 where
     LaneCount<L>: SupportedLaneCount,
 {
