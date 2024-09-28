@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-#[cfg(feature = "gpu")]
-use rtori_core_wgpu as os_wgpu;
 #[cfg(feature = "cpu")]
 use rtori_core_simd as os_cpu;
+#[cfg(feature = "gpu")]
+use rtori_core_wgpu as os_wgpu;
 
 use os_wgpu::wgpu;
 
@@ -34,48 +34,56 @@ impl Default for BackendFlags {
 #[derive(Debug)]
 struct GPURunner {
     runner: os_wgpu::Runner,
-    primary_queue: wgpu::Queue
+    primary_queue: wgpu::Queue,
 }
 
 impl GPURunner {
-    async fn create(
-        backends: wgpu::Backends
-    )  -> Result<Self, ()> {
+    async fn create(backends: wgpu::Backends) -> Result<Self, ()> {
         // Create a GPU-based one
-        let instance = wgpu::Instance::new(
-            wgpu::InstanceDescriptor{
-                backends: backends,
-                dx12_shader_compiler: wgpu::Dx12Compiler::Dxc { dxil_path: Some(PathBuf::from("dxil.dll")), dxc_path: Some(PathBuf::from("dxcompiler.dll")) },
-                ..Default::default()
-            }
-        );
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: backends,
+            dx12_shader_compiler: wgpu::Dx12Compiler::Dxc {
+                dxil_path: Some(PathBuf::from("dxil.dll")),
+                dxc_path: Some(PathBuf::from("dxcompiler.dll")),
+            },
+            ..Default::default()
+        });
 
-        let adapter = instance.request_adapter(&wgpu::RequestAdapterOptionsBase {
-            power_preference: wgpu::PowerPreference::None,
-            force_fallback_adapter: false,
-            compatible_surface: None
-        }).await;
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptionsBase {
+                power_preference: wgpu::PowerPreference::None,
+                force_fallback_adapter: false,
+                compatible_surface: None,
+            })
+            .await;
 
         if let Some(adapter) = adapter {
             let limits = os_wgpu::Runner::optimize_limits(adapter.limits(), None).unwrap();
-            let features = os_wgpu::Runner::optimize_features(adapter.features(), None, &adapter.get_info());
+            let features =
+                os_wgpu::Runner::optimize_features(adapter.features(), None, &adapter.get_info());
 
-            let res = adapter.request_device(&wgpu::DeviceDescriptor {
-                label: Some("rtori-core-os-solver"),
-                required_features: features,
-                required_limits: limits,
-                memory_hints: Default::default()
-            }, None).await;
+            let res = adapter
+                .request_device(
+                    &wgpu::DeviceDescriptor {
+                        label: Some("rtori-core-os-solver"),
+                        required_features: features,
+                        required_limits: limits,
+                        memory_hints: Default::default(),
+                    },
+                    None,
+                )
+                .await;
 
             res.map(|(device, queue)| {
                 let runner = rtori_core_wgpu::Runner::create(&device);
                 Self {
                     runner,
-                    primary_queue: queue
+                    primary_queue: queue,
                 }
-            }).map_err(|_e| ())
+            })
+            .map_err(|_e| ())
         } else {
-            Err(()) 
+            Err(())
         }
     }
 }
@@ -85,15 +93,12 @@ pub enum Solver {
     #[cfg(feature = "cpu")]
     CPU(os_cpu::Simulator),
     #[cfg(feature = "gpu")]
-    GPU(GPURunner)
+    GPU(GPURunner),
 }
 
 impl Solver {
-    pub async fn create(
-        backends: BackendFlags
-    ) -> Result<Self, ()> {
+    pub async fn create(backends: BackendFlags) -> Result<Self, ()> {
         if backends.intersects(BackendFlags::GPU_ANY) {
-
             let wgpu_backends = if backends.contains(BackendFlags::GPU_ANY) {
                 os_wgpu::wgpu::Backends::all()
             } else {
@@ -116,8 +121,10 @@ impl Solver {
                 }
                 output
             };
-            
-            GPURunner::create(wgpu_backends).await.map(|inner| Self::GPU(inner))
+
+            GPURunner::create(wgpu_backends)
+                .await
+                .map(|inner| Self::GPU(inner))
         } else if backends.intersects(BackendFlags::CPU) {
             // create a CPU-backed one
             unimplemented!()

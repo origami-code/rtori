@@ -68,7 +68,10 @@ impl<'a> Proxy<'a> for FoldAssignmentParser<'a> {
         self.0.get(idx).map(|ea| Self::convert(*ea))
     }
 
-    type Iter = impl Iterator<Item=Self::Output> where Self: 'a;
+    type Iter
+        = impl Iterator<Item = Self::Output>
+    where
+        Self: 'a;
 
     fn iter(&self) -> Self::Iter {
         self.0.iter().map(|ea| Self::convert(*ea))

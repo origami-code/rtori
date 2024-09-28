@@ -5,39 +5,37 @@ use core::{
 
 use nalgebra::RealField;
 
-use crate::{kernels::{self, d_per_node::PerNodeOutput}};
-
-use crate::simd_atoms::{
-    SimdF32,
-    SimdU32,
-    SimdVec3F
+use crate::{
+    kernels::{self, d_per_node::PerNodeOutput},
+    model::NodeFaceSpec,
 };
 
+use crate::simd_atoms::{SimdF32, SimdU32, SimdVec3F};
+
 use crate::model::{
-    NodeGeometry,
-    CreaseFaceIndices,
-    CreaseNeighbourhood,
-    CreasesPhysicsLens
+    CreaseFaceIndices, CreaseNeighbourhood, CreasesPhysicsLens, NodeBeamSpec, NodeGeometry,
 };
 
 /// Should be swapped
 #[repr(transparent)]
 pub struct MemorableInput<'backer, const L: usize>
 where
-    LaneCount<L>: SupportedLaneCount {
+    LaneCount<L>: SupportedLaneCount,
+{
     pub crease_fold_angle: &'backer mut [SimdF32<L>],
 }
 
 pub struct ScratchInput<'backer, const L: usize>
 where
-    LaneCount<L>: SupportedLaneCount {
+    LaneCount<L>: SupportedLaneCount,
+{
     pub crease_physics: &'backer mut [CreasesPhysicsLens<L>],
     pub face_normals: &'backer mut [SimdVec3F<L>],
     pub node_crease_forces: &'backer mut [SimdVec3F<L>],
     pub node_beam_forces: &'backer mut [SimdVec3F<L>],
     pub node_beam_error: &'backer mut [SimdF32<L>],
     pub node_face_forces: &'backer mut [SimdVec3F<L>],
-    pub node_face_error: &'backer mut [SimdF32<L>]
+    pub node_face_error: &'backer mut [SimdF32<L>],
 }
 
 pub struct ReadOnlyInput<'backer, const L: usize>
@@ -77,18 +75,16 @@ where
     pub node_crease_crease_indices: &'backer [SimdU32<L>],
     pub node_crease_node_number: &'backer [SimdU32<L>],
 
-    /* Per-Node-Beams: RO Geometry (todo: merge) */
-    pub node_beam_node_index: &'backer [SimdU32<L>],
-    pub node_beam_length: &'backer [SimdF32<L>],
-    pub node_beam_neighbour_index: &'backer [SimdU32<L>],
+    /* Per-Node-Beams: RO Geometry */
+    pub node_beam_spec: &'backer [NodeBeamSpec<L>],
 
     /* Per-Node-Beams: RO Configs */
+    pub node_beam_length: &'backer [SimdF32<L>],
     pub node_beam_k: &'backer [SimdF32<L>],
     pub node_beam_d: &'backer [SimdF32<L>],
 
-    /* Per-Node-Face: RO (todo: merge) */
-    pub node_face_node_index: &'backer [SimdU32<L>],
-    pub node_face_face_index: &'backer [SimdU32<L>],
+    /* Per-Node-Face: RO */
+    pub node_face_spec: &'backer [NodeFaceSpec<L>],
 
     pub crease_percentage: f32,
     pub dt: f32,
@@ -97,10 +93,10 @@ where
 
 /// The parameter L should be the native vector size of the platform for highest efficiency
 pub fn process<'a, const L: usize>(
-    input: &'a ReadOnlyInput<'a, L>, // RO
-    scratch: &'a mut ScratchInput<'a, L>, // WO
-    memorable: &'a mut MemorableInput<'a, L> // WO
-) -> impl ExactSizeIterator<Item=PerNodeOutput<L>> + use<'a, L>
+    input: &'a ReadOnlyInput<'a, L>,          // RO
+    scratch: &'a mut ScratchInput<'a, L>,     // WO
+    memorable: &'a mut MemorableInput<'a, L>, // WO
+) -> impl ExactSizeIterator<Item = PerNodeOutput<L>> + use<'a, L>
 where
     LaneCount<L>: SupportedLaneCount,
     simba::simd::Simd<core::simd::Simd<f32, L>>: RealField,
@@ -213,18 +209,16 @@ where
         let per_node_beam_error_dest = &mut scratch.node_beam_error;
         {
             let per_node_beam_input = kernels::cb_per_node_beam::PerNodeBeamInput {
-                beam_node_index: &input.node_beam_node_index,
+                beam_spec: &input.node_beam_spec,
                 beam_k: &input.node_beam_k,
                 beam_d: &input.node_beam_d,
                 beam_length: &input.node_beam_length,
-                beam_neighbour_index: &input.node_beam_neighbour_index,
                 node_positions_unchanging: &input.node_positions_unchanging,
                 node_positions_offset: &input.node_position_offset,
                 node_velocity: &input.node_velocity,
             };
 
-            let it =
-                kernels::cb_per_node_beam::calculate_node_beam_forces(&per_node_beam_input);
+            let it = kernels::cb_per_node_beam::calculate_node_beam_forces(&per_node_beam_input);
 
             let forces_dest = per_node_beam_forces_dest;
             assert!(it.len() <= forces_dest.len());
@@ -238,10 +232,7 @@ where
             }
         }
 
-        (
-            &scratch.node_beam_forces,
-            &scratch.node_beam_error
-        )
+        (&scratch.node_beam_forces, &scratch.node_beam_error)
     };
 
     let (per_node_face_forces, per_node_face_error) = {
@@ -249,8 +240,7 @@ where
         let per_node_face_error_dest = &mut scratch.node_face_error;
         {
             let per_node_face_input = kernels::cc_per_node_face::PerNodeFaceInput {
-                node_face_node_index: &input.node_face_node_index,
-                node_face_face_index: &input.node_face_face_index,
+                node_face_spec: &input.node_face_spec,
                 node_positions_unchanging: &input.node_positions_unchanging,
                 node_positions_offset: &input.node_position_offset,
                 node_velocity: &input.node_velocity,
@@ -260,8 +250,7 @@ where
                 face_stiffness: input.face_stiffness,
             };
 
-            let it =
-                kernels::cc_per_node_face::calculate_node_face_forces(&per_node_face_input);
+            let it = kernels::cc_per_node_face::calculate_node_face_forces(&per_node_face_input);
 
             let forces_dest = per_node_face_forces_dest;
             assert!(it.len() <= forces_dest.len());
@@ -274,10 +263,7 @@ where
                 error_dest[i] = output.error;
             }
         }
-        (
-            &scratch.node_face_forces,
-            &scratch.node_face_error
-        )
+        (&scratch.node_face_forces, &scratch.node_face_error)
     };
 
     {

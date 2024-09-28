@@ -10,7 +10,7 @@ pub struct Vertex(pub Handful<[f32; 3]>);
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct VertexInformation {
     #[serde(rename = "vertices_coords")]
-    pub coords:Lockstep<Vertex>,
+    pub coords: Lockstep<Vertex>,
 
     #[serde(rename = "vertices_vertices")]
     pub adjacent: Lockstep<Handful<[VertexIndex; 8]>>,

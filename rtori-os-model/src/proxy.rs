@@ -1,23 +1,26 @@
-use core::{marker::PhantomData, ops::{Deref, DerefMut}};
+use core::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
 pub struct Proxy<Collection, InnerType> {
     collection: Collection,
-    _inner_type: PhantomData<InnerType>
+    _inner_type: PhantomData<InnerType>,
 }
 
 impl<Collection, InnerType> Proxy<Collection, InnerType> {
     pub const fn new(collection: Collection) -> Self {
         Self {
             collection,
-            _inner_type: PhantomData
+            _inner_type: PhantomData,
         }
     }
 }
 
 impl<Collection, InnerType> Deref for Proxy<Collection, InnerType>
 where
-    Collection: Deref<Target=[u8]>,
-    InnerType: bytemuck::AnyBitPattern
+    Collection: Deref<Target = [u8]>,
+    InnerType: bytemuck::AnyBitPattern,
 {
     type Target = [InnerType];
 
@@ -28,8 +31,8 @@ where
 
 impl<Collection, InnerType> DerefMut for Proxy<Collection, InnerType>
 where
-    Collection: DerefMut<Target=[u8]>,
-    InnerType: bytemuck::AnyBitPattern + bytemuck::NoUninit
+    Collection: DerefMut<Target = [u8]>,
+    InnerType: bytemuck::AnyBitPattern + bytemuck::NoUninit,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         bytemuck::cast_slice_mut(&mut self.collection)

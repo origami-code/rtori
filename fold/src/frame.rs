@@ -39,7 +39,7 @@ pub struct FrameCore {
     #[serde(flatten)]
     pub layering: LayerInformation,
 
-    pub uvs: Lockstep<[f32; 2]>
+    pub uvs: Lockstep<[f32; 2]>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]

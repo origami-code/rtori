@@ -10,6 +10,7 @@ use nalgebra::SimdValue;
 use super::algebra::algebrize;
 use super::operations::gather::gather_vec3f;
 use super::position;
+use crate::model::NodeFaceSpec;
 use crate::simd_atoms::*;
 
 #[derive(Debug)]
@@ -17,8 +18,7 @@ pub struct PerNodeFaceInput<'backer, const L: usize>
 where
     LaneCount<L>: SupportedLaneCount,
 {
-    pub node_face_node_index: &'backer [SimdU32<L>],
-    pub node_face_face_index: &'backer [SimdU32<L>],
+    pub node_face_spec: &'backer [NodeFaceSpec<L>],
 
     pub node_positions_unchanging: &'backer [SimdVec3F<L>],
     pub node_positions_offset: &'backer [SimdVec3F<L>],
@@ -55,12 +55,13 @@ where
     let zero = simba::simd::Simd(SimdF32::splat(0.0));
     let zero_force = nalgebra::Vector3::new(zero, zero, zero);
 
-    itertools::izip!(inputs.node_face_node_index, inputs.node_face_face_index).map(
-        move |(node_indices, face_indices)| {
+    inputs.node_face_spec.iter().map(
+        #[inline]
+        move |spec| {
             use super::operations::select;
 
             let face_vertex_indices =
-                super::gather::gather_vec3([&inputs.face_node_indices], *face_indices)[0];
+                super::gather::gather_vec3([&inputs.face_node_indices], spec.face_indices)[0];
 
             // We have the node indices, so we don't need to do that weird magic
             let a = position::get_positions_for_indices(
@@ -101,16 +102,16 @@ where
 
             let [normal, nominal_angles] = super::gather::gather_vec3f(
                 [&inputs.face_normals, &inputs.face_nominal_angles],
-                *face_indices,
+                spec.face_indices,
             );
 
             let angles_diff =
                 algebrize(nominal_angles) - nalgebra::Vector3::new(angles[0], angles[1], angles[2]);
             let angles_diff = angles_diff.scale(face_stiffness);
 
-            let is_a = node_indices.simd_eq(face_vertex_indices[0]);
-            let is_b = node_indices.simd_eq(face_vertex_indices[1]);
-            let is_c = node_indices.simd_eq(face_vertex_indices[2]);
+            let is_a = spec.node_indices.simd_eq(face_vertex_indices[0]);
+            let is_b = spec.node_indices.simd_eq(face_vertex_indices[1]);
+            let is_c = spec.node_indices.simd_eq(face_vertex_indices[2]);
 
             let left = select(is_b, ab, ac);
             let left_length = simba::simd::Simd(is_b.select(ab_length.0, ac_length.0));

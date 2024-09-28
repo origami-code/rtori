@@ -1,4 +1,7 @@
-#
+# TODO
+
+Move model into its own crate (rtori-os-simd-model)
+That way, we can pass SIMD through C API boundary using AoSoA style.
 
 Goal: compile with several different feature sets
 
@@ -19,7 +22,9 @@ armv8 and later
 
 - NEON vfpv=neon-fp-armv8 (same as armv7)
 
-aarch64 (by default, nothing to be done)
+aarch64 (NEON by default, nothing to be done ?)
+
+- sve (scalable up to 2k)
 
 wasm32
 

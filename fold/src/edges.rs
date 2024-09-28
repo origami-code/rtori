@@ -1,6 +1,6 @@
 use crate::common::{self};
-use crate::Lockstep;
 use crate::Handful;
+use crate::Lockstep;
 
 use super::indices::*;
 

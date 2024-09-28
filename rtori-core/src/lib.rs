@@ -6,21 +6,19 @@ use std::sync::Arc;
 pub mod os_solver;
 
 pub struct Context<A> {
-    allocator: A
+    allocator: A,
 }
 
 impl<A: Allocator> Context<A> {
     pub const fn new(allocator: A) -> Self {
-        Self {
-            allocator
-        }
+        Self { allocator }
     }
 }
 
 impl<A> Context<A> {
     pub async fn create_os_solver(
         &self,
-        backends: os_solver::BackendFlags
+        backends: os_solver::BackendFlags,
     ) -> Result<os_solver::Solver, ()> {
         os_solver::Solver::create(backends).await
     }

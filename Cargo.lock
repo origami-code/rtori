@@ -1272,8 +1272,10 @@ dependencies = [
  "cfg-if",
  "itertools",
  "nalgebra",
+ "num-traits",
  "rtori-os-model",
  "simba",
+ "static_assertions",
 ]
 
 [[package]]

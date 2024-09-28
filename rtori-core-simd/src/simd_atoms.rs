@@ -6,7 +6,6 @@ pub type SimdVec3F<const N: usize> = [SimdF32<N>; 3];
 pub type SimdVec3U<const N: usize> = [SimdU32<N>; 3];
 pub type SimdMask<const N: usize> = simd::Mask<i32, { N }>;
 
-
 cfg_if::cfg_if! {
     if #[cfg(
         all(
@@ -14,14 +13,14 @@ cfg_if::cfg_if! {
             target_feature="avx512f"
         )
     )] {
-        const PREFERRED_WIDTH: usize = 16;
+        pub const PREFERRED_WIDTH: usize = 16;
     } else if #[cfg(
         all(
             any(target_arch = "x86", target_arch = "x86_64"),
             target_feature="avx"
         )
     )] {
-        const PREFERRED_WIDTH: usize = 8;
+        pub const PREFERRED_WIDTH: usize = 8;
     } else if #[cfg(
         any(
             all(
@@ -39,32 +38,28 @@ cfg_if::cfg_if! {
             )
         )
     )] {
-        const PREFERRED_WIDTH: usize = 4;
+        pub const PREFERRED_WIDTH: usize = 4;
     } else {
-        const PREFERRED_WIDTH: usize = 1;
+        pub const PREFERRED_WIDTH: usize = 1;
     }
 }
 
 pub fn preferred_width() -> usize {
-    
-cfg_if::cfg_if! {
-    if #[cfg(
-        all(target_arch = "aarch64", target_feature = "sve")
-    )] {
-        let res: u64 = unsafe {
-            let mut res: u64 = 0;
-            asm!(
-                "cntb {x}, ALL"
-                x = inout(reg) res
-            );
-            res
-        };
-        usize::try_from(res).unwrap()
-    } else {
-        PREFERRED_WIDTH
+    cfg_if::cfg_if! {
+        if #[cfg(
+            all(target_arch = "aarch64", target_feature = "sve")
+        )] {
+            let res: u64 = unsafe {
+                let mut res: u64 = 0;
+                asm!(
+                    "cntb {x}, ALL"
+                    x = inout(reg) res
+                );
+                res
+            };
+            usize::try_from(res).unwrap()
+        } else {
+            PREFERRED_WIDTH
+        }
     }
 }
-}
-
-
-

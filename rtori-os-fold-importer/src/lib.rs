@@ -1,14 +1,11 @@
 #![feature(impl_trait_in_assoc_type)]
 #![feature(array_try_map)]
-use creases::{
-    extract_creases, ExtractCreasesError, ExtractCreasesIteratorError,
-};
+use creases::{extract_creases, ExtractCreasesError, ExtractCreasesIteratorError};
 use fold_input::{FoldAssignment, Vector2U, Vector3F, Vector3U};
 pub mod creases;
 pub mod fold_input;
 pub mod triangulation;
 use fold_input::ImportInput;
-
 
 use crate::fold_input::Proxy;
 
@@ -21,11 +18,11 @@ pub enum ImportError {
         vertex_count: u32,
     },
     EdgesVerticesInvalid {
-        edge_index: u32
+        edge_index: u32,
     },
     EdgesVerticesPointingToInvalidVertex {
         edge_index: u32,
-        pointing_to: u32
+        pointing_to: u32,
     },
     CreaseExtractionError(ExtractCreasesIteratorError),
 }
@@ -33,13 +30,13 @@ pub enum ImportError {
 #[derive(Default, Clone, Copy)]
 pub struct ImportConfig {
     pub default_axial_stiffness: f32,
-    pub default_crease_stiffness: f32
+    pub default_crease_stiffness: f32,
 }
 
 pub fn import<'a, O: Output, FI: ImportInput>(
     output: &mut O,
     input: &FI,
-    config: ImportConfig
+    config: ImportConfig,
 ) -> Result<(), ImportError> {
     for i in 0..input.vertices_coords().count() {
         output.set_node_config(
@@ -93,39 +90,38 @@ pub fn import<'a, O: Output, FI: ImportInput>(
         };
         output.set_crease_geometry(crease_index, geometry);
 
-        let crease_stiffness = input
-            .edges_crease_stiffnesses()
-            .map_or(
-                config.default_crease_stiffness,
-                |v| v.get(crease.edge_index as usize)
-                .expect("Crease refers to non-existing edge in edges_crease_stiffnesses")
-            );
+        let crease_stiffness =
+            input
+                .edges_crease_stiffnesses()
+                .map_or(config.default_crease_stiffness, |v| {
+                    v.get(crease.edge_index as usize)
+                        .expect("Crease refers to non-existing edge in edges_crease_stiffnesses")
+                });
 
-        let axial_stiffness = input
-            .edges_axial_stiffnesses()
-            .map_or(
-                config.default_axial_stiffness,
-                |v| v.get(crease.edge_index as usize)
-                    .expect("Crease refers to non-existing edge in edges_axial_stiffnesses")
-            );
-            
-        let vertices 
-            = input
+        let axial_stiffness =
+            input
+                .edges_axial_stiffnesses()
+                .map_or(config.default_axial_stiffness, |v| {
+                    v.get(crease.edge_index as usize)
+                        .expect("Crease refers to non-existing edge in edges_axial_stiffnesses")
+                });
+
+        let vertices = input
             .edges_vertices()
             .get(crease.edge_index as usize)
-            .ok_or(ImportError::EdgesVerticesInvalid{
-                edge_index: crease.edge_index
+            .ok_or(ImportError::EdgesVerticesInvalid {
+                edge_index: crease.edge_index,
             })
-            .and_then(|indices|
-                indices.try_map(|index| 
-                    input.vertices_coords()
-                        .get(index as usize)
-                        .ok_or(ImportError::EdgesVerticesPointingToInvalidVertex{
+            .and_then(|indices| {
+                indices.try_map(|index| {
+                    input.vertices_coords().get(index as usize).ok_or(
+                        ImportError::EdgesVerticesPointingToInvalidVertex {
                             edge_index: crease.edge_index,
-                            pointing_to: index
-                        })
-                )
-            )?;
+                            pointing_to: index,
+                        },
+                    )
+                })
+            })?;
 
         let length = {
             let a = glam::Vec3::from(vertices[0]);
@@ -149,9 +145,7 @@ pub fn import<'a, O: Output, FI: ImportInput>(
     let mut node_creases_offset = 0;
     let mut node_beams_offset = 0;
     let mut node_faces_offset = 0;
-    for (node_index, node_faces) in input.vertices_faces() {
-        
-    }
+    for (node_index, node_faces) in input.vertices_faces() {}
 
     unimplemented!()
 }
