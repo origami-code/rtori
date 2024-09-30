@@ -1,5 +1,7 @@
 use crate::Handful;
 
+pub use alloc::{string::String, vec::Vec};
+
 #[derive(Debug, Clone)]
 pub struct PropertyNotMatchingError {
     pub container: &'static str,
@@ -8,8 +10,8 @@ pub struct PropertyNotMatchingError {
     pub index: usize,
 }
 
-impl std::fmt::Display for PropertyNotMatchingError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for PropertyNotMatchingError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "PropertyNotMatchingError: in object '{}' with {}[{}] existing, the property '{}' exist but does not contain at least {} elements",
@@ -22,9 +24,9 @@ impl std::fmt::Display for PropertyNotMatchingError {
     }
 }
 
-impl std::error::Error for PropertyNotMatchingError {}
+impl core::error::Error for PropertyNotMatchingError {}
 
-pub type PropertyResult<T> = std::result::Result<Option<T>, PropertyNotMatchingError>;
+pub type PropertyResult<T> = core::result::Result<Option<T>, PropertyNotMatchingError>;
 
 pub struct DebugInfo {
     pub container: &'static str,

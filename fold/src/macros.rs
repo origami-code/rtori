@@ -43,7 +43,7 @@ macro_rules! iter_partial_optional {
                 $(
                     s.$field.as_ref().map_or_else(
                         // No such field
-                        || $crate::macros::Either::Right(std::iter::repeat(None)),
+                        || $crate::macros::Either::Right(core::iter::repeat(None)),
                         // Such a field
                         |v| $crate::macros::Either::Left(v.iter().map(|i| Some(i)))
                     )
@@ -142,7 +142,7 @@ macro_rules! iter {
                     $(
                         s.$optional_field.as_ref().map_or_else(
                             // No such field
-                            || $crate::macros::Either::Right(std::iter::repeat(None)),
+                            || $crate::macros::Either::Right(core::iter::repeat(None)),
                             // Such a field
                             |v| $crate::macros::Either::Left(v.iter().map(|i| Some(i)))
                         )

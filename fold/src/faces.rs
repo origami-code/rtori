@@ -38,7 +38,11 @@ pub struct PerFaceInformation<'a> {
 
 impl FaceInformation {
     pub fn query(&self, index: VertexIndex) -> PropertyResult<PerFaceInformation> {
-        let vertices = match self.vertices.as_ref().and_then(|v| v.get(index as usize)) {
+        let vertices = match self
+            .vertices
+            .as_ref()
+            .and_then(|v| v.as_slice().get(index as usize))
+        {
             Some(vertices) => vertices,
             None => return Ok(None),
         };

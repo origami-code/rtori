@@ -1,7 +1,10 @@
+#![cfg_attr(not(test), no_std)]
 #![feature(impl_trait_in_assoc_type)]
 #![feature(coroutines)]
 #![feature(coroutine_trait)]
 #![feature(stmt_expr_attributes)]
+
+extern crate alloc;
 
 mod indices;
 pub use indices::*;
@@ -13,6 +16,7 @@ mod lockstep;
 use lockstep::Lockstep;
 
 mod common;
+use common::*;
 
 mod vertices;
 pub use vertices::*;

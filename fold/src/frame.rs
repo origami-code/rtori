@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::Deref};
+use alloc::borrow::Cow;
 
 use crate::Lockstep;
 
