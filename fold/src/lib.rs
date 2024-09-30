@@ -73,11 +73,39 @@ impl File {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const SIMPLE: &'static str = include_str!("../testdata/simple.fold");
-    #[test]
 
-    pub fn deserialize_simple() {
-        let output = serde_json::from_str::<File>(SIMPLE).unwrap();
-        println!("Output: {:#?}", output);
-    }
+    macro_rules! declare_file(
+        ($const_name:ident, $test_name:ident, $file:expr) => {
+            const $const_name: &'static str = include_str!($file);
+
+            #[test]
+            pub fn $test_name() {
+                let output = serde_json::from_str::<File>($const_name).unwrap();
+                println!("Output: {:#?}", output);
+            }
+        }
+    );
+
+    declare_file!(SIMPLE, deserialize_simple, "../testdata/simple.fold");
+    declare_file!(BOX, deserialize_box, "../testdata/box.fold");
+    declare_file!(
+        DIAGONAL_CP,
+        deserialize_diagonal_cp,
+        "../testdata/diagonal-cp.fold"
+    );
+    declare_file!(
+        DIAGONAL_FOLDED,
+        deserialize_diagonal_folded,
+        "../testdata/diagonal-folded.fold"
+    );
+    declare_file!(
+        ONE_VERTEX,
+        deserialize_one_vertex,
+        "../testdata/one_vertex.fold"
+    );
+    declare_file!(
+        SQUARE_TWIST,
+        deserialize_square_twist,
+        "../testdata/squaretwist.fold"
+    );
 }

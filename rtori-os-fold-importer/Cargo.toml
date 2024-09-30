@@ -3,9 +3,12 @@ name = "rtori-os-fold-importer"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+fold = ["dep:fold"]
+
 [dependencies]
 bytemuck = "1.18.0"
-fold = {path = "../fold", features=["bytemuck"]}
 glam = "0.29.0"
 itertools = "0.13.0"
 rtori-os-model = {path = "../rtori-os-model"}
+fold = {path = "../fold", features=["bytemuck"], optional = true}

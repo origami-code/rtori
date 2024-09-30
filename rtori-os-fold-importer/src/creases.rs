@@ -34,27 +34,6 @@ pub struct ExtractCreasesIteratorError {
     pub kind: ExtractCreasesIteratorErrorKind,
 }
 
-/*
-
-
-    if input.edges.vertices.is_none() {
-        return Err(ExtractCreasesError::EdgeVerticesMissing);
-    } else if input.edges.faces.is_none() {
-        return Err(ExtractCreasesError::EdgeFacesMissing);
-    } else if input.edges.assignments.is_none() {
-        return Err(ExtractCreasesError::EdgeAssignmentsMissing);
-    } else if input.faces.vertices.is_none() {
-        return Err(ExtractCreasesError::FaceVerticesMissing);
-    }
-
-    let iterator = fold::iter!(
-        &input.edges,
-        required(vertices, faces, assignments),
-        optional(fold_angles)
-    )
-    .expect("required fields have already been checked");
-*/
-
 use crate::{
     fold_input::{FoldAssignment, Proxy, Vector2U, Vector3U},
     ImportInput,
@@ -85,7 +64,7 @@ pub fn iter_edges<'a, FI: ExtractCreasesInput>(
         .as_ref()
         .map_or_else(
             // No such field
-            || itertools::Either::Right(std::iter::repeat(None)),
+            || itertools::Either::Right(core::iter::repeat(None)),
             // Such a field
             |v| itertools::Either::Left(v.iter().map(|i| Some(i))),
         )

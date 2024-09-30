@@ -33,23 +33,29 @@ pub struct ImportConfig {
     pub default_crease_stiffness: f32,
 }
 
-pub fn import<'a, O: Output, FI: ImportInput>(
-    output: &mut O,
+pub fn import<'output, O, FI>(
+    output: &'output mut O,
     input: &FI,
     config: ImportConfig,
-) -> Result<(), ImportError> {
+) -> Result<(), ImportError>
+where
+    O: rtori_os_model::LoaderDyn<'output>,
+    FI: ImportInput,
+{
     for i in 0..input.vertices_coords().count() {
-        output.set_node_config(
-            i,
-            NodeConfig {
-                mass: 1.0,
-                fixed: false,
-            },
-        );
+        const BASE: rtori_os_model::NodeConfig = rtori_os_model::NodeConfig {
+            mass: 1.0,
+            fixed: 0,
+            _reserved: [0; 3],
+        };
+        output.copy_node_config(&[BASE], i as u32);
     }
 
     for (face_index, face_vertices) in input.faces_vertices().iter().enumerate() {
-        output.set_face_indices(face_index, face_vertices);
+        output.copy_face_indices(
+            &[rtori_os_model::Vector3U(face_vertices)],
+            face_index as u32,
+        );
 
         {
             let pos_for_node = |vertex_number: u8| {
@@ -74,7 +80,10 @@ pub fn import<'a, O: Output, FI: ImportInput>(
             let y = f32::acos(-1f32 * glam::Vec3::dot(ab, bc));
             let z = f32::acos(glam::Vec3::dot(ac, bc));
 
-            output.set_face_nominal_angles(face_index, [x, y, z]);
+            output.copy_face_nominal_angles(
+                &[rtori_os_model::Vector3F([x, y, z])],
+                face_index as u32,
+            );
         }
     }
 
@@ -82,13 +91,13 @@ pub fn import<'a, O: Output, FI: ImportInput>(
     for (crease_index, res) in creases.enumerate() {
         let crease: creases::Crease = res.map_err(ImportError::CreaseExtractionError)?;
 
-        let geometry = CreaseGeometry {
-            faces: crease.faces.map(|f| CreaseGeometryFace {
+        let geometry = rtori_os_model::CreaseGeometry {
+            faces: crease.faces.map(|f| rtori_os_model::CreaseGeometryFace {
                 face_index: f.face_index,
                 complement_vertex_index: f.complement_vertex_index,
             }),
         };
-        output.set_crease_geometry(crease_index, geometry);
+        output.copy_crease_geometry(&[geometry], crease_index as u32);
 
         let crease_stiffness =
             input
@@ -133,19 +142,19 @@ pub fn import<'a, O: Output, FI: ImportInput>(
         let k = crease_stiffness * length;
         let d = axial_stiffness / length;
 
-        let parameters = CreaseParameters {
+        let parameters = rtori_os_model::CreaseParameters {
             target_fold_angle: crease.fold_angle,
             k,
             d,
         };
 
-        output.set_crease_parameters(crease_index, parameters);
+        output.copy_crease_parameters(&[parameters], crease_index as u32);
     }
 
     let mut node_creases_offset = 0;
     let mut node_beams_offset = 0;
     let mut node_faces_offset = 0;
-    for (node_index, node_faces) in input.vertices_faces() {}
+    //for (node_index, node_faces) in input.vertices_faces() {}
 
     unimplemented!()
 }

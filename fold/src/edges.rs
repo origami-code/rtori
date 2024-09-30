@@ -50,7 +50,7 @@ pub struct EdgeInformation {
     pub vertices: Lockstep<EdgeVertexIndices>,
 
     #[serde(rename = "edges_faces")]
-    pub faces: Lockstep<Handful<[VertexIndex; 3]>>,
+    pub faces: Lockstep<Handful<Option<VertexIndex>, 2>>, // an edge will generally have no more than two faces, though it can happen
 
     #[serde(rename = "edges_assignment")]
     pub assignments: Lockstep<EdgeAssignment>,

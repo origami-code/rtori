@@ -1,4 +1,4 @@
-use fold::{EdgeVertexIndices, Vertex, VertexIndex};
+type VertexIndex = u32;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Triangulate3DError {
@@ -8,13 +8,15 @@ pub enum Triangulate3DError {
 /// The two callbacks (`replace_face_partial` and `append_edge`) are called to create the new model.
 /// - `replace_face_partial` is called for every face created and/or reused (it's a replace operation)
 /// - `append_edge` is called only for new edges as it's not necessary to ever remove edges (it's an append operation)
-pub fn triangulate3d<'a, FuncRF, FuncAE>(
+#[inline]
+pub fn triangulate3d<'a, Vertex, FuncRF, FuncAE>(
     face_vertex_indices: &'a [VertexIndex],
     vertices: &'a [Vertex],
     mut replace_face_partial: FuncRF,
     mut append_edge: FuncAE,
 ) -> Result<(), Triangulate3DError>
 where
+    Vertex: core::ops::Deref<Target = [f32]>,
     FuncRF: FnMut([VertexIndex; 3]),
     FuncAE: FnMut([VertexIndex; 2]),
 {
@@ -36,7 +38,7 @@ where
     } else if vertex_count == 4 {
         let f = |idx| {
             let vertex_index = face_vertex_indices[idx] as usize;
-            let vertices = vertices[vertex_index].0.as_slice();
+            let vertices = &vertices[vertex_index];
             if vertices.len() != 3 {
                 return Err(Triangulate3DError::ErrVertexIsNot3D { vertex_index });
             }

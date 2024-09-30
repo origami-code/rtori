@@ -1,5 +1,3 @@
-use fold::EdgeAssignment;
-
 pub type Vector3F = [f32; 3];
 pub type Vector3U = [u32; 3];
 pub type Vector2U = [u32; 2];
@@ -37,44 +35,10 @@ where
         (*self).get(idx).copied()
     }
 
-    type Iter = std::iter::Copied<std::slice::Iter<'a, T>>;
+    type Iter = core::iter::Copied<core::slice::Iter<'a, T>>;
 
     fn iter<'b>(&'b self) -> Self::Iter {
         (*self).iter().copied()
-    }
-}
-
-pub struct FoldAssignmentParser<'a>(&'a [fold::EdgeAssignment]);
-
-impl FoldAssignmentParser<'_> {
-    fn convert(input: fold::EdgeAssignment) -> FoldAssignment {
-        match input {
-            EdgeAssignment::M => FoldAssignment::Mountain,
-            EdgeAssignment::V => FoldAssignment::Valley,
-            EdgeAssignment::F => FoldAssignment::Facet,
-            _ => FoldAssignment::Other,
-        }
-    }
-}
-
-impl<'a> Proxy<'a> for FoldAssignmentParser<'a> {
-    type Output = FoldAssignment;
-
-    fn count(&self) -> usize {
-        self.0.len()
-    }
-
-    fn get(&self, idx: usize) -> Option<Self::Output> {
-        self.0.get(idx).map(|ea| Self::convert(*ea))
-    }
-
-    type Iter
-        = impl Iterator<Item = Self::Output>
-    where
-        Self: 'a;
-
-    fn iter(&self) -> Self::Iter {
-        self.0.iter().map(|ea| Self::convert(*ea))
     }
 }
 
@@ -182,54 +146,3 @@ macro_rules! subclass {
     };
 }
 pub(crate) use subclass;
-
-/*
-impl<'a> FoldInput for &'a fold::FrameCore {
-    type VerticesCoords = &'a [Vector3F];
-
-    fn vertices_coords(&self) -> Self::VerticesCoords {
-        let coords: &'a [fold::Vertex] = match &self.vertices.coords {
-            Some(coords) => coords.as_slice(),
-            None => return &[],
-        };
-
-        // Vertex is repr(transparent) so it's ok
-        //bytemuck::cast_slice(coords)
-        todo!()
-    }
-
-    type EdgeVertices = &'a [Vector2U];
-
-    fn edges_vertices(&self) -> Self::EdgeVertices {
-        let edge_vertices = match &self.edges.vertices {
-            Some(indices) => indices.as_slice(),
-            None => return &[],
-        };
-
-        bytemuck::cast_slice(edge_vertices)
-    }
-
-    type EdgeAssignment = FoldAssignmentParser<'a>;
-
-    fn edges_assignment(&self) -> Self::EdgeAssignment {
-        FoldAssignmentParser(
-            self.edges
-                .assignments
-                .as_deref()
-                .unwrap_or(&[]),
-        )
-    }
-
-    type FaceVertices = &'a [Vector3U];
-
-    fn faces_vertices(&self) -> Self::FaceVertices {
-        let faces_vertices = match &self.faces.vertices {
-            Some(indices) => indices.as_slice(),
-            None => return &[],
-        };
-
-        //bytemuck::cast_slice(faces_vertices)
-        unimplemented!()
-    }
-}
-*/
