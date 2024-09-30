@@ -40,7 +40,7 @@ use crate::{
 };
 
 crate::fold_input::subclass! {
-    ExtractCreasesInput {
+    pub ExtractCreasesInput {
         edges_vertices -> (req, EdgeVertices, Vector2U);
         edges_faces -> (req, EdgeFaces, &'a [u32]);
         edges_assignment -> (req, EdgeAssignment, FoldAssignment);

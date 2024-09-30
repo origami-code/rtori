@@ -1,3 +1,4 @@
+#![cfg_attr(test, feature(assert_matches))]
 #![feature(impl_trait_in_assoc_type)]
 #![feature(array_try_map)]
 use creases::{extract_creases, ExtractCreasesError, ExtractCreasesIteratorError};

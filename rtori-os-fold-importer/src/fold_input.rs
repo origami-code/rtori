@@ -123,13 +123,13 @@ macro_rules! subclass {
     };
 
     {
-        $subclass_name:ident {
+        $visibility:vis $subclass_name:ident {
             $(
                 $method:ident -> ($mode:tt, $associated:tt, $($ty:tt)+);
             )*
         }
     } => {
-        trait $subclass_name {
+        $visibility trait $subclass_name {
             $(
                 type $associated<'a>: Proxy<'a, Output=$($ty)+>
                     where Self: 'a;
