@@ -126,9 +126,11 @@ where
         'b: 'a;
 }
 
-impl<'backer, const L: usize> rtori_os_model::Extractor<'backer> for Extractor<'backer, L>
+impl<'extractor, 'backer, const L: usize> rtori_os_model::Extractor<'extractor>
+    for Extractor<'backer, L>
 where
     LaneCount<L>: SupportedLaneCount,
+    'backer: 'extractor, // the backing data must live at least as long as the extractor is alive
 {
     fn count_nodes(&self) -> usize {
         self.size.nodes as usize
@@ -144,11 +146,14 @@ where
     >
     where
         Self: 'a,
-        'a: 'backer;
+        'extractor: 'a;
 
-    fn access_node_position<'call>(&'call self) -> Option<Self::NodePositionAccess<'call>>
+    fn access_node_position<'call, 'output>(
+        &'call self,
+    ) -> Option<Self::NodePositionAccess<'output>>
     where
-        'call: 'backer,
+        'call: 'output,
+        'extractor: 'output,
     {
         Some(LoaderReadAccess {
             data: &self.inner.node_position_offset.back,
@@ -168,11 +173,14 @@ where
     >
     where
         Self: 'a,
-        'a: 'backer;
+        'extractor: 'a;
 
-    fn access_node_velocity<'call>(&'call self) -> Option<Self::NodeVelocityAccess<'call>>
+    fn access_node_velocity<'call, 'output>(
+        &'call self,
+    ) -> Option<Self::NodeVelocityAccess<'output>>
     where
-        'call: 'backer,
+        'call: 'output,
+        'extractor: 'output,
     {
         Some(LoaderReadAccess {
             data: &self.inner.node_velocity.back,
@@ -192,11 +200,12 @@ where
     >
     where
         Self: 'a,
-        'a: 'backer;
+        'extractor: 'a;
 
-    fn access_node_error<'call>(&'call self) -> Option<Self::NodeErrorAccess<'call>>
+    fn access_node_error<'call, 'output>(&'call self) -> Option<Self::NodeErrorAccess<'output>>
     where
-        'call: 'backer,
+        'call: 'output,
+        'extractor: 'output,
     {
         Some(LoaderReadAccess {
             data: &self.inner.node_error.0,

@@ -31,22 +31,29 @@ pub trait Loader<'container> {
         Self: 'a,
         'container: 'a;
     fn access_node_position<'call, 'output>(&'call mut self) -> Self::NodePositionAccess<'output>
-        where 'call: 'output, 'container: 'output;
+    where
+        'call: 'output,
+        'container: 'output;
 
     type NodeExternalForcesAccess<'a>: WriteAccess<'a, Vector3F> + 'a
     where
         Self: 'a,
         'container: 'a;
-    fn access_node_external_forces<'call, 'output>(&'call mut self) -> Self::NodeExternalForcesAccess<'output>
+    fn access_node_external_forces<'call, 'output>(
+        &'call mut self,
+    ) -> Self::NodeExternalForcesAccess<'output>
     where
-        'call: 'output, 'container: 'output;
+        'call: 'output,
+        'container: 'output;
 
     type NodeConfigAccess<'a>: WriteAccess<'a, NodeConfig> + 'a
     where
         Self: 'a,
         'container: 'a;
     fn access_node_config<'call, 'output>(&'call mut self) -> Self::NodeConfigAccess<'output>
-    where 'call: 'output, 'container: 'output;
+    where
+        'call: 'output,
+        'container: 'output;
 
     type NodeGeometryAccess<'a>: WriteAccess<'a, NodeGeometry> + 'a
     where
@@ -54,23 +61,30 @@ pub trait Loader<'container> {
         'container: 'a;
     fn access_node_geometry<'call, 'output>(&'call mut self) -> Self::NodeGeometryAccess<'output>
     where
-        'call: 'output, 'container: 'output;
+        'call: 'output,
+        'container: 'output;
 
     type CreaseGeometryAccess<'a>: WriteAccess<'a, CreaseGeometry> + 'a
     where
         Self: 'a,
         'container: 'a;
-    fn access_crease_geometry<'call, 'output>(&'call mut self) -> Self::CreaseGeometryAccess<'output>
+    fn access_crease_geometry<'call, 'output>(
+        &'call mut self,
+    ) -> Self::CreaseGeometryAccess<'output>
     where
-        'call: 'output, 'container: 'output;
+        'call: 'output,
+        'container: 'output;
 
     type CreaseParametersAccess<'a>: WriteAccess<'a, CreaseParameters> + 'a
     where
         Self: 'a,
         'container: 'a;
-    fn access_crease_parameters<'call, 'output>(&'call mut self) -> Self::CreaseParametersAccess<'output>
+    fn access_crease_parameters<'call, 'output>(
+        &'call mut self,
+    ) -> Self::CreaseParametersAccess<'output>
     where
-        'call: 'output, 'container: 'output;
+        'call: 'output,
+        'container: 'output;
 
     type FaceIndicesAccess<'a>: WriteAccess<'a, Vector3U> + 'a
     where
@@ -78,15 +92,19 @@ pub trait Loader<'container> {
         'container: 'a;
     fn access_face_indices<'call, 'output>(&'call mut self) -> Self::FaceIndicesAccess<'output>
     where
-        'call: 'output, 'container: 'output;
+        'call: 'output,
+        'container: 'output;
 
     type FaceNominalAnglesAccess<'a>: WriteAccess<'a, Vector3F> + 'a
     where
         Self: 'a,
         'container: 'a;
-    fn access_face_nominal_angles<'call, 'output>(&'call mut self) -> Self::FaceNominalAnglesAccess<'output>
+    fn access_face_nominal_angles<'call, 'output>(
+        &'call mut self,
+    ) -> Self::FaceNominalAnglesAccess<'output>
     where
-        'call: 'output, 'container: 'output;
+        'call: 'output,
+        'container: 'output;
 
     type NodeCreaseAccess<'a>: WriteAccess<'a, NodeCreaseSpec> + 'a
     where
@@ -94,7 +112,8 @@ pub trait Loader<'container> {
         'container: 'a;
     fn access_node_crease<'call, 'output>(&'call mut self) -> Self::NodeCreaseAccess<'output>
     where
-        'call: 'output, 'container: 'output;
+        'call: 'output,
+        'container: 'output;
 
     type NodeBeamAccess<'a>: WriteAccess<'a, NodeBeamSpec> + 'a
     where
@@ -102,7 +121,8 @@ pub trait Loader<'container> {
         'container: 'a;
     fn access_node_beam<'call, 'output>(&'call mut self) -> Self::NodeBeamAccess<'output>
     where
-        'call: 'output, 'container: 'output;
+        'call: 'output,
+        'container: 'output;
 
     type NodeFaceAccess<'a>: WriteAccess<'a, NodeFaceSpec> + 'a
     where
@@ -110,7 +130,8 @@ pub trait Loader<'container> {
         'container: 'a;
     fn access_node_face<'call, 'output>(&'call mut self) -> Self::NodeFaceAccess<'output>
     where
-        'call: 'output, 'container: 'output;
+        'call: 'output,
+        'container: 'output;
 }
 
 pub trait LoaderDyn<'container> {
@@ -158,11 +179,7 @@ where
         Loader::access_crease_geometry(self).copy_in(from, offset)
     }
 
-    fn copy_crease_parameters(
-        &mut self,
-        from: &[CreaseParameters],
-        offset: CreaseIndex,
-    ) {
+    fn copy_crease_parameters(&mut self, from: &[CreaseParameters], offset: CreaseIndex) {
         Loader::access_crease_parameters(self).copy_in(from, offset)
     }
 

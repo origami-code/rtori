@@ -9,7 +9,7 @@ bitflags! {
         const ERROR = 0b0000_0000_0000_0010;
         const VELOCITY = 0b0000_0000_0000_0100;
         const FOLD_ANGLE = 0b0000_0000_0000_1000;
-        
+
         const ALL = Self::POSITION.bits() | Self::ERROR.bits() | Self::VELOCITY.bits() | Self::FOLD_ANGLE.bits();
     }
 }

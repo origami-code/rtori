@@ -156,17 +156,22 @@ where
 impl<'loader, 'backer, const L: usize> rtori_os_model::Loader<'loader> for Loader<'backer, L>
 where
     LaneCount<L>: SupportedLaneCount,
-    'backer: 'loader
+    'backer: 'loader,
 {
     fn model(&self) -> rtori_os_model::ModelSize {
         self.size
     }
 
     type NodePositionAccess<'a>
-        = Vec3FAccess<'a, L> where Self: 'a, 'loader: 'a;
+        = Vec3FAccess<'a, L>
+    where
+        Self: 'a,
+        'loader: 'a;
 
     fn access_node_position<'call, 'output>(&'call mut self) -> Self::NodePositionAccess<'output>
-    where 'call: 'output, 'loader: 'output
+    where
+        'call: 'output,
+        'loader: 'output,
     {
         LoaderWriteAccess {
             data: &mut self.inner.node_positions_unchanging.data,
@@ -178,11 +183,16 @@ where
 
     type NodeExternalForcesAccess<'a>
         = Vec3FAccess<'a, L>
-    where Self: 'a, 'loader: 'a;
-
-    fn access_node_external_forces<'call, 'output>(&'call mut self) -> Self::NodeExternalForcesAccess<'output>
     where
-        'call: 'output, 'loader: 'output
+        Self: 'a,
+        'loader: 'a;
+
+    fn access_node_external_forces<'call, 'output>(
+        &'call mut self,
+    ) -> Self::NodeExternalForcesAccess<'output>
+    where
+        'call: 'output,
+        'loader: 'output,
     {
         LoaderWriteAccess {
             data: &mut self.inner.node_external_forces,
@@ -210,11 +220,14 @@ where
             rtori_os_model::NodeConfig,
         ),
     >
-    where Self: 'a, 'loader: 'a;
+    where
+        Self: 'a,
+        'loader: 'a;
 
     fn access_node_config<'call, 'output>(&'call mut self) -> Self::NodeConfigAccess<'output>
     where
-        'call: 'output, 'loader: 'output
+        'call: 'output,
+        'loader: 'output,
     {
         #[inline]
         fn set_node_config<const L: usize>(
@@ -248,11 +261,14 @@ where
         &'a mut [crate::model::NodeGeometry<L>],
         impl Fn(&mut &'a mut [crate::model::NodeGeometry<L>], usize, rtori_os_model::NodeGeometry),
     >
-    where Self: 'a, 'loader: 'a;
+    where
+        Self: 'a,
+        'loader: 'a;
 
     fn access_node_geometry<'call, 'output>(&'call mut self) -> Self::NodeGeometryAccess<'output>
     where
-        'call: 'output, 'loader: 'output
+        'call: 'output,
+        'loader: 'output,
     {
         #[inline]
         fn set_node_geometry<const L: usize>(
@@ -300,11 +316,16 @@ where
             rtori_os_model::CreaseGeometry,
         ),
     >
-    where Self: 'a, 'loader: 'a;
-
-    fn access_crease_geometry<'call, 'output>(&'call mut self) -> Self::CreaseGeometryAccess<'output>
     where
-        'call: 'output, 'loader: 'output
+        Self: 'a,
+        'loader: 'a;
+
+    fn access_crease_geometry<'call, 'output>(
+        &'call mut self,
+    ) -> Self::CreaseGeometryAccess<'output>
+    where
+        'call: 'output,
+        'loader: 'output,
     {
         #[inline]
         fn set_crease_geometry<const L: usize>(
@@ -360,11 +381,16 @@ where
             rtori_os_model::CreaseParameters,
         ),
     >
-    where Self: 'a, 'loader: 'a;
-
-    fn access_crease_parameters<'call, 'output>(&'call mut self) -> Self::CreaseParametersAccess<'output>
     where
-        'call: 'output, 'loader: 'output
+        Self: 'a,
+        'loader: 'a;
+
+    fn access_crease_parameters<'call, 'output>(
+        &'call mut self,
+    ) -> Self::CreaseParametersAccess<'output>
+    where
+        'call: 'output,
+        'loader: 'output,
     {
         #[inline]
         fn set_crease_parameters<const L: usize>(
@@ -395,11 +421,14 @@ where
 
     type FaceIndicesAccess<'a>
         = Vec3UAccess<'a, L>
-    where Self: 'a, 'loader: 'a;
+    where
+        Self: 'a,
+        'loader: 'a;
 
     fn access_face_indices<'call, 'output>(&'call mut self) -> Self::FaceIndicesAccess<'output>
     where
-        'call: 'output, 'loader: 'output
+        'call: 'output,
+        'loader: 'output,
     {
         LoaderWriteAccess {
             data: &mut self.inner.face_indices,
@@ -411,11 +440,16 @@ where
 
     type FaceNominalAnglesAccess<'a>
         = Vec3FAccess<'a, L>
-    where Self: 'a, 'loader: 'a;
-
-    fn access_face_nominal_angles<'call, 'output>(&'call mut self) -> Self::FaceNominalAnglesAccess<'output>
     where
-        'call: 'output, 'loader: 'output
+        Self: 'a,
+        'loader: 'a;
+
+    fn access_face_nominal_angles<'call, 'output>(
+        &'call mut self,
+    ) -> Self::FaceNominalAnglesAccess<'output>
+    where
+        'call: 'output,
+        'loader: 'output,
     {
         LoaderWriteAccess {
             data: &mut self.inner.face_nominal_angles,
@@ -443,11 +477,14 @@ where
             rtori_os_model::NodeCreaseSpec,
         ),
     >
-    where Self: 'a, 'loader: 'a;
+    where
+        Self: 'a,
+        'loader: 'a;
 
     fn access_node_crease<'call, 'output>(&'call mut self) -> Self::NodeCreaseAccess<'output>
     where
-        'call: 'output, 'loader: 'output
+        'call: 'output,
+        'loader: 'output,
     {
         #[inline]
         fn set_node_crease<const L: usize>(
@@ -498,11 +535,14 @@ where
             rtori_os_model::NodeBeamSpec,
         ),
     >
-    where Self: 'a, 'loader: 'a;
+    where
+        Self: 'a,
+        'loader: 'a;
 
     fn access_node_beam<'call, 'output>(&'call mut self) -> Self::NodeBeamAccess<'output>
     where
-        'call: 'output, 'loader: 'output
+        'call: 'output,
+        'loader: 'output,
     {
         #[inline]
         fn set_node_beam<const L: usize>(
@@ -552,11 +592,14 @@ where
         &'a mut [crate::model::NodeFaceSpec<L>],
         impl Fn(&mut &'a mut [crate::model::NodeFaceSpec<L>], usize, rtori_os_model::NodeFaceSpec),
     >
-    where Self: 'a, 'loader: 'a;
+    where
+        Self: 'a,
+        'loader: 'a;
 
     fn access_node_face<'call, 'output>(&'call mut self) -> Self::NodeFaceAccess<'output>
     where
-        'call: 'output, 'loader: 'output
+        'call: 'output,
+        'loader: 'output,
     {
         #[inline]
         fn set_node_face<const L: usize>(
