@@ -394,6 +394,17 @@ impl<'backer, const L: usize> State<'backer, L>
 where
     LaneCount<L>: SupportedLaneCount,
 {
+    pub const fn size(&self) -> rtori_os_model::ModelSize {
+        rtori_os_model::ModelSize {
+            nodes: (self.node_positions_unchanging.data.len() * L) as u32,
+            creases: (self.crease_target_fold_angle.data.len() * L) as u32,
+            faces: (self.face_indices.0.len() * L) as u32,
+            node_beams: (self.node_beam_length.data.len() * L) as u32,
+            node_creases: (self.node_crease_crease_indices.0.len() * L) as u32,
+            node_faces: (self.node_face_spec.0.len() * L) as u32,
+        }
+    }
+
     pub const DATA_CHARACTERISTICS: [DataCharacteristic; DATA_COUNT] =
         Self::compute_data_characteristics();
 

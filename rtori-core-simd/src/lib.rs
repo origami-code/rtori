@@ -5,11 +5,13 @@
 #![feature(impl_trait_in_assoc_type)]
 #![feature(generic_const_exprs)]
 #![feature(const_swap)]
+#![feature(type_alias_impl_trait)]
+
 use core::simd::{LaneCount, SupportedLaneCount};
 
 use model::ModelSizes;
-#[macro_use]
 extern crate static_assertions;
+mod extractor;
 mod kernels;
 mod loader;
 mod model;
@@ -127,15 +129,21 @@ where
             .into()
     }
 
-    pub fn load<'a>(&'a mut self) -> impl rtori_os_model::Destination + use<'backer, 'a, L>
+    pub fn load<'a>(&'a mut self) -> impl rtori_os_model::Loader<'a> + use<'backer, 'a, L>
     where
         'a: 'backer,
     {
         loader::Loader::new(&mut self.state)
     }
 
-    pub fn read(&self) -> &model::State<L> {
-        &self.state
+    pub fn extract<'a>(
+        &'a self,
+        _flags: rtori_os_model::ExtractFlags,
+    ) -> impl rtori_os_model::Extractor<'a> + use<'backer, 'a, L>
+    where
+        'a: 'backer,
+    {
+        extractor::Extractor::new(&self.state)
     }
 
     pub fn step_count(&self) -> u64 {

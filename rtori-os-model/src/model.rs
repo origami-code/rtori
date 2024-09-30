@@ -21,7 +21,7 @@ pub struct Vector3U(pub [u32; 3]);
 pub struct Vector2U(pub [u32; 3]);
 
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 #[repr(C)]
 pub struct NodeConfig {
     pub mass: f32,

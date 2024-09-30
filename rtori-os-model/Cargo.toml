@@ -11,3 +11,4 @@ default = ["bytemuck", "define_proxy"]
 [dependencies]
 bytemuck = {version = "1.18.0", optional = true, features = ["derive", "min_const_generics"], default-features = false}
 static_assertions = "1.1.0"
+bitflags = "2.6.0"
