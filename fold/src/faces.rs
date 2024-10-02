@@ -2,12 +2,17 @@ use super::common::*;
 use super::indices::*;
 use crate::Handful;
 
-use itertools::izip;
-use itertools::{Either, Itertools};
-
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize, serde::Serialize)]
 #[repr(transparent)]
 pub struct Face(pub Handful<VertexIndex, 4>);
+
+impl core::ops::Deref for Face {
+    type Target = [VertexIndex];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct FaceInformation {

@@ -67,3 +67,9 @@ pub struct EdgeInformation {
     #[serde(rename = "rtori:edges_axialStiffness")]
     pub axial_stiffness: Lockstep<Option<f32>>,
 }
+
+impl EdgeInformation {
+    pub fn count(&self) -> usize {
+        self.vertices.as_ref().map(|c| c.len()).unwrap_or(0)
+    }
+}

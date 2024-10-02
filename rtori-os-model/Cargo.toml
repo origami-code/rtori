@@ -7,8 +7,10 @@ edition = "2021"
 define_proxy = ["bytemuck"]
 bytemuck = ["dep:bytemuck"]
 default = ["bytemuck", "define_proxy"]
+serde = ["dep:serde"]
 
 [dependencies]
 bytemuck = {version = "1.18.0", optional = true, features = ["derive", "min_const_generics"], default-features = false}
 static_assertions = "1.1.0"
 bitflags = "2.6.0"
+serde = {version = "^1.0.210", optional = true}

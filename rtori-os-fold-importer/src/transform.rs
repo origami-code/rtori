@@ -168,18 +168,23 @@ where
             })
     }
 
-    type Iter = impl core::iter::Iterator<Item = Self::Output>;
+    type Iter = impl core::iter::ExactSizeIterator<Item = Self::Output>;
 
     fn iter(&self) -> Self::Iter {
-        self.0.source.vertices.coords.iter().flat_map(|v| {
-            v.iter().map(|slice| {
+        self.0
+            .source
+            .vertices
+            .coords
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|slice| {
                 if slice.len() != 3 {
                     panic!();
                 }
 
                 [slice[0], slice[1], slice[2]]
             })
-        })
     }
 }
 
@@ -201,7 +206,7 @@ where
         self.0.get(idx).map(|v| v.as_slice())
     }
 
-    type Iter = impl core::iter::Iterator<Item = Self::Output>;
+    type Iter = impl core::iter::ExactSizeIterator<Item = Self::Output>;
 
     fn iter(&self) -> Self::Iter {
         self.0.iter().map(|v| v.as_slice())
@@ -230,7 +235,7 @@ impl<'a> Proxy<'a> for TranslatingProxy<'a> {
     }
 
     type Iter
-        = impl Iterator<Item = Self::Output>
+        = impl ExactSizeIterator<Item = Self::Output>
     where
         Self: 'a;
 
@@ -253,6 +258,18 @@ where
         'call: 'output,
     {
         VerticesCoords(self)
+    }
+
+    type VerticesEdges<'a>
+        = impl crate::input::Proxy<'a, Output = &'a [EdgeIndex]>
+    where
+        Self: 'a;
+
+    fn vertices_edges<'call, 'output>(&'call self) -> Self::VerticesEdges<'output>
+    where
+        'call: 'output,
+    {
+        VecWrapper(self.transformed.vertices_edges.as_slice())
     }
 
     type VerticesFaces<'a>
@@ -289,7 +306,7 @@ where
             }
 
             type Iter
-                = impl Iterator<Item = Self::Output>
+                = impl ExactSizeIterator<Item = Self::Output>
             where
                 Self: 'a;
 
@@ -410,7 +427,7 @@ where
             }
 
             type Iter
-                = impl Iterator<Item = Self::Output>
+                = impl ExactSizeIterator<Item = Self::Output>
             where
                 Self: 'a;
 

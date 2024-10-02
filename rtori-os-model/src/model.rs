@@ -5,21 +5,37 @@ pub type NodeCreaseIndex = u32;
 pub type NodeBeamIndex = u32;
 pub type NodeFaceIndex = u32;
 
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(transparent)
+)]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(transparent)]
 pub struct Vector3F(pub [f32; 3]);
 
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(transparent)
+)]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(transparent)]
 pub struct Vector3U(pub [u32; 3]);
 
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(transparent)
+)]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(transparent)]
 pub struct Vector2U(pub [u32; 3]);
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 #[repr(C)]
@@ -29,6 +45,7 @@ pub struct NodeConfig {
     pub _reserved: [u8; 3],
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(C)]
@@ -37,6 +54,7 @@ pub struct NodeCreasePointer {
     pub count: u32,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(C)]
@@ -45,6 +63,7 @@ pub struct NodeBeamPointer {
     pub count: u32,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(C)]
@@ -53,6 +72,7 @@ pub struct NodeFacePointer {
     pub count: u32,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(C)]
@@ -62,21 +82,17 @@ pub struct NodeGeometry {
     pub face: NodeFacePointer,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct CreaseGeometryFace {
-    pub face_index: u32,
-    pub complement_vertex_index: u32,
-}
-
-#[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy)]
-#[repr(transparent)]
 pub struct CreaseGeometry {
-    pub faces: [CreaseGeometryFace; 2],
+    pub face_indices: [FaceIndex; 2],
+    pub complementary_node_indices: [NodeIndex; 2],
+    pub adjacent_node_indices: [NodeIndex; 2],
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -86,6 +102,7 @@ pub struct CreaseParameters {
     pub target_fold_angle: f32,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -94,6 +111,7 @@ pub struct NodeCreaseSpec {
     pub node_number: u32,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -105,6 +123,7 @@ pub struct NodeBeamSpec {
     pub neighbour_index: u32,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]

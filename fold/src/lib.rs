@@ -35,6 +35,15 @@ pub use frame::*;
 
 pub mod macros;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Field {
+    FacesVertices,
+    EdgesVertices,
+    VerticesFaces,
+    VerticesEdges,
+    VerticesCoords,
+}
+
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct FileMetadata {
     #[serde(rename = "file_spec")]

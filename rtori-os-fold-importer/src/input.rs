@@ -50,6 +50,13 @@ pub trait ImportInput {
     where
         'call: 'output;
 
+    type VerticesEdges<'a>: Proxy<'a, Output = &'a [u32]>
+    where
+        Self: 'a;
+    fn vertices_edges<'call, 'output>(&'call self) -> Self::VerticesEdges<'output>
+    where
+        'call: 'output;
+
     type VerticesFaces<'a>: Proxy<'a, Output = &'a [u32]>
     where
         Self: 'a;

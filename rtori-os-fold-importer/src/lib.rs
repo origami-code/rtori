@@ -16,7 +16,7 @@ use input::{ImportInput, Proxy};
 
 extern crate alloc;
 use alloc::vec::Vec;
-use rtori_os_model::NodeBeamPointer;
+use rtori_os_model::{NodeBeamSpec, NodeCreaseSpec};
 
 #[cfg(feature = "fold")]
 mod transform;
@@ -43,11 +43,13 @@ pub enum ImportError {
 pub struct ImportConfig {
     pub default_axial_stiffness: f32,
     pub default_crease_stiffness: f32,
+    pub default_mass: f32,
+    pub damping_percentage: f32,
 }
 
-pub fn import<'output, O, FI, A>(
+pub fn import<'output, 'input, O, FI, A>(
     output: &'output mut O,
-    input: &FI,
+    input: &'input FI,
     config: ImportConfig,
     allocator: A,
 ) -> Result<(), ImportError>
@@ -104,9 +106,12 @@ where
     let mut node_inv_creases = alloc::vec::Vec::new_in(allocator.clone());
     let mut node_creases = alloc::vec::Vec::new_in(allocator.clone());
 
-    let creases = extract_creases(input);
-    for (crease_index, res) in creases.enumerate() {
+    let creases_iter = extract_creases(input);
+    let mut creases =
+        alloc::vec::Vec::with_capacity_in(input.edges_vertices().count(), allocator.clone());
+    for (crease_index, res) in creases_iter.enumerate() {
         let crease: creases::Crease = res.map_err(ImportError::CreaseExtractionError)?;
+        creases.push(crease);
 
         // We'll need this at several points
         let vertex_indices = input
@@ -127,10 +132,9 @@ where
         });
 
         let geometry = rtori_os_model::CreaseGeometry {
-            faces: crease.faces.map(|f| rtori_os_model::CreaseGeometryFace {
-                face_index: f.face_index,
-                complement_vertex_index: f.complement_vertex_index,
-            }),
+            face_indices: crease.faces.map(|f| f.face_index),
+            complementary_node_indices: crease.faces.map(|f| f.complement_vertex_index),
+            adjacent_node_indices: vertex_indices,
         };
         output.copy_crease_geometry(&[geometry], crease_index as u32);
 
@@ -211,26 +215,215 @@ where
         create_node_index_to_crease_index(node_inv_creases, vertices_count, allocator.clone());
     assert_eq!(node_index_to_inv_crease_indices.len(), vertices_count);
 
-    let mut node_creases_offset = 0;
-    
-    let mut node_beams_offset = 0;
-    let mut node_faces_offset = 0;
-    for (i, (node_creases_for_this_node, node_inv_creases_for_this_node, vertices_faces, vertices_edges)) in itertools::izip!(
+    let mut node_creases_cursor = 0;
+    let mut node_beams_cursor = 0;
+    let mut node_faces_cursor = 0;
+    for (
+        i,
+        (
+            node_creases_for_this_node,
+            node_inv_creases_for_this_node,
+            vertices_faces,
+            vertices_edges,
+        ),
+    ) in itertools::izip!(
         node_index_to_crease_indices,
         node_index_to_inv_crease_indices,
         input.vertices_faces().iter(),
         input.vertices_edges().iter()
     )
     .enumerate()
-    {   
-        let crease_count = node_creases_for_this_node.len() + node_inv_creases_for_this_node.len();
+    {
+        let node_index = i as u32;
+
+        let crease_count =
+            (node_creases_for_this_node.len() + node_inv_creases_for_this_node.len()) as u32;
+        let beams_count = vertices_edges.len() as u32;
+        let faces_count = vertices_faces.len() as u32;
 
         let geometry = rtori_os_model::NodeGeometry {
-            crease: rtori_os_model::NodeCreasePointer { offset: node_creases_offset, count: crease_count },
-            beam: NodeBeamPointer {offset: node_beams_offset, count: vertices_edges.len()},
-            face: NodeBeamPointer {offset: node_faces_offset, count: vertices_faces.len()},
-        }; 
-        output.copy_node_geometry(from, offset);
+            crease: rtori_os_model::NodeCreasePointer {
+                offset: node_creases_cursor,
+                count: crease_count,
+            },
+            beam: rtori_os_model::NodeBeamPointer {
+                offset: node_beams_cursor,
+                count: beams_count,
+            },
+            face: rtori_os_model::NodeFacePointer {
+                offset: node_faces_cursor,
+                count: faces_count,
+            },
+        };
+        output.copy_node_geometry(&[geometry], node_index);
+
+        // Load node-crease
+        {
+            fn process_node_crease<'input, 'loader, L, EV>(
+                output: &mut L,
+                node_index: u32,
+                local_node_crease_index: u32,
+                crease_index: u32,
+                crease: &creases::Crease,
+                edges_vertices: &EV,
+            ) where
+                L: rtori_os_model::LoaderDyn<'loader>,
+                EV: Proxy<'input, Output = [u32; 2]>,
+            {
+                #[derive(Copy, Debug, Clone, PartialEq)]
+                #[repr(u8)]
+                enum NodeNumber {
+                    N1 = 1,
+                    N2 = 2,
+                    N3 = 3,
+                    N4 = 4,
+                }
+
+                fn get_node_number_from_index<'a, EV>(
+                    edges_vertices: &EV,
+                    crease: &creases::Crease,
+                    node_index: u32,
+                ) -> NodeNumber
+                where
+                    EV: Proxy<'a, Output = [u32; 2]>,
+                {
+                    if node_index == crease.faces[0].complement_vertex_index {
+                        NodeNumber::N1
+                    } else if node_index == crease.faces[1].complement_vertex_index {
+                        NodeNumber::N2
+                    } else {
+                        let edge_vertex_indices = edges_vertices
+                            .get(crease.edge_index as usize)
+                            .expect("edge should be defined");
+                        if node_index == edge_vertex_indices[0] {
+                            NodeNumber::N3
+                        } else if node_index == edge_vertex_indices[1] {
+                            NodeNumber::N4
+                        } else {
+                            panic!("Not in crease")
+                        }
+                    }
+                }
+
+                let node_number_for_crease = get_node_number_from_index(
+                    // ...
+                    edges_vertices,
+                    &crease,
+                    node_index,
+                );
+
+                output.copy_node_crease(
+                    &[NodeCreaseSpec {
+                        crease_index: crease_index as u32,
+                        node_number: node_number_for_crease as u8 as u32,
+                    }],
+                    local_node_crease_index as u32,
+                );
+            }
+
+            let edges_vertices = input.edges_vertices();
+            node_creases_for_this_node
+                .into_iter()
+                .map(|crease_index| (crease_index, creases[crease_index]))
+                .enumerate()
+                .for_each(|(local_node_crease_index, (crease_index, crease))| {
+                    process_node_crease(
+                        output,
+                        node_index,
+                        local_node_crease_index as u32,
+                        crease_index as u32,
+                        &crease,
+                        &edges_vertices,
+                    );
+                });
+            node_inv_creases_for_this_node
+                .into_iter()
+                .map(|crease_index| (crease_index, creases[crease_index]))
+                .enumerate()
+                .for_each(|(local_node_crease_index, (crease_index, crease))| {
+                    process_node_crease(
+                        output,
+                        node_index,
+                        local_node_crease_index as u32,
+                        crease_index as u32,
+                        &crease,
+                        &edges_vertices,
+                    );
+                });
+            node_creases_cursor += crease_count;
+        }
+        // Load node-beams
+        {
+            let edge_vertex_indices: <FI as ImportInput>::EdgeVertices<'_> = input.edges_vertices();
+            vertices_edges
+                .iter()
+                .map(|edge_index| {
+                    (
+                        edge_index,
+                        edge_vertex_indices.get(*edge_index as usize).unwrap(),
+                    )
+                })
+                .enumerate()
+                .for_each(
+                    |(node_beam_local_index, (edge_index, edge_vertex_indices))| {
+                        let edge_vertices_coords: [[f32; 3]; 2] = edge_vertex_indices
+                            .map(|index| input.vertices_coords().get(index as usize).unwrap());
+
+                        let length = {
+                            let a = glam::Vec3::from(edge_vertices_coords[0]);
+                            let b = glam::Vec3::from(edge_vertices_coords[1]);
+
+                            (b - a).length()
+                        };
+
+                        let default_mass = config.default_mass;
+                        // TODO: recover the mass of the vertices
+                        let min_mass = default_mass;
+                        let axial_stiffness = input
+                            .edges_axial_stiffnesses()
+                            .and_then(|proxy| proxy.get(*edge_index as usize))
+                            .flatten()
+                            .unwrap_or(config.default_axial_stiffness);
+
+                        let k = axial_stiffness / length;
+                        let d = config.damping_percentage * 2.0 * f32::sqrt(k * min_mass);
+                        let neighbour_index = match edge_vertex_indices {
+                            [a, _] if a == node_index => 0,
+                            [_, a] if a == node_index => 1,
+                            _ => unreachable!(),
+                        };
+
+                        let spec = NodeBeamSpec {
+                            node_index,
+                            k,
+                            d,
+                            length,
+                            neighbour_index,
+                        };
+
+                        output.copy_node_beam(
+                            &[spec],
+                            node_beams_cursor + (node_beam_local_index as u32),
+                        )
+                    },
+                );
+            node_beams_cursor += beams_count;
+        }
+
+        // Load node-faces
+        vertices_faces.iter().enumerate().for_each(
+            |(node_faces_offset_local, node_face_face_index)| {
+                let index = node_faces_cursor + (node_faces_offset_local as u32);
+                output.copy_node_face(
+                    &[rtori_os_model::NodeFaceSpec {
+                        node_index,
+                        face_index: *node_face_face_index,
+                    }],
+                    index,
+                );
+            },
+        );
+        node_faces_cursor += faces_count;
     }
 
     //for (node_index, node_faces) in input.vertices_faces() {}

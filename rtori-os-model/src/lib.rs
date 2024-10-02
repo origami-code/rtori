@@ -15,6 +15,7 @@ pub use loader::*;
 mod extract_flags;
 pub use extract_flags::*;
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd, Eq, Ord)]
 pub struct ModelSize {
     pub nodes: NodeIndex,

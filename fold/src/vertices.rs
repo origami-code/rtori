@@ -7,6 +7,14 @@ use super::Lockstep;
 #[repr(transparent)]
 pub struct Vertex(pub Handful<f32, 3>);
 
+impl core::ops::Deref for Vertex {
+    type Target = [f32];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct VertexInformation {
     #[serde(rename = "vertices_coords")]
