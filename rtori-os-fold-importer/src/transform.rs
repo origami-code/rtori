@@ -130,14 +130,39 @@ where
     pub edges_faces: Vec<Vec<FaceIndex, A>, A>,
 }
 
-pub struct TransformedInput<'a, A>
+impl<A> TransformedData<A>
 where
     A: Allocator,
 {
-    pub transformed: TransformedData<A>,
-    pub source: &'a fold::FrameCore,
+    pub const fn with_fold<'frame>(
+        self,
+        frame: &'frame fold::FrameCore,
+    ) -> TransformedInput<'frame, A> {
+        TransformedInput::new(frame, self)
+    }
 }
 
+pub struct TransformedInput<'frame, A>
+where
+    A: Allocator,
+{
+    pub source: &'frame fold::FrameCore,
+    pub transformed: TransformedData<A>,
+}
+
+impl<'frame, A> TransformedInput<'frame, A>
+where
+    A: Allocator,
+{
+    pub const fn new(fold: &'frame fold::FrameCore, transformed: TransformedData<A>) -> Self {
+        {
+            Self {
+                transformed,
+                source: fold,
+            }
+        }
+    }
+}
 pub struct VerticesCoords<'input, A>(&'input TransformedInput<'input, A>)
 where
     A: Allocator;

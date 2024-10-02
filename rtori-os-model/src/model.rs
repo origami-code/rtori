@@ -11,7 +11,7 @@ pub type NodeFaceIndex = u32;
     serde(transparent)
 )]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(transparent)]
 pub struct Vector3F(pub [f32; 3]);
 
@@ -21,7 +21,7 @@ pub struct Vector3F(pub [f32; 3]);
     serde(transparent)
 )]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(transparent)]
 pub struct Vector3U(pub [u32; 3]);
 
@@ -31,23 +31,41 @@ pub struct Vector3U(pub [u32; 3]);
     serde(transparent)
 )]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(transparent)]
 pub struct Vector2U(pub [u32; 3]);
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(C)]
 pub struct NodeConfig {
     pub mass: f32,
     pub fixed: u8,
+
+    #[cfg_attr(feature = "serde", serde(skip))]
     pub _reserved: [u8; 3],
+}
+
+impl NodeConfig {
+    pub const fn new() -> Self {
+        Self {
+            mass: 1.0,
+            fixed: 0,
+            _reserved: [0; 3],
+        }
+    }
+}
+
+impl Default for NodeConfig {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct NodeCreasePointer {
     pub offset: NodeCreaseIndex,
@@ -56,7 +74,7 @@ pub struct NodeCreasePointer {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct NodeBeamPointer {
     pub offset: NodeBeamIndex,
@@ -65,7 +83,7 @@ pub struct NodeBeamPointer {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct NodeFacePointer {
     pub offset: NodeFaceIndex,
@@ -74,7 +92,7 @@ pub struct NodeFacePointer {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct NodeGeometry {
     pub crease: NodeCreasePointer,
@@ -84,7 +102,7 @@ pub struct NodeGeometry {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct CreaseGeometry {
     pub face_indices: [FaceIndex; 2],
@@ -94,7 +112,7 @@ pub struct CreaseGeometry {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct CreaseParameters {
     pub k: f32,
@@ -104,7 +122,7 @@ pub struct CreaseParameters {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct NodeCreaseSpec {
     pub crease_index: CreaseIndex,
@@ -113,7 +131,7 @@ pub struct NodeCreaseSpec {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct NodeBeamSpec {
     pub node_index: NodeIndex,
@@ -125,7 +143,7 @@ pub struct NodeBeamSpec {
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bytemuck", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 #[repr(C)]
 pub struct NodeFaceSpec {
     pub node_index: NodeIndex,

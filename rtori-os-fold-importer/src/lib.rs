@@ -18,8 +18,8 @@ extern crate alloc;
 use alloc::vec::Vec;
 use rtori_os_model::{NodeBeamSpec, NodeCreaseSpec};
 
-#[cfg(feature = "fold")]
-mod transform;
+#[cfg(any(test, feature = "fold"))]
+pub mod transform;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ImportError {
@@ -47,17 +47,81 @@ pub struct ImportConfig {
     pub damping_percentage: f32,
 }
 
-pub fn import<'output, 'input, O, FI, A>(
-    output: &'output mut O,
+pub fn import<'output, 'input, F, O, FI>(
+    output_factory: F,
+    input: &'input FI,
+    config: ImportConfig,
+) -> Result<O, ImportError>
+where
+    F: FnOnce(rtori_os_model::ModelSize) -> O + 'output,
+    O: rtori_os_model::LoaderDyn<'output> + 'output,
+    FI: ImportInput,
+{
+    import_in(output_factory, input, config, alloc::alloc::Global)
+}
+
+pub fn import_in<'output, 'input, F, O, FI, A>(
+    output_factory: F,
     input: &'input FI,
     config: ImportConfig,
     allocator: A,
-) -> Result<(), ImportError>
+) -> Result<O, ImportError>
 where
-    O: rtori_os_model::LoaderDyn<'output>,
+    F: FnOnce(rtori_os_model::ModelSize) -> O + 'output,
+    O: rtori_os_model::LoaderDyn<'output> + 'output,
     FI: ImportInput,
     A: core::alloc::Allocator + Clone,
 {
+    let mut node_inv_creases = alloc::vec::Vec::new_in(allocator.clone());
+    let mut node_creases = alloc::vec::Vec::new_in(allocator.clone());
+
+    let creases_iter = extract_creases(input);
+    let mut creases =
+        alloc::vec::Vec::with_capacity_in(input.edges_vertices().count(), allocator.clone());
+    for (crease_index, res) in creases_iter.enumerate() {
+        let crease: creases::Crease = res.map_err(ImportError::CreaseExtractionError)?;
+        creases.push(crease);
+
+        // We'll need this at several points
+        let vertex_indices = input
+            .edges_vertices()
+            .get(crease.edge_index as usize)
+            .ok_or(ImportError::EdgesVerticesInvalid {
+                edge_index: crease.edge_index,
+            })?;
+
+        // First, fill in our (crease_index <-> node_index map for inverse creases)
+        vertex_indices.into_iter().for_each(|vertex_index| {
+            node_inv_creases.push((crease_index, vertex_index));
+        });
+
+        // Same but for direct creases
+        crease.faces.iter().for_each(|face| {
+            node_creases.push((crease_index, face.complement_vertex_index));
+        });
+    }
+
+    // Here we have enough information to size up the output
+    let node_creases_count = node_creases.len();
+    let node_beams_count = input
+        .vertices_edges()
+        .iter()
+        .fold(0, |acc, el| acc + el.len());
+    let node_faces_count = input
+        .vertices_faces()
+        .iter()
+        .fold(0, |acc, el| acc + el.len());
+    let model_size = rtori_os_model::ModelSize {
+        nodes: input.vertices_coords().count() as u32,
+        creases: creases.len() as u32,
+        faces: input.faces_vertices().count() as u32,
+        node_beams: node_beams_count as u32,
+        node_creases: node_creases_count as u32,
+        node_faces: node_faces_count as u32,
+    };
+    let mut output_base = output_factory(model_size);
+    let output = &mut output_base;
+
     for i in 0..input.vertices_coords().count() {
         const BASE: rtori_os_model::NodeConfig = rtori_os_model::NodeConfig {
             mass: 1.0,
@@ -103,16 +167,7 @@ where
         }
     }
 
-    let mut node_inv_creases = alloc::vec::Vec::new_in(allocator.clone());
-    let mut node_creases = alloc::vec::Vec::new_in(allocator.clone());
-
-    let creases_iter = extract_creases(input);
-    let mut creases =
-        alloc::vec::Vec::with_capacity_in(input.edges_vertices().count(), allocator.clone());
-    for (crease_index, res) in creases_iter.enumerate() {
-        let crease: creases::Crease = res.map_err(ImportError::CreaseExtractionError)?;
-        creases.push(crease);
-
+    for (crease_index, crease) in creases.iter().enumerate() {
         // We'll need this at several points
         let vertex_indices = input
             .edges_vertices()
@@ -120,16 +175,6 @@ where
             .ok_or(ImportError::EdgesVerticesInvalid {
                 edge_index: crease.edge_index,
             })?;
-
-        // First, fill in our (crease_index <-> node_index map for inverse creases)
-        vertex_indices.into_iter().for_each(|vertex_index| {
-            node_inv_creases.push((crease_index, vertex_index));
-        });
-
-        // Same but for direct creases
-        crease.faces.iter().for_each(|face| {
-            node_creases.push((crease_index, face.complement_vertex_index));
-        });
 
         let geometry = rtori_os_model::CreaseGeometry {
             face_indices: crease.faces.map(|f| f.face_index),
@@ -428,5 +473,5 @@ where
 
     //for (node_index, node_faces) in input.vertices_faces() {}
 
-    unimplemented!()
+    Ok(output_base)
 }
