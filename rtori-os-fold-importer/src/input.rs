@@ -46,47 +46,69 @@ pub trait ImportInput {
     type VerticesCoords<'a>: Proxy<'a, Output = Vector3F>
     where
         Self: 'a;
-    fn vertices_coords<'a>(&'a self) -> Self::VerticesCoords<'a>;
+    fn vertices_coords<'call, 'output>(&'call self) -> Self::VerticesCoords<'output>
+    where
+        'call: 'output;
 
     type VerticesFaces<'a>: Proxy<'a, Output = &'a [u32]>
     where
         Self: 'a;
-    fn vertices_faces<'a>(&'a self) -> Self::VerticesFaces<'a>;
+    fn vertices_faces<'call, 'output>(&'call self) -> Self::VerticesFaces<'output>
+    where
+        'call: 'output;
 
     type EdgeVertices<'a>: Proxy<'a, Output = Vector2U>
     where
         Self: 'a;
-    fn edges_vertices<'a>(&'a self) -> Self::EdgeVertices<'a>;
+    fn edges_vertices<'call, 'output>(&'call self) -> Self::EdgeVertices<'output>
+    where
+        'call: 'output;
 
     type EdgeFaces<'a>: Proxy<'a, Output = &'a [u32]>
     where
         Self: 'a;
-    fn edges_faces<'a>(&'a self) -> Self::EdgeFaces<'a>;
+    fn edges_faces<'call, 'output>(&'call self) -> Self::EdgeFaces<'output>
+    where
+        'call: 'output;
 
     type EdgeAssignment<'a>: Proxy<'a, Output = FoldAssignment>
     where
         Self: 'a;
-    fn edges_assignment<'a>(&'a self) -> Self::EdgeAssignment<'a>;
+    fn edges_assignment<'call, 'output>(&'call self) -> Self::EdgeAssignment<'output>
+    where
+        'call: 'output;
 
-    type EdgeAxialStiffnesses<'a>: Proxy<'a, Output = f32>
+    type EdgeAxialStiffnesses<'a>: Proxy<'a, Output = Option<f32>>
     where
         Self: 'a;
-    fn edges_axial_stiffnesses<'a>(&'a self) -> Option<Self::EdgeAxialStiffnesses<'a>>;
+    fn edges_axial_stiffnesses<'call, 'output>(
+        &'call self,
+    ) -> Option<Self::EdgeAxialStiffnesses<'output>>
+    where
+        'call: 'output;
 
-    type EdgeCreaseStiffnesses<'a>: Proxy<'a, Output = f32>
+    type EdgeCreaseStiffnesses<'a>: Proxy<'a, Output = Option<f32>>
     where
         Self: 'a;
-    fn edges_crease_stiffnesses<'a>(&'a self) -> Option<Self::EdgeCreaseStiffnesses<'a>>;
+    fn edges_crease_stiffnesses<'call, 'output>(
+        &'call self,
+    ) -> Option<Self::EdgeCreaseStiffnesses<'output>>
+    where
+        'call: 'output;
 
     type EdgeFoldAngles<'a>: Proxy<'a, Output = f32>
     where
         Self: 'a;
-    fn edges_fold_angles<'a>(&'a self) -> Option<Self::EdgeFoldAngles<'a>>;
+    fn edges_fold_angles<'call, 'output>(&'call self) -> Option<Self::EdgeFoldAngles<'output>>
+    where
+        'call: 'output;
 
     type FaceVertices<'a>: Proxy<'a, Output = Vector3U>
     where
         Self: 'a;
-    fn faces_vertices<'a>(&'a self) -> Self::FaceVertices<'a>;
+    fn faces_vertices<'call, 'output>(&'call self) -> Self::FaceVertices<'output>
+    where
+        'call: 'output;
 }
 
 macro_rules! subclass {
@@ -94,22 +116,22 @@ macro_rules! subclass {
         @trait_decl
         $method:ident -> (req, $associated:tt)
     } => {
-        fn $method<'a>(&'a self) -> Self::$associated<'a>;
+        fn $method<'call, 'output>(&'call self) -> Self::$associated<'output> where 'call: 'output;
     };
 
     {
         @trait_decl
         $method:ident -> (opt, $associated:tt)
     } => {
-        fn $method<'a>(&'a self) -> Option<Self::$associated<'a>>;
+        fn $method<'call, 'output>(&'call self) -> Option<Self::$associated<'output>> where 'call: 'output;
     };
 
     {
         @trait_def
         $method:ident -> (req, $associated:tt)
     } => {
-        fn $method<'a>(&'a self) -> Self::$associated<'a>{
-            ImportInput::$method(self)
+        fn $method<'call, 'output>(&'call self) -> Self::$associated<'output> where 'call: 'output{
+            $crate::input::ImportInput::$method(self)
         }
     };
 
@@ -117,8 +139,8 @@ macro_rules! subclass {
         @trait_def
         $method:ident -> (opt, $associated:tt)
     } => {
-        fn $method<'a>(&'a self) -> Option<Self::$associated<'a>>{
-            ImportInput::$method(self)
+        fn $method<'call, 'output>(&'call self) -> Option<Self::$associated<'output>> where 'call: 'output{
+            $crate::input::ImportInput::$method(self)
         }
     };
 
@@ -133,14 +155,14 @@ macro_rules! subclass {
             $(
                 type $associated<'a>: Proxy<'a, Output=$($ty)+>
                     where Self: 'a;
-                $crate::fold_input::subclass!{@trait_decl $method -> ($mode, $associated)}
+                $crate::input::subclass!{@trait_decl $method -> ($mode, $associated)}
             )+
         }
 
         impl<T> $subclass_name for T where T: ImportInput {
             $(
                 type $associated<'a> = <T as ImportInput>::$associated<'a> where T: 'a;
-                $crate::fold_input::subclass!{@trait_def $method -> ($mode, $associated)}
+                $crate::input::subclass!{@trait_def $method -> ($mode, $associated)}
             )+
         }
     };

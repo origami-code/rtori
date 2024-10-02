@@ -1,3 +1,5 @@
+use rtori_os_model::FaceIndex;
+
 type VertexIndex = u32;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -77,9 +79,64 @@ where
     }
 }
 
+extern crate alloc;
+
+#[derive(Debug, Clone, Copy)]
+pub struct TriangulatedFace {
+    pub indices: [VertexIndex; 3],
+    pub replacing: FaceIndex,
+}
+
+#[derive(Debug, Clone)]
+pub struct TriangulatedDiff<A>
+where
+    A: core::alloc::Allocator,
+{
+    pub faces: alloc::vec::Vec<TriangulatedFace, A>,
+    pub additional_edges: alloc::vec::Vec<[VertexIndex; 2], A>,
+}
+
+pub fn triangulate3d_collect<Vertex, Face, A>(
+    face_vertex_indices: &[Face],
+    vertices: &[Vertex],
+    allocator: A,
+) -> Result<TriangulatedDiff<A>, Triangulate3DError>
+where
+    Vertex: core::ops::Deref<Target = [f32]>,
+    Face: core::ops::Deref<Target = [u32]>,
+    A: core::alloc::Allocator + Clone,
+{
+    let mut faces = alloc::vec::Vec::new_in(allocator.clone());
+    let mut additional_edges = alloc::vec::Vec::new_in(allocator);
+
+    face_vertex_indices
+        .as_ref()
+        .iter()
+        .enumerate()
+        .try_for_each(|(i, face)| {
+            let replace_face = |face: [VertexIndex; 3]| {
+                faces.push(TriangulatedFace {
+                    indices: face,
+                    replacing: i as u32,
+                })
+            };
+
+            let append_edge = |edge: [VertexIndex; 2]| additional_edges.push(edge);
+
+            crate::triangulation::triangulate3d(&face, vertices, replace_face, append_edge)
+        })?;
+
+    Ok(TriangulatedDiff {
+        faces,
+        additional_edges,
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use std::assert_matches::assert_matches;
+    use core::assert_matches::assert_matches;
+    extern crate alloc;
+    use alloc::vec::Vec;
 
     #[test]
     fn test_triangulate_invalid_vertex_count() {

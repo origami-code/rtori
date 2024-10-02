@@ -35,11 +35,11 @@ pub struct ExtractCreasesIteratorError {
 }
 
 use crate::{
-    fold_input::{FoldAssignment, Proxy, Vector2U, Vector3U},
+    input::{FoldAssignment, Proxy, Vector2U, Vector3U},
     ImportInput,
 };
 
-crate::fold_input::subclass! {
+crate::input::subclass! {
     pub ExtractCreasesInput {
         edges_vertices -> (req, EdgeVertices, Vector2U);
         edges_faces -> (req, EdgeFaces, &'a [u32]);

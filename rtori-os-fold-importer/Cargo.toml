@@ -5,6 +5,8 @@ edition = "2021"
 
 [features]
 fold = ["dep:fold"]
+#todo: remove
+default = ["fold"]
 
 [dependencies]
 bytemuck = "1.18.0"
