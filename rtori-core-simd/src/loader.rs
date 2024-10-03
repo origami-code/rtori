@@ -345,10 +345,9 @@ where
             let (target_face_indices, _) = scope_access::<L, _>(&mut data.1, crease_idx);
 
             for i in 0..2 {
-                let face_spec = geometry.faces[i];
                 target_complement.complement_node_indices[i][inner_index] =
-                    face_spec.complement_vertex_index;
-                target_face_indices.0[i][inner_index] = face_spec.face_index;
+                    geometry.complementary_node_indices[i];
+                target_face_indices.0[i][inner_index] = geometry.face_indices[i];
             }
         }
 
