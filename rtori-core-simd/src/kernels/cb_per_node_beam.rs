@@ -41,7 +41,7 @@ pub fn calculate_node_beam_forces<'a, const L: usize>(
 ) -> impl ExactSizeIterator<Item = PerNodeBeamOutput<L>> + use<'a, L>
 where
     LaneCount<L>: SupportedLaneCount,
-    simba::simd::Simd<core::simd::Simd<f32, L>>: RealField,
+    simba::simd::Simd<core::simd::Simd<f32, L>>: nalgebra::SimdRealField,
 {
     itertools::izip!(
         inputs.beam_spec,

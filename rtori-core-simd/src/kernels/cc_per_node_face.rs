@@ -1,14 +1,9 @@
-use core::ops::BitOr;
 use core::simd::cmp::SimdPartialEq;
-use core::simd::cmp::SimdPartialOrd;
 use core::simd::LaneCount;
 use core::simd::SupportedLaneCount;
-use nalgebra::RealField;
 use nalgebra::SimdComplexField;
-use nalgebra::SimdValue;
 
 use super::algebra::algebrize;
-use super::operations::gather::gather_vec3f;
 use super::position;
 use crate::model::NodeFaceSpec;
 use crate::simd_atoms::*;
@@ -48,7 +43,7 @@ pub fn calculate_node_face_forces<'a, const L: usize>(
 ) -> impl ExactSizeIterator<Item = PerNodeFaceOutput<L>> + use<'a, L>
 where
     LaneCount<L>: SupportedLaneCount,
-    simba::simd::Simd<core::simd::Simd<f32, L>>: RealField,
+    simba::simd::Simd<core::simd::Simd<f32, L>>: nalgebra::SimdRealField,
 {
     let tol = simba::simd::Simd(SimdF32::splat(TOL));
     let face_stiffness = simba::simd::Simd(SimdF32::splat(inputs.face_stiffness));

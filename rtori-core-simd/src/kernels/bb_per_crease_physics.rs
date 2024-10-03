@@ -25,7 +25,7 @@ pub fn calculate_crease_physics<'a, const L: usize>(
 ) -> impl ExactSizeIterator<Item = CreasesPhysicsLens<L>> + use<'a, L>
 where
     LaneCount<L>: SupportedLaneCount,
-    simba::simd::Simd<core::simd::Simd<f32, L>>: RealField,
+    simba::simd::Simd<core::simd::Simd<f32, L>>: nalgebra::SimdRealField,
 {
     // First check
     let tol = simba::simd::Simd(SimdF32::splat(TOL));

@@ -2,7 +2,7 @@ use core::simd::{cmp::SimdPartialEq, LaneCount, SupportedLaneCount};
 
 use nalgebra::{SimdComplexField, SimdRealField};
 
-use super::{algebra::algebrize, input_iterator::InputIteratorItem};
+use super::algebra::algebrize;
 use crate::simd_atoms::*;
 
 #[derive(Debug)]

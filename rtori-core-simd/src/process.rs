@@ -1,9 +1,4 @@
-use core::{
-    error,
-    simd::{LaneCount, SupportedLaneCount},
-};
-
-use nalgebra::RealField;
+use core::simd::{LaneCount, SupportedLaneCount};
 
 use crate::{
     kernels::{self, d_per_node::PerNodeOutput},
@@ -99,7 +94,7 @@ pub fn process<'a, const L: usize>(
 ) -> impl ExactSizeIterator<Item = PerNodeOutput<L>> + use<'a, L>
 where
     LaneCount<L>: SupportedLaneCount,
-    simba::simd::Simd<core::simd::Simd<f32, L>>: RealField,
+    simba::simd::Simd<core::simd::Simd<f32, L>>: nalgebra::SimdRealField,
 {
     // This can be run in its own thread
     let (face_normals, fold_angles) = {

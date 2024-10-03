@@ -3,6 +3,11 @@ name = "rtori-core-simd"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+alloc = []
+# tmp
+default = ["alloc"]
+
 [dependencies]
 itertools = {version = "0.13.0",  default-features = false}
 nalgebra = "0.33.0"

@@ -1,9 +1,11 @@
+#![no_std]
 #![feature(allocator_api)]
 
-use std::alloc::Allocator;
-use std::sync::Arc;
-
+use core::alloc::Allocator;
+extern crate alloc;
 pub mod os_solver;
+
+pub use fold;
 
 pub struct Context<A> {
     allocator: A,

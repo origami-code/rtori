@@ -28,16 +28,6 @@ pub use node_crease_pointers::*;
 mod crease_face_indices;
 pub use crease_face_indices::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
-pub struct ModelSizes {
-    pub node_count: usize,
-    pub crease_count: usize,
-    pub face_count: usize,
-    pub node_crease_count: usize,
-    pub node_beam_count: usize,
-    pub node_face_count: usize,
-}
-
 /// Geometry Data: just a transparent passthrough
 #[derive(Debug, Default)]
 #[repr(transparent)]
@@ -468,7 +458,7 @@ where
     }
 
     pub fn from_slice(
-        model_size: &ModelSizes,
+        model_size: &rtori_os_model::ModelSize,
         slice: &'backer mut [u8],
     ) -> Result<(Self, &'backer mut [u8]), ()> {
         use DataConcept::*;
@@ -481,13 +471,13 @@ where
             let characteristic = Self::DATA_CHARACTERISTICS[idx];
 
             let item_count = match characteristic.concept {
-                PerNode => model_size.node_count,
-                PerCrease => model_size.crease_count,
-                PerFace => model_size.face_count,
-                PerNodeCrease => model_size.node_crease_count,
-                PerNodeBeam => model_size.node_beam_count,
-                PerNodeFace => model_size.node_face_count,
-            };
+                PerNode => model_size.nodes,
+                PerCrease => model_size.creases,
+                PerFace => model_size.faces,
+                PerNodeCrease => model_size.node_creases,
+                PerNodeBeam => model_size.node_beams,
+                PerNodeFace => model_size.node_faces,
+            } as usize;
 
             // First, find at what point do we split between the first and 2nd slice
             let ptr = rest.as_ptr();
@@ -602,7 +592,7 @@ where
         Ok((output, rest))
     }
 
-    pub const fn required_backing_size(model_size: &ModelSizes) -> usize {
+    pub const fn required_backing_size(model_size: &rtori_os_model::ModelSize) -> usize {
         use DataConcept::*;
 
         let mut cursor = 0usize;
@@ -615,13 +605,13 @@ where
             let characteristic = Self::DATA_CHARACTERISTICS[idx];
 
             let item_count = match characteristic.concept {
-                PerNode => model_size.node_count,
-                PerCrease => model_size.crease_count,
-                PerFace => model_size.face_count,
-                PerNodeCrease => model_size.node_crease_count,
-                PerNodeBeam => model_size.node_beam_count,
-                PerNodeFace => model_size.node_face_count,
-            };
+                PerNode => model_size.nodes,
+                PerCrease => model_size.creases,
+                PerFace => model_size.faces,
+                PerNodeCrease => model_size.node_creases,
+                PerNodeBeam => model_size.node_beams,
+                PerNodeFace => model_size.node_faces,
+            } as usize;
 
             let aligned = cursor.next_multiple_of(characteristic.unit_alignment);
             cursor = aligned + item_count * characteristic.unit_size;

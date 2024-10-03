@@ -44,6 +44,8 @@ cfg_if::cfg_if! {
     }
 }
 
+static_assertions::assert_impl_all!(simba::simd::Simd<SimdF32<{PREFERRED_WIDTH}>>: nalgebra::SimdRealField);
+
 pub fn preferred_width() -> usize {
     cfg_if::cfg_if! {
         if #[cfg(

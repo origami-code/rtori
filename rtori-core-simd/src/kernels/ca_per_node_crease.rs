@@ -3,8 +3,6 @@ use core::simd::cmp::SimdPartialOrd;
 use core::simd::LaneCount;
 use core::simd::SupportedLaneCount;
 
-use nalgebra::RealField;
-
 use super::algebra::algebrize;
 use crate::kernels::operations::gather::{gather_f32, gather_scalar, gather_vec3f_1};
 use crate::model::CreaseFaceIndices;
@@ -44,7 +42,7 @@ pub fn calculate_node_crease_forces<'a, const L: usize>(
 ) -> impl ExactSizeIterator<Item = SimdVec3F<L>> + use<'a, L>
 where
     LaneCount<L>: SupportedLaneCount,
-    simba::simd::Simd<core::simd::Simd<f32, L>>: RealField,
+    simba::simd::Simd<core::simd::Simd<f32, L>>: nalgebra::SimdRealField,
 {
     itertools::izip!(inputs.node_crease_indices, inputs.node_crease_node_number).map(
         |(crease_indices, node_number)| {

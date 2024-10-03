@@ -15,13 +15,16 @@ gpu_native = ["gpu", "vulkan", "metal", "dx12"]
 gpu_web = ["gpu", "webgpu"]
 gpu = ["dep:rtori-core-wgpu"]
 
-default = ["gpu_native"] #, "cpu"]
+default = ["cpu"] #, "cpu"]
 
 [dependencies]
 fold = {path = "../fold"}
-rtori-core-simd = {path = "../rtori-core-simd", optional = true}
+rtori-core-simd = {path = "../rtori-core-simd", optional = true, feature = ["alloc"]}
 rtori-core-wgpu = {path = "../rtori-core-wgpu", optional = true}
+rtori-os-fold-importer = {path = "../rtori-os-fold-importer"}
+rtori-os-model = {path = "../rtori-os-model"}
 bitflags = "2.6.0"
+serde_json = {version = "1.0.128", default-features = false, features = ["alloc"]}
 
 # for dx12_interop
 # windows = {version = "0.58", default-features = false, optional = true}

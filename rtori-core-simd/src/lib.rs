@@ -6,10 +6,10 @@
 #![feature(generic_const_exprs)]
 #![feature(const_swap)]
 #![feature(type_alias_impl_trait)]
+#![cfg_attr(feature = "alloc", feature(allocator_api))]
 
 use core::simd::{LaneCount, SupportedLaneCount};
 
-use model::ModelSizes;
 extern crate static_assertions;
 mod extractor;
 mod kernels;
@@ -17,7 +17,11 @@ mod loader;
 mod model;
 mod process;
 mod simd_atoms;
+pub use simd_atoms::PREFERRED_WIDTH;
+#[cfg(feature = "alloc")]
+pub mod owned;
 
+#[derive(Debug)]
 pub struct Runner<'backer, const L: usize = { simd_atoms::PREFERRED_WIDTH }>
 where
     LaneCount<L>: SupportedLaneCount,
@@ -29,7 +33,7 @@ where
 impl<'backer, const L: usize> Runner<'backer, L>
 where
     LaneCount<L>: SupportedLaneCount,
-    simba::simd::Simd<core::simd::Simd<f32, L>>: simba::scalar::RealField,
+    simba::simd::Simd<core::simd::Simd<f32, L>>: simba::simd::SimdRealField,
 {
     pub fn step(&mut self) -> Result<(), ()> {
         let input = process::ReadOnlyInput {
@@ -100,12 +104,13 @@ where
         Ok(())
     }
 
-    pub fn query_backing_size_requirement(sizes: &ModelSizes) -> usize {
+    pub fn query_backing_size_requirement(sizes: &rtori_os_model::ModelSize) -> usize {
         crate::model::State::required_backing_size(sizes)
     }
 
+    /// Returns what is unused
     pub fn from_backing_slice(
-        sizes: &ModelSizes,
+        sizes: &rtori_os_model::ModelSize,
         backing_slice: &'backer mut [u8],
     ) -> Result<(Self, &'backer mut [u8]), usize> {
         crate::model::State::from_slice(sizes, backing_slice)
@@ -114,7 +119,7 @@ where
     }
 
     pub fn from_allocator_func<'a, F>(
-        sizes: &ModelSizes,
+        sizes: &rtori_os_model::ModelSize,
         allocator: F,
     ) -> Option<(Self, &'backer mut [u8])>
     where
