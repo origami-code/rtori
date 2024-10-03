@@ -39,12 +39,27 @@ pub enum ImportError {
     CreaseExtractionError(ExtractCreasesIteratorError),
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct ImportConfig {
     pub default_axial_stiffness: f32,
     pub default_crease_stiffness: f32,
     pub default_mass: f32,
     pub damping_percentage: f32,
+}
+
+impl ImportConfig {
+    pub const DEFAULT: Self = Self {
+        default_axial_stiffness: 20.0,
+        default_crease_stiffness: 0.7,
+        default_mass: 1.0,
+        damping_percentage: 0.45,
+    };
+}
+
+impl Default for ImportConfig {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
 }
 
 pub fn import<'output, 'input, F, O, FI>(
@@ -102,7 +117,7 @@ where
     }
 
     // Here we have enough information to size up the output
-    let node_creases_count = node_creases.len();
+    let node_creases_count = node_creases.len() + node_inv_creases.len();
     let node_beams_count = input
         .vertices_edges()
         .iter()
@@ -122,7 +137,9 @@ where
     let mut output_base = output_factory(model_size);
     let output = &mut output_base;
 
-    for i in 0..input.vertices_coords().count() {
+    for (i, vertex) in input.vertices_coords().iter().enumerate() {
+        output.copy_node_position(&[rtori_os_model::Vector3F(vertex)], i as u32);
+
         const BASE: rtori_os_model::NodeConfig = rtori_os_model::NodeConfig {
             mass: 1.0,
             fixed: 0,
@@ -152,9 +169,9 @@ where
             };
 
             let [a, b, c] = [0, 1, 2].try_map(pos_for_node)?;
-            let ab = glam::Vec3::from(b) - glam::Vec3::from(a);
-            let ac = glam::Vec3::from(c) - glam::Vec3::from(a);
-            let bc = glam::Vec3::from(c) - glam::Vec3::from(b);
+            let ab = (glam::Vec3::from(b) - glam::Vec3::from(a)).normalize();
+            let ac = (glam::Vec3::from(c) - glam::Vec3::from(a)).normalize();
+            let bc = (glam::Vec3::from(c) - glam::Vec3::from(b)).normalize();
 
             let x = f32::acos(glam::Vec3::dot(ab, ac));
             let y = f32::acos(-1f32 * glam::Vec3::dot(ab, bc));
@@ -191,13 +208,13 @@ where
             })
             .unwrap_or(config.default_crease_stiffness);
 
-        let axial_stiffness = input
-            .edges_axial_stiffnesses()
-            .and_then(|v| {
-                v.get(crease.edge_index as usize)
-                    .expect("Crease refers to non-existing edge in edges_axial_stiffnesses")
-            })
-            .unwrap_or(config.default_axial_stiffness);
+        /*let axial_stiffness = input
+        .edges_axial_stiffnesses()
+        .and_then(|v| {
+            v.get(crease.edge_index as usize)
+                .expect("Crease refers to non-existing edge in edges_axial_stiffnesses")
+        })
+        .unwrap_or(config.default_axial_stiffness);*/
 
         let vertices = vertex_indices.try_map(|index| {
             input.vertices_coords().get(index as usize).ok_or(
@@ -216,7 +233,7 @@ where
         };
 
         let k = crease_stiffness * length;
-        let d = axial_stiffness / length;
+        let d = 0.0f32; //axial_stiffness / length;
 
         let parameters = rtori_os_model::CreaseParameters {
             target_fold_angle: crease.fold_angle,
@@ -367,6 +384,7 @@ where
             }
 
             let edges_vertices = input.edges_vertices();
+            let node_creases_len = node_creases_for_this_node.len();
             node_creases_for_this_node
                 .into_iter()
                 .map(|crease_index| (crease_index, creases[crease_index]))
@@ -375,12 +393,15 @@ where
                     process_node_crease(
                         output,
                         node_index,
-                        local_node_crease_index as u32,
+                        node_creases_cursor + local_node_crease_index as u32,
                         crease_index as u32,
                         &crease,
                         &edges_vertices,
                     );
                 });
+            node_creases_cursor += node_creases_len as u32;
+
+            let node_inv_creases_len = node_inv_creases_for_this_node.len();
             node_inv_creases_for_this_node
                 .into_iter()
                 .map(|crease_index| (crease_index, creases[crease_index]))
@@ -389,13 +410,13 @@ where
                     process_node_crease(
                         output,
                         node_index,
-                        local_node_crease_index as u32,
+                        node_creases_cursor + local_node_crease_index as u32,
                         crease_index as u32,
                         &crease,
                         &edges_vertices,
                     );
                 });
-            node_creases_cursor += crease_count;
+            node_creases_cursor += node_inv_creases_len as u32;
         }
         // Load node-beams
         {
@@ -432,11 +453,13 @@ where
 
                         let k = axial_stiffness / length;
                         let d = config.damping_percentage * 2.0 * f32::sqrt(k * min_mass);
-                        let neighbour_index = match edge_vertex_indices {
+                        let this_node_index_in_edge = match edge_vertex_indices {
                             [a, _] if a == node_index => 0,
                             [_, a] if a == node_index => 1,
                             _ => unreachable!(),
                         };
+                        let neighbour_index_in_edge = 1 - this_node_index_in_edge;
+                        let neighbour_index = edge_vertex_indices[neighbour_index_in_edge];
 
                         let spec = NodeBeamSpec {
                             node_index,

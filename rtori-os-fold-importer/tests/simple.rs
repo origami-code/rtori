@@ -35,8 +35,10 @@ fn test_import() {
         store
     };
 
-    assert_eq!(
-        decoded_expectation, imported,
-        "import vs expectation do not match"
-    );
+    {
+        let imported_json = serde_json::to_string(&imported).unwrap();
+        println!("{}", imported_json);
+    }
+
+    assert_json_diff::assert_json_eq!(decoded_expectation, imported);
 }

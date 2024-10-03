@@ -19,3 +19,4 @@ fold = {path = "../fold", features=["bytemuck"], optional = true}
 serde_json = {version = "1.0.128", default-features = false, features = ["alloc"]}
 serde = {version = "1.0.210", default-features = false, features = ["alloc"]}
 rtori-os-model = {path = "../rtori-os-model", features = ["serde"]}
+assert-json-diff = {version = "2.0.2"}

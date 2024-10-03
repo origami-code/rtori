@@ -269,6 +269,35 @@ impl<'a> Proxy<'a> for TranslatingProxy<'a> {
     }
 }
 
+pub struct DegreesToRadiansProxy<'a>(&'a [f32]);
+impl<'a> DegreesToRadiansProxy<'a> {
+    const DEGREES_TO_RADIANS_FACTOR: f32 = core::f32::consts::PI / 180.0f32;
+}
+impl<'a> Proxy<'a> for DegreesToRadiansProxy<'a> {
+    type Output = f32;
+
+    fn count(&self) -> usize {
+        self.0.len()
+    }
+
+    fn get(&self, idx: usize) -> Option<Self::Output> {
+        self.0
+            .get(idx)
+            .map(|value| value * Self::DEGREES_TO_RADIANS_FACTOR)
+    }
+
+    type Iter
+        = impl ExactSizeIterator<Item = Self::Output>
+    where
+        Self: 'a;
+
+    fn iter(&self) -> Self::Iter {
+        self.0
+            .iter()
+            .map(|value| value * Self::DEGREES_TO_RADIANS_FACTOR)
+    }
+}
+
 impl<'input, A> crate::input::ImportInput for TransformedInput<'input, A>
 where
     A: core::alloc::Allocator,
@@ -414,7 +443,7 @@ where
     }
 
     type EdgeFoldAngles<'a>
-        = &'a [f32]
+        = DegreesToRadiansProxy<'a>
     where
         Self: 'a;
 
@@ -422,7 +451,11 @@ where
     where
         'call: 'output,
     {
-        self.source.edges.fold_angles.as_ref().map(|v| v.as_slice())
+        self.source
+            .edges
+            .fold_angles
+            .as_ref()
+            .map(|v| DegreesToRadiansProxy(v))
     }
 
     type FaceVertices<'a>

@@ -86,12 +86,13 @@ pub fn count_creases<'a, FI: ExtractCreasesInput>(input: &'a FI) -> usize {
         .count()
 }
 
+/// TODO: Add a test suite
 /// foldAngles is not provided,
 pub fn extract_creases<'a, FI: ExtractCreasesInput>(
     input: &'a FI,
 ) -> impl Iterator<Item = Result<Crease, ExtractCreasesIteratorError>> + use<'a, FI> {
-    let default_mountain_fold_angle = -180.0;
-    let default_valley_fold_angle = 180.0;
+    let default_mountain_fold_angle = -core::f32::consts::PI;
+    let default_valley_fold_angle = core::f32::consts::PI;
 
     let iterator = iter_edges(input);
 
@@ -153,10 +154,15 @@ pub fn extract_creases<'a, FI: ExtractCreasesInput>(
                     });
                 }
 
-                let complement_vertex_index = indices
+                let complement_vertex_index_index = [0, 1, 2]
                     .into_iter()
-                    .find(|face_vertex_index| usize::try_from(*face_vertex_index).unwrap() != v0_idx && usize::try_from(*face_vertex_index).unwrap() != v1_idx)
+                    .find(|face_vertex_index| {
+                        let face_vertex_index = usize::try_from(*face_vertex_index).unwrap();
+                        face_vertex_index != v0_idx && face_vertex_index != v1_idx
+                    })
                     .expect("Should find the complement given we checked every conceivable reason it wouldn't give it");
+
+                let complement_vertex_index = indices[complement_vertex_index_index];
 
                 let result = CreaseFace {
                     face_index: face_index as u32,
