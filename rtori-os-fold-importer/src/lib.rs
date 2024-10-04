@@ -16,7 +16,11 @@ use input::{ImportInput, Proxy};
 
 extern crate alloc;
 use alloc::vec::Vec;
+use preprocess::PreprocessedInput;
 use rtori_os_model::{NodeBeamSpec, NodeCreaseSpec};
+
+mod preprocess;
+pub use preprocess::{preprocess, PreprocessingError};
 
 #[cfg(any(test, feature = "fold"))]
 pub mod transform;
@@ -36,7 +40,7 @@ pub enum ImportError {
         edge_index: u32,
         pointing_to: u32,
     },
-    CreaseExtractionError(ExtractCreasesIteratorError),
+    PreprocessingError(crate::preprocess::PreprocessingError),
 }
 
 #[derive(Clone, Copy)]
@@ -68,74 +72,28 @@ pub fn import<'output, 'input, F, O, FI>(
     config: ImportConfig,
 ) -> Result<O, ImportError>
 where
-    F: FnOnce(rtori_os_model::ModelSize) -> O + 'output,
+    F: FnOnce(rtori_os_model::ModelSize) -> O,
     O: rtori_os_model::LoaderDyn<'output> + 'output,
     FI: ImportInput,
 {
     import_in(output_factory, input, config, alloc::alloc::Global)
 }
 
-pub fn import_in<'output, 'input, F, O, FI, A>(
-    output_factory: F,
-    input: &'input FI,
+pub fn import_preprocessed_in<'output, 'input, O, FI, A>(
+    output: &mut O,
+    preprocessed: &'input PreprocessedInput<'input, FI, A>,
     config: ImportConfig,
     allocator: A,
-) -> Result<O, ImportError>
+) -> Result<(), ImportError>
 where
-    F: FnOnce(rtori_os_model::ModelSize) -> O + 'output,
     O: rtori_os_model::LoaderDyn<'output> + 'output,
     FI: ImportInput,
     A: core::alloc::Allocator + Clone,
 {
-    let mut node_inv_creases = alloc::vec::Vec::new_in(allocator.clone());
-    let mut node_creases = alloc::vec::Vec::new_in(allocator.clone());
-
-    let creases_iter = extract_creases(input);
-    let mut creases =
-        alloc::vec::Vec::with_capacity_in(input.edges_vertices().count(), allocator.clone());
-    for (crease_index, res) in creases_iter.enumerate() {
-        let crease: creases::Crease = res.map_err(ImportError::CreaseExtractionError)?;
-        creases.push(crease);
-
-        // We'll need this at several points
-        let vertex_indices = input
-            .edges_vertices()
-            .get(crease.edge_index as usize)
-            .ok_or(ImportError::EdgesVerticesInvalid {
-                edge_index: crease.edge_index,
-            })?;
-
-        // First, fill in our (crease_index <-> node_index map for inverse creases)
-        vertex_indices.into_iter().for_each(|vertex_index| {
-            node_inv_creases.push((crease_index, vertex_index));
-        });
-
-        // Same but for direct creases
-        crease.faces.iter().for_each(|face| {
-            node_creases.push((crease_index, face.complement_vertex_index));
-        });
-    }
-
-    // Here we have enough information to size up the output
-    let node_creases_count = node_creases.len() + node_inv_creases.len();
-    let node_beams_count = input
-        .vertices_edges()
-        .iter()
-        .fold(0, |acc, el| acc + el.len());
-    let node_faces_count = input
-        .vertices_faces()
-        .iter()
-        .fold(0, |acc, el| acc + el.len());
-    let model_size = rtori_os_model::ModelSize {
-        nodes: input.vertices_coords().count() as u32,
-        creases: creases.len() as u32,
-        faces: input.faces_vertices().count() as u32,
-        node_beams: node_beams_count as u32,
-        node_creases: node_creases_count as u32,
-        node_faces: node_faces_count as u32,
-    };
-    let mut output_base = output_factory(model_size);
-    let output = &mut output_base;
+    let input = preprocessed.input;
+    let creases = &preprocessed.preprocessed.creases;
+    let node_inv_creases = &preprocessed.preprocessed.node_creases_adjacent;
+    let node_creases = &preprocessed.preprocessed.node_creases_complement;
 
     for (i, vertex) in input.vertices_coords().iter().enumerate() {
         output.copy_node_position(&[rtori_os_model::Vector3F(vertex)], i as u32);
@@ -246,24 +204,20 @@ where
 
     let vertices_count = input.vertices_coords().count();
 
-    fn create_node_index_to_crease_index<S, A, U, V>(
+    fn create_node_index_to_crease_index<S, A>(
         source: S,
         vertices_count: usize,
         allocator: A,
-    ) -> Vec<Vec<U, A>, A>
+    ) -> Vec<Vec<crate::creases::CreaseIndex, A>, A>
     where
-        S: AsRef<[(U, V)]>,
+        S: AsRef<[crate::preprocess::CreaseNodePair]>,
         A: Allocator + Clone,
-        U: Copy,
-        V: Copy,
-        usize: TryFrom<V>,
-        <usize as TryFrom<V>>::Error: core::fmt::Debug,
     {
         let mut mapping = alloc::vec::Vec::with_capacity_in(vertices_count, allocator.clone());
         mapping.resize(vertices_count, alloc::vec::Vec::new_in(allocator.clone()));
 
-        source.as_ref().iter().for_each(|(to, from)| {
-            mapping[usize::try_from(*from).unwrap()].push(*to);
+        source.as_ref().iter().for_each(|pair| {
+            mapping[usize::try_from(pair.node_index).unwrap()].push(pair.crease_index);
         });
 
         mapping
@@ -387,7 +341,7 @@ where
             let node_creases_len = node_creases_for_this_node.len();
             node_creases_for_this_node
                 .into_iter()
-                .map(|crease_index| (crease_index, creases[crease_index]))
+                .map(|crease_index| (crease_index, creases[crease_index as usize]))
                 .enumerate()
                 .for_each(|(local_node_crease_index, (crease_index, crease))| {
                     process_node_crease(
@@ -404,7 +358,7 @@ where
             let node_inv_creases_len = node_inv_creases_for_this_node.len();
             node_inv_creases_for_this_node
                 .into_iter()
-                .map(|crease_index| (crease_index, creases[crease_index]))
+                .map(|crease_index| (crease_index, creases[crease_index as usize]))
                 .enumerate()
                 .for_each(|(local_node_crease_index, (crease_index, crease))| {
                     process_node_crease(
@@ -495,6 +449,31 @@ where
     }
 
     //for (node_index, node_faces) in input.vertices_faces() {}
+
+    Ok(())
+}
+
+pub fn import_in<'output, 'input, F, O, FI, A>(
+    output_factory: F,
+    input: &'input FI,
+    config: ImportConfig,
+    allocator: A,
+) -> Result<O, ImportError>
+where
+    F: FnOnce(rtori_os_model::ModelSize) -> O,
+    O: rtori_os_model::LoaderDyn<'output> + 'output,
+    FI: ImportInput,
+    A: core::alloc::Allocator + Clone,
+{
+    let preprocessed = crate::preprocess::preprocess(input, allocator.clone())
+        .map_err(|e| ImportError::PreprocessingError(e))?;
+    let model_size = preprocessed.size();
+
+    let mut output_base = output_factory(*model_size);
+    {
+        let output = &mut output_base;
+        import_preprocessed_in(output, &preprocessed, config, allocator)?;
+    }
 
     Ok(output_base)
 }

@@ -5,20 +5,20 @@ use core::{
 
 use rtori_os_model::ModelSize;
 
-pub struct Loader<'backer, const L: usize>
+pub struct Loader<'loader, 'backer, const L: usize>
 where
     LaneCount<L>: SupportedLaneCount,
 {
-    inner: &'backer mut crate::model::State<'backer, L>,
+    inner: &'loader mut crate::Runner<'backer, L>,
     size: ModelSize,
 }
 
-impl<'backer, const L: usize> Loader<'backer, L>
+impl<'loader, 'backer, const L: usize> Loader<'loader, 'backer, L>
 where
     LaneCount<L>: SupportedLaneCount,
 {
-    pub const fn new(inner: &'backer mut crate::model::State<'backer, L>) -> Self {
-        let size = inner.size();
+    pub const fn new(inner: &'loader mut crate::Runner<'backer, L>) -> Self {
+        let size = inner.state.size();
         Self { inner, size }
     }
 }
@@ -153,7 +153,8 @@ where
     impl Fn(&mut &mut [crate::simd_atoms::SimdVec3U<L>], usize, rtori_os_model::Vector3U),
 >;
 
-impl<'loader, 'backer, const L: usize> rtori_os_model::Loader<'loader> for Loader<'backer, L>
+impl<'loader, 'backer, const L: usize> rtori_os_model::Loader<'loader>
+    for Loader<'loader, 'backer, L>
 where
     LaneCount<L>: SupportedLaneCount,
     'backer: 'loader,
@@ -174,7 +175,7 @@ where
         'loader: 'output,
     {
         LoaderWriteAccess {
-            data: &mut self.inner.node_positions_unchanging.data,
+            data: &mut self.inner.state.node_positions_unchanging.data,
             len: self.size.nodes.try_into().unwrap(),
             setter: set_vec3f,
             _marker: PhantomData,
@@ -195,7 +196,7 @@ where
         'loader: 'output,
     {
         LoaderWriteAccess {
-            data: &mut self.inner.node_external_forces,
+            data: &mut self.inner.state.node_external_forces,
             len: self.size.nodes.try_into().unwrap(),
             setter: set_vec3f,
             _marker: PhantomData,
@@ -246,7 +247,10 @@ where
         }
 
         LoaderWriteAccess {
-            data: (&mut self.inner.node_mass, &mut self.inner.node_fixed),
+            data: (
+                &mut self.inner.state.node_mass,
+                &mut self.inner.state.node_fixed,
+            ),
             len: self.size.nodes.try_into().unwrap(),
             setter: set_node_config,
             _marker: PhantomData,
@@ -291,7 +295,7 @@ where
         }
 
         LoaderWriteAccess {
-            data: &mut self.inner.node_geometry.0,
+            data: &mut self.inner.state.node_geometry.0,
             len: self.size.nodes.try_into().unwrap(),
             setter: set_node_geometry,
             _marker: PhantomData,
@@ -353,8 +357,8 @@ where
 
         LoaderWriteAccess {
             data: (
-                &mut self.inner.crease_neighbourhoods,
-                &mut self.inner.crease_face_indices,
+                &mut self.inner.state.crease_neighbourhoods,
+                &mut self.inner.state.crease_face_indices,
             ),
             len: self.size.creases.try_into().unwrap(),
             setter: set_crease_geometry,
@@ -403,14 +407,14 @@ where
             LaneCount<L>: SupportedLaneCount,
         {
             set_scalar(&mut data.0, crease_idx, parameters.k);
-            //set_scalar(&mut self.inner.crease_d, crease_idx, parameters.d);
+            //set_scalar(&mut self.inner.state.crease_d, crease_idx, parameters.d);
             set_scalar(&mut data.1, crease_idx, parameters.target_fold_angle);
         }
 
         LoaderWriteAccess {
             data: (
-                &mut self.inner.crease_k,
-                &mut self.inner.crease_target_fold_angle,
+                &mut self.inner.state.crease_k,
+                &mut self.inner.state.crease_target_fold_angle,
             ),
             len: self.size.creases.try_into().unwrap(),
             setter: set_crease_parameters,
@@ -430,7 +434,7 @@ where
         'loader: 'output,
     {
         LoaderWriteAccess {
-            data: &mut self.inner.face_indices,
+            data: &mut self.inner.state.face_indices,
             len: self.size.faces.try_into().unwrap(),
             setter: set_vec3u,
             _marker: PhantomData,
@@ -451,7 +455,7 @@ where
         'loader: 'output,
     {
         LoaderWriteAccess {
-            data: &mut self.inner.face_nominal_angles,
+            data: &mut self.inner.state.face_nominal_angles,
             len: self.size.faces.try_into().unwrap(),
             setter: set_vec3f,
             _marker: PhantomData,
@@ -503,8 +507,8 @@ where
 
         LoaderWriteAccess {
             data: (
-                &mut self.inner.node_crease_crease_indices,
-                &mut self.inner.node_crease_node_number,
+                &mut self.inner.state.node_crease_crease_indices,
+                &mut self.inner.state.node_crease_node_number,
             ),
             len: self.size.node_creases.try_into().unwrap(),
             setter: set_node_crease,
@@ -572,10 +576,10 @@ where
 
         LoaderWriteAccess {
             data: (
-                &mut self.inner.node_beam_spec,
-                &mut self.inner.node_beam_length,
-                &mut self.inner.node_beam_k,
-                &mut self.inner.node_beam_d,
+                &mut self.inner.state.node_beam_spec,
+                &mut self.inner.state.node_beam_length,
+                &mut self.inner.state.node_beam_k,
+                &mut self.inner.state.node_beam_d,
             ),
             len: self.size.node_beams.try_into().unwrap(),
             setter: set_node_beam,
@@ -614,7 +618,7 @@ where
         }
 
         LoaderWriteAccess {
-            data: &mut self.inner.node_face_spec.0,
+            data: &mut self.inner.state.node_face_spec.0,
             len: self.size.node_faces.try_into().unwrap(),
             setter: set_node_face,
             _marker: PhantomData,

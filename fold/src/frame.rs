@@ -19,7 +19,7 @@ pub struct FrameMetadata {
     pub attributes: Option<Vec<String>>,
 
     #[serde(rename = "frame_unit")]
-    pub unit: Option<Vec<String>>,
+    pub unit: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]

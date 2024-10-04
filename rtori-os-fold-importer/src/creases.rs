@@ -1,3 +1,5 @@
+pub type CreaseIndex = u32;
+
 #[derive(Debug, Clone, Copy)]
 pub struct CreaseFace {
     pub face_index: u32,

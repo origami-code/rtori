@@ -117,4 +117,19 @@ mod tests {
         deserialize_square_twist,
         "../testdata/squaretwist.fold"
     );
+    declare_file!(
+        THIRTEEN_HORNS,
+        deserialize_thirteen_horns,
+        "../testdata/13-horns-123-vertices.fold"
+    );
+    declare_file!(
+        THIRTEEN_HORNS_AUGMENTED,
+        deserialize_thirteen_horns_augmented,
+        "../testdata/13-horns-123-vertices-augmented.fold"
+    );
+    declare_file!(
+        THIRTEEN_HORNS_AUGMENTED_TRIANGULATED,
+        deserialize_thirteen_horns_augmented_triangulated,
+        "../testdata/13-horns-123-vertices-augmented-triangulated.fold"
+    );
 }

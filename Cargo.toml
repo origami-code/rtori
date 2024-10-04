@@ -1,3 +1,10 @@
+cargo-features = ["profile-rustflags"]
+
 [workspace]
 resolver = "2"
 members = ["fold", "rtori-core-simd","rtori-core-wgpu", "rtori-server", "rtori-cli", "rtori-os-fold-importer", "rtori-core", "rtori-core-ext", "rtori-os-model"]
+
+[profile.bench]
+lto = true
+codegen-units = 1
+rustflags = ["-C", "target-cpu=native"]

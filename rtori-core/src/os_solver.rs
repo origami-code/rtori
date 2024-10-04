@@ -95,17 +95,38 @@ impl Solver {
 
         use rtori_os_model::LoaderDyn;
         match self {
-            Self::CPU(runner) => rtori_os_fold_importer::import_in(
-                |size| {
-                    let owned = os_cpu::owned::OwnedRunner::with_size(&size);
-                    *runner = Some(owned);
-                    runner.as_mut().unwrap().runner.load()
-                },
-                &transformed_input,
-                Default::default(),
-                allocator,
-            )
-            .unwrap(),
+            Self::CPU(runner) => {
+                let preprocessed =
+                    rtori_os_fold_importer::preprocess(&transformed_input, allocator).unwrap();
+                let size = preprocessed.size();
+                let mut owned_runner = os_cpu::owned::OwnedRunner::with_size(&size);
+                {
+                    let runner = &mut owned_runner.runner;
+                    let mut loader = os_cpu::Loader::new(runner);
+                    rtori_os_fold_importer::import_preprocessed_in(
+                        &mut loader,
+                        &preprocessed,
+                        Default::default(),
+                        allocator,
+                    )
+                    .unwrap();
+                }
+                *runner = Some(owned_runner);
+            }
         };
     }
+
+    pub fn step(&mut self, step_count: usize) {
+        match self {
+            Self::CPU(runner) => {
+                let runner = runner.as_mut().unwrap();
+                (0..step_count).for_each(|_| runner.step().unwrap())
+            }
+        }
+    }
+
+    /*
+    pub fn extract(&self) -> impl rtori_os_model::Extractor<'_> {
+        todo!()
+    }*/
 }

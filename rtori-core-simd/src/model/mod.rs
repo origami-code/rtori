@@ -323,7 +323,7 @@ macro_rules! define_inner(
     (13) => {m!((13) crease_physics PerCrease(S) CreasesPhysicsLens<L>)};
 
     /* per_face */
-    (14) => {m!((14) face_indices PerFace(G) [SimdU32<L>; 2])};
+    (14) => {m!((14) face_indices PerFace(G) [SimdU32<L>; 3])};
     (15) => {m!((15) face_nominal_angles PerFace(G) SimdVec3F<L>)};
     (16) => {m!((16) face_normals PerFace(S) SimdVec3F<L>)};
 
@@ -470,7 +470,7 @@ where
         for idx in 0..DATA_COUNT {
             let characteristic = Self::DATA_CHARACTERISTICS[idx];
 
-            let item_count = match characteristic.concept {
+            let lane_count = match characteristic.concept {
                 PerNode => model_size.nodes,
                 PerCrease => model_size.creases,
                 PerFace => model_size.faces,
@@ -478,6 +478,7 @@ where
                 PerNodeBeam => model_size.node_beams,
                 PerNodeFace => model_size.node_faces,
             } as usize;
+            let item_count = lane_count.div_ceil(L);
 
             // First, find at what point do we split between the first and 2nd slice
             let ptr = rest.as_ptr();
@@ -490,67 +491,139 @@ where
             let (_dead_space, mid_and_post) = rest.split_at_mut(offset_bytes);
             let required_size_in_bytes = item_count * characteristic.unit_size;
             let (mid, post) = mid_and_post.split_at_mut(required_size_in_bytes);
+            assert_eq!(mid.len(), required_size_in_bytes);
+
             rest = post;
 
-            unsafe fn transmute_special<'a, T>(slice: &'a mut [u8]) -> &'a mut [T] {
+            #[derive(Debug, Clone, Copy)]
+            enum TransmuteSpecialError {
+                InputSliceIsNotAligned {
+                    alignment: usize,
+                    /// Do not dereference
+                    address_as_ptr: *const u8,
+                },
+                InputSliceSizeNotAMultiple {
+                    element_size_in_bytes: usize,
+                    input_size_in_bytes: usize,
+                },
+            }
+
+            impl core::fmt::Display for TransmuteSpecialError {
+                fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                    match self {
+                        Self::InputSliceIsNotAligned { alignment, address_as_ptr } => write!(f, "Input slice is not aligned on the expected boundary, pointer is {:?}, alignment requirement is {}B (modulo {}B)", address_as_ptr, alignment, (*address_as_ptr as usize) % alignment),
+                        Self::InputSliceSizeNotAMultiple { element_size_in_bytes, input_size_in_bytes } =>write!(f, "Error: the slice's length ({}B) should be a multiple of the target type's size ({}B), but it isn't (modulo is {}B)", input_size_in_bytes, element_size_in_bytes, input_size_in_bytes % element_size_in_bytes)
+                    }
+                }
+            }
+
+            #[inline]
+            unsafe fn transmute_special<'a, T>(
+                slice: &'a mut [u8],
+            ) -> Result<&'a mut [T], TransmuteSpecialError> {
+                if (slice.as_ptr() as usize) % core::mem::align_of::<T>() != 0 {
+                    return Err(TransmuteSpecialError::InputSliceIsNotAligned {
+                        alignment: core::mem::align_of::<T>(),
+                        address_as_ptr: slice.as_ptr(),
+                    });
+                }
+
+                if slice.len() % core::mem::size_of::<T>() != 0 {
+                    return Err(TransmuteSpecialError::InputSliceSizeNotAMultiple {
+                        element_size_in_bytes: core::mem::size_of::<T>(),
+                        input_size_in_bytes: slice.len(),
+                    });
+                }
+
                 let (pre, target, post) = slice.align_to_mut::<T>();
-                assert!(pre.len() == 0 && post.len() == 0);
-                target
+                assert_eq!(pre.len(), 0, "one of the expectations is that we have already offsetted using ptr.align_offset");
+                assert_eq!(
+                    post.len(),
+                    0,
+                    "while transmutting a slice which should be aligned and of the right size"
+                );
+
+                Ok(target)
             }
 
             unsafe fn create_memorable<'a, T>(
                 slice: &'a mut [u8],
                 unit_count: usize,
-            ) -> MemorableData<'a, T> {
-                let transmuted = transmute_special::<T>(slice);
+            ) -> Result<MemorableData<'a, T>, TransmuteSpecialError> {
+                let transmuted = transmute_special::<T>(slice)?;
+
                 let (front, back) = transmuted.split_at_mut(unit_count);
                 assert!(front.len() == unit_count && back.len() == unit_count);
 
-                MemorableData { front, back }
+                Ok(MemorableData { front, back })
             }
 
             unsafe fn create_geometry<'a, T>(
                 slice: &'a mut [u8],
                 unit_count: usize,
-            ) -> GeometryData<'a, T> {
-                let transmuted = transmute_special::<T>(slice);
-                assert_eq!(transmuted.len(), unit_count);
-                GeometryData(transmuted)
+            ) -> Result<GeometryData<'a, T>, TransmuteSpecialError> {
+                let transmuted = transmute_special::<T>(slice)?;
+                assert_eq!(
+                    transmuted.len(),
+                    unit_count,
+                    "transmute_special should return the expected unit count (of {})",
+                    unit_count
+                );
+
+                Ok(GeometryData(transmuted))
             }
 
             unsafe fn create_parameter<'a, T>(
                 slice: &'a mut [u8],
                 unit_count: usize,
-            ) -> ParameterData<'a, T> {
-                let transmuted = transmute_special::<T>(slice);
+            ) -> Result<ParameterData<'a, T>, TransmuteSpecialError> {
+                let transmuted = transmute_special::<T>(slice)?;
                 assert_eq!(transmuted.len(), unit_count);
-                ParameterData {
+                Ok(ParameterData {
                     data: transmuted,
                     dirty: true,
-                }
+                })
             }
 
             unsafe fn create_scratch<'a, T>(
                 slice: &'a mut [u8],
                 unit_count: usize,
-            ) -> ScratchData<'a, T> {
-                let transmuted = transmute_special::<T>(slice);
+            ) -> Result<ScratchData<'a, T>, TransmuteSpecialError> {
+                let transmuted = transmute_special::<T>(slice)?;
                 assert_eq!(transmuted.len(), unit_count);
-                ScratchData(transmuted)
+                Ok(ScratchData(transmuted))
             }
+
+            macro_rules! inner_message(
+                (($idx:expr) $field_name:ident $concept:ident($class:ident) $field_type:ty) => (
+                    concat!(stringify!($idx), " => ", stringify!($field_name), " [ type ", stringify!($field_type), "/ concept ", stringify!($concept), "] ")
+                );
+            );
+
+            macro_rules! rhs(
+                (@with $create_func:ident ($idx:expr) $field_name:ident $concept:ident($class:ident) $field_type:ty) => (
+                    unsafe {$create_func(mid, item_count)}.expect(inner_message!(($idx) $field_name $concept(M) $field_type))
+                );
+            );
+
+            macro_rules! arm(
+                (@with $create_func:ident ($idx:expr) $field_name:ident $concept:ident($class:ident) $field_type:ty) => (
+                    output.$field_name = rhs!(@with $create_func ($idx) $field_name $concept($class) $field_type)
+                );
+            );
 
             macro_rules! m(
                 (($idx:expr) $field_name:ident $concept:ident(M) $field_type:ty) => (
-                    output.$field_name = unsafe {create_memorable(mid, item_count)}
+                    arm!(@with create_memorable ($idx) $field_name $concept(M) $field_type)
                 );
                 (($idx:expr) $field_name:ident $concept:ident(G) $field_type:ty) => (
-                    output.$field_name = unsafe {create_geometry(mid, item_count)}
+                    arm!(@with create_geometry ($idx) $field_name $concept(G) $field_type)
                 );
                 (($idx:expr) $field_name:ident $concept:ident(P) $field_type:ty) => (
-                    output.$field_name = unsafe {create_parameter(mid, item_count)}
+                    arm!(@with create_parameter ($idx) $field_name $concept(P) $field_type)
                 );
                 (($idx:expr) $field_name:ident $concept:ident(S) $field_type:ty) => (
-                    output.$field_name = unsafe {create_scratch(mid, item_count)}
+                    arm!(@with create_scratch ($idx) $field_name $concept(S) $field_type)
                 );
             );
 
