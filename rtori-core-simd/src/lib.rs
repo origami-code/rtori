@@ -11,10 +11,10 @@
 use core::simd::{LaneCount, SupportedLaneCount};
 
 extern crate static_assertions;
-mod extractor;
+
+
+
 mod kernels;
-mod loader;
-pub use loader::Loader;
 mod model;
 mod process;
 mod simd_atoms;
@@ -22,6 +22,11 @@ pub use simd_atoms::PREFERRED_WIDTH;
 #[cfg(feature = "alloc")]
 pub mod owned;
 
+mod extractor;
+pub use extractor::Extractor;
+
+mod loader;
+pub use loader::Loader;
 #[derive(Debug)]
 pub struct Runner<'backer, const L: usize = { simd_atoms::PREFERRED_WIDTH }>
 where
@@ -36,6 +41,11 @@ where
     LaneCount<L>: SupportedLaneCount,
     simba::simd::Simd<core::simd::Simd<f32, L>>: simba::simd::SimdRealField,
 {
+    /// The number of steps done
+    pub fn steps(&self) -> u64 {
+        self.steps
+    }
+
     pub fn step(&mut self) -> Result<(), ()> {
         let state = &mut self.state;
 
@@ -144,14 +154,10 @@ where
     pub fn extract<'a>(
         &'a self,
         _flags: rtori_os_model::ExtractFlags,
-    ) -> impl rtori_os_model::Extractor<'a> + use<'backer, 'a, L>
+    ) -> extractor::Extractor<'a, L>
     where
         'backer: 'a,
     {
         extractor::Extractor::new(&self.state)
-    }
-
-    pub fn step_count(&self) -> u64 {
-        self.steps
     }
 }

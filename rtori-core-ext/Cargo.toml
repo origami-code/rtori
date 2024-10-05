@@ -11,6 +11,12 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 bitflags = "2.6.0"
 rtori-core = {path = "../rtori-core"}
+fold = {path = "../fold"}
+pkg-version = "1.0.0"
+serde_json = {version = "1.0.128", default-features = false, features = ["alloc"]}
+pollster = "0.3.0"
+static_assertions = "1.1.0"
+bytemuck = "1.18.0"
 
 [build-dependencies]
 cbindgen = "^0.27.0"

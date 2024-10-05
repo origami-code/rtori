@@ -43,3 +43,6 @@ corrosion_experimental_cbindgen(
     HEADER_NAME "rtori_core.hpp"
     --config "${CMAKE_CURRENT_LIST_DIR}/cbindgen_cpp.toml" --lang cxx
 )
+
+target_link_libraries(rtori_core INTERFACE rtori_core_ext)
+target_sources(rtori_core INTERFACE FILE_SET HEADERS TYPE HEADERS BASE_DIRS include FILES include/rtori/attributes.h)

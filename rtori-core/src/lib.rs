@@ -7,6 +7,8 @@ pub mod os_solver;
 
 pub use fold;
 
+pub use rtori_os_model as model;
+
 pub struct Context<A> {
     allocator: A,
 }

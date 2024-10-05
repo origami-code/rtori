@@ -67,14 +67,14 @@ pub struct File {
 }
 
 impl File {
-    pub fn frame<'a>(&'a self, index: FrameIndex) -> Option<Frame<'a>> {
+    pub fn frame<'a>(&'a self, index: FrameIndex) -> Option<FrameRef<'a>> {
         match index {
-            0 => Some(Frame::Key(&self.key_frame)),
+            0 => Some(FrameRef::Key(&self.key_frame)),
             other => self
                 .frames
                 .as_ref()
                 .and_then(|frame_vec| frame_vec.get(usize::from(other - 1)))
-                .map(|frame| Frame::NonKey(frame)),
+                .map(|frame| FrameRef::NonKey(frame)),
         }
     }
 }

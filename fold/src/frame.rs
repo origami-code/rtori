@@ -52,16 +52,18 @@ pub struct NonKeyFrame {
     pub inherit: Option<bool>,
 }
 
-pub enum Frame<'a> {
+pub enum FrameRef<'a> {
     Key(&'a FrameCore),
     NonKey(&'a NonKeyFrame),
 }
 
-impl<'a> Frame<'a> {
+impl<'a> FrameRef<'a> {
+    /// To get a core frame, allocations may be needed to resolve the whole
+    /// parenting/inheritance logic
     pub fn get(&'a self) -> Cow<'a, FrameCore> {
         match *self {
             Self::Key(core) => Cow::Borrowed(core),
-            Self::NonKey(nk) => unimplemented!(),
+            Self::NonKey(_nk) => unimplemented!(),
         }
     }
 }

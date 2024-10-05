@@ -112,16 +112,27 @@ impl Solver {
                     .unwrap();
                 }
                 *runner = Some(owned_runner);
-            }
+            },
+            _ => unimplemented!()
         };
     }
 
-    pub fn step(&mut self, step_count: usize) {
+    pub fn step(&mut self, step_count: u32) -> Result<(), StepError> {
         match self {
             Self::CPU(runner) => {
-                let runner = runner.as_mut().unwrap();
-                (0..step_count).for_each(|_| runner.step().unwrap())
-            }
+                let runner = runner.as_mut().ok_or(StepError::NotLoaded)?;
+                (0..step_count).try_for_each(|step_number| runner.step().map_err(|_| StepError::Other {
+                    local_step_number: step_number
+                }))
+            },
+            _ => unimplemented!()
+        }
+    }
+
+
+    pub fn extract(&self, extract_flags: rtori_os_model::ExtractFlags) -> Result<Extractor<'_>, ExtractError> {
+        match self {
+            Self::CPU(runner) => runner.as_ref().ok_or(ExtractError::NotLoaded).map(|runner| Extractor::CPU(runner.extract(extract_flags)))
         }
     }
 
@@ -129,4 +140,47 @@ impl Solver {
     pub fn extract(&self) -> impl rtori_os_model::Extractor<'_> {
         todo!()
     }*/
+}
+
+pub enum Extractor<'borrow> {
+    CPU(rtori_core_simd::Extractor<'borrow, {rtori_core_simd::PREFERRED_WIDTH}>)
+}
+
+impl rtori_os_model::ExtractorDyn<'_> for Extractor<'_> {
+    fn count_nodes(&self) -> usize {
+        match self {
+            Self::CPU(inner) => inner.count_nodes()
+        }
+    }
+
+    fn copy_node_position(&self, to: &mut [rtori_os_model::Vector3F], from: rtori_os_model::NodeIndex) -> bool {
+        match self {
+            Self::CPU(inner) => inner.copy_node_position(to, from)
+        }
+    }
+
+    fn copy_node_velocity(&self, to: &mut [rtori_os_model::Vector3F], from: rtori_os_model::NodeIndex) -> bool {
+        match self {
+            Self::CPU(inner) => inner.copy_node_velocity(to, from)
+        }
+    }
+
+    fn copy_node_error(&self, to: &mut [f32], from: rtori_os_model::NodeIndex) -> bool {
+        match self {
+            Self::CPU(inner) => inner.copy_node_error(to, from)
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ExtractError {
+    NotLoaded
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum StepError {
+    NotLoaded,
+    Other{
+        local_step_number: u32
+    }
 }
