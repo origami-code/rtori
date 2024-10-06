@@ -7,6 +7,7 @@ pub mod os_solver;
 
 pub use fold;
 
+pub use rtori_os_fold_importer as fold_importer;
 pub use rtori_os_model as model;
 
 pub struct Context<A> {

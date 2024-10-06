@@ -1,9 +1,12 @@
+use core::alloc::Allocator;
+
 #[cfg(feature = "cpu")]
 use rtori_core_simd as os_cpu;
 #[cfg(feature = "gpu")]
 use rtori_core_wgpu as os_wgpu;
 
 use bitflags::bitflags;
+pub use rtori_os_fold_importer as fold_importer;
 
 bitflags! {
     #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
@@ -85,19 +88,17 @@ impl Solver {
         Err(())
     }
 
-    pub fn load_fold(&mut self, fold: &fold::FrameCore) {
-        let allocator = alloc::alloc::Global;
-
-        let transformed = rtori_os_fold_importer::transform::transform_in(fold, allocator)
-            .expect("Transformation into importation input failed");
-
-        let transformed_input = transformed.with_fold(fold);
-
-        use rtori_os_model::LoaderDyn;
+    pub fn load_preprocessed_in<I, PA, A>(
+        &mut self,
+        preprocessed: &fold_importer::PreprocessedInput<'_, I, PA>,
+        allocator: A,
+    ) where
+        I: fold_importer::input::ImportInput,
+        PA: Allocator,
+        A: Allocator + Clone,
+    {
         match self {
             Self::CPU(runner) => {
-                let preprocessed =
-                    rtori_os_fold_importer::preprocess(&transformed_input, allocator).unwrap();
                 let size = preprocessed.size();
                 let mut owned_runner = os_cpu::owned::OwnedRunner::with_size(&size);
                 {
@@ -112,27 +113,60 @@ impl Solver {
                     .unwrap();
                 }
                 *runner = Some(owned_runner);
-            },
-            _ => unimplemented!()
+            }
+            _ => unimplemented!(),
         };
+    }
+
+    pub fn load_transformed_in<IA, A>(
+        &mut self,
+        transformed: &fold_importer::transform::TransformedInput<'_, IA>,
+        allocator: A,
+    ) where
+        IA: Allocator,
+        A: Allocator + Clone,
+    {
+        let preprocessed =
+            rtori_os_fold_importer::preprocess(transformed, allocator.clone()).unwrap();
+
+        self.load_preprocessed_in(&preprocessed, allocator)
+    }
+
+    pub fn load_fold_in<A: Allocator>(&mut self, fold: &fold::FrameCore, allocator: A)
+    where
+        A: Allocator + Clone,
+    {
+        let transformed = rtori_os_fold_importer::transform::transform_in(fold, allocator.clone())
+            .expect("Transformation into importation input failed");
+
+        let transformed_input = transformed.with_fold(fold);
+
+        self.load_transformed_in(&transformed_input, allocator);
     }
 
     pub fn step(&mut self, step_count: u32) -> Result<(), StepError> {
         match self {
             Self::CPU(runner) => {
                 let runner = runner.as_mut().ok_or(StepError::NotLoaded)?;
-                (0..step_count).try_for_each(|step_number| runner.step().map_err(|_| StepError::Other {
-                    local_step_number: step_number
-                }))
-            },
-            _ => unimplemented!()
+                (0..step_count).try_for_each(|step_number| {
+                    runner.step().map_err(|_| StepError::Other {
+                        local_step_number: step_number,
+                    })
+                })
+            }
+            _ => unimplemented!(),
         }
     }
 
-
-    pub fn extract(&self, extract_flags: rtori_os_model::ExtractFlags) -> Result<Extractor<'_>, ExtractError> {
+    pub fn extract(
+        &self,
+        extract_flags: rtori_os_model::ExtractFlags,
+    ) -> Result<Extractor<'_>, ExtractError> {
         match self {
-            Self::CPU(runner) => runner.as_ref().ok_or(ExtractError::NotLoaded).map(|runner| Extractor::CPU(runner.extract(extract_flags)))
+            Self::CPU(runner) => runner
+                .as_ref()
+                .ok_or(ExtractError::NotLoaded)
+                .map(|runner| Extractor::CPU(runner.extract(extract_flags))),
         }
     }
 
@@ -143,44 +177,50 @@ impl Solver {
 }
 
 pub enum Extractor<'borrow> {
-    CPU(rtori_core_simd::Extractor<'borrow, {rtori_core_simd::PREFERRED_WIDTH}>)
+    CPU(rtori_core_simd::Extractor<'borrow, { rtori_core_simd::PREFERRED_WIDTH }>),
 }
 
 impl rtori_os_model::ExtractorDyn<'_> for Extractor<'_> {
     fn count_nodes(&self) -> usize {
         match self {
-            Self::CPU(inner) => inner.count_nodes()
+            Self::CPU(inner) => inner.count_nodes(),
         }
     }
 
-    fn copy_node_position(&self, to: &mut [rtori_os_model::Vector3F], from: rtori_os_model::NodeIndex) -> bool {
+    fn copy_node_position(
+        &self,
+        to: &mut [rtori_os_model::Vector3F],
+        from: rtori_os_model::NodeIndex,
+    ) -> bool {
         match self {
-            Self::CPU(inner) => inner.copy_node_position(to, from)
+            Self::CPU(inner) => inner.copy_node_position(to, from),
         }
     }
 
-    fn copy_node_velocity(&self, to: &mut [rtori_os_model::Vector3F], from: rtori_os_model::NodeIndex) -> bool {
+    fn copy_node_velocity(
+        &self,
+        to: &mut [rtori_os_model::Vector3F],
+        from: rtori_os_model::NodeIndex,
+    ) -> bool {
         match self {
-            Self::CPU(inner) => inner.copy_node_velocity(to, from)
+            Self::CPU(inner) => inner.copy_node_velocity(to, from),
         }
     }
 
     fn copy_node_error(&self, to: &mut [f32], from: rtori_os_model::NodeIndex) -> bool {
         match self {
-            Self::CPU(inner) => inner.copy_node_error(to, from)
+            Self::CPU(inner) => inner.copy_node_error(to, from),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum ExtractError {
-    NotLoaded
+    NotLoaded,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum StepError {
     NotLoaded,
-    Other{
-        local_step_number: u32
-    }
+    Other { local_step_number: u32 },
 }

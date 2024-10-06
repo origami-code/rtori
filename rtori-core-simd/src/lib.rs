@@ -12,8 +12,6 @@ use core::simd::{LaneCount, SupportedLaneCount};
 
 extern crate static_assertions;
 
-
-
 mod kernels;
 mod model;
 mod process;

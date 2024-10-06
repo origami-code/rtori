@@ -477,11 +477,11 @@ where
             type Output = [VertexIndex; 3];
 
             fn count(&self) -> usize {
-                self.0.faces.len()
+                self.0.face_indices.len()
             }
 
             fn get(&self, idx: usize) -> Option<Self::Output> {
-                self.0.faces.get(idx).map(|face| face.indices)
+                self.0.face_indices.get(idx).copied()
             }
 
             type Iter
@@ -490,7 +490,7 @@ where
                 Self: 'a;
 
             fn iter(&self) -> Self::Iter {
-                self.0.faces.iter().map(|face| face.indices)
+                self.0.face_indices.iter().copied()
             }
         }
 
@@ -522,6 +522,14 @@ pub fn transform_in<A: Allocator + Clone>(
     )
     .map_err(|e| TransformError::TriangulationError(e))?;
 
+    transform_triangulated_in(input, triangulated, allocator)
+}
+
+pub fn transform_triangulated_in<A: Allocator + Clone>(
+    input: &fold::FrameCore,
+    triangulated: crate::triangulation::TriangulatedDiff<A>,
+    allocator: A,
+) -> Result<TransformedData<A>, TransformError> {
     // Then, we compute the required mappings
     let vertices_count = input.vertices.count();
     let vertices_edges = create_vertices_edges(
@@ -539,7 +547,7 @@ pub fn transform_in<A: Allocator + Clone>(
         allocator.clone(),
     );
     let vertices_faces = create_vertices_faces(
-        triangulated.faces.iter().map(|tf| tf.indices),
+        triangulated.face_indices.iter(),
         vertices_count,
         allocator.clone(),
     );

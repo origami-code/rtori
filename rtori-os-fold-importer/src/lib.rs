@@ -16,11 +16,10 @@ use input::{ImportInput, Proxy};
 
 extern crate alloc;
 use alloc::vec::Vec;
-use preprocess::PreprocessedInput;
 use rtori_os_model::{NodeBeamSpec, NodeCreaseSpec};
 
 mod preprocess;
-pub use preprocess::{preprocess, PreprocessingError};
+pub use preprocess::{preprocess, PreprocessedInput, PreprocessingError};
 
 #[cfg(any(test, feature = "fold"))]
 pub mod transform;
@@ -79,15 +78,16 @@ where
     import_in(output_factory, input, config, alloc::alloc::Global)
 }
 
-pub fn import_preprocessed_in<'output, 'input, O, FI, A>(
+pub fn import_preprocessed_in<'output, 'input, O, FI, PA, A>(
     output: &mut O,
-    preprocessed: &'input PreprocessedInput<'input, FI, A>,
+    preprocessed: &'input PreprocessedInput<'input, FI, PA>,
     config: ImportConfig,
     allocator: A,
 ) -> Result<(), ImportError>
 where
     O: rtori_os_model::LoaderDyn<'output> + 'output,
     FI: ImportInput,
+    PA: core::alloc::Allocator,
     A: core::alloc::Allocator + Clone,
 {
     let input = preprocessed.input;

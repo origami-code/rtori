@@ -21,7 +21,7 @@ fn bench_source(c: &mut Criterion, name: &str, fold_str: &str) {
             .block_on()
             .unwrap();
 
-    solver.load_fold(&parsed_input.key_frame);
+    solver.load_fold_in(&parsed_input.key_frame, allocator);
 
     c.bench_function(name, |b| b.iter(|| black_box(solver.step(1))));
 }

@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use rtori_os_model::FaceIndex;
 
 type VertexIndex = u32;
@@ -81,19 +82,28 @@ where
 
 extern crate alloc;
 
-#[derive(Debug, Clone, Copy)]
-pub struct TriangulatedFace {
-    pub indices: [VertexIndex; 3],
-    pub replacing: FaceIndex,
-}
-
 #[derive(Debug, Clone)]
 pub struct TriangulatedDiff<A>
 where
     A: core::alloc::Allocator,
 {
-    pub faces: alloc::vec::Vec<TriangulatedFace, A>,
+    pub face_indices: alloc::vec::Vec<[VertexIndex; 3], A>,
+    pub face_replacing: alloc::vec::Vec<FaceIndex, A>,
     pub additional_edges: alloc::vec::Vec<[VertexIndex; 2], A>,
+}
+
+impl<A> TriangulatedDiff<A>
+where
+    A: core::alloc::Allocator,
+{
+    pub fn iter_faces<'a>(
+        &'a self,
+    ) -> impl ExactSizeIterator<Item = ([VertexIndex; 3], FaceIndex)> + use<'a, A> {
+        self.face_indices
+            .iter()
+            .copied()
+            .zip_eq(self.face_replacing.iter().copied())
+    }
 }
 
 pub fn triangulate3d_collect<Vertex, Face, A>(
@@ -106,7 +116,8 @@ where
     Face: core::ops::Deref<Target = [u32]>,
     A: core::alloc::Allocator + Clone,
 {
-    let mut faces = alloc::vec::Vec::new_in(allocator.clone());
+    let mut face_indices = alloc::vec::Vec::new_in(allocator.clone());
+    let mut face_replacing = alloc::vec::Vec::new_in(allocator.clone());
     let mut additional_edges = alloc::vec::Vec::new_in(allocator);
 
     face_vertex_indices
@@ -115,10 +126,8 @@ where
         .enumerate()
         .try_for_each(|(i, face)| {
             let replace_face = |face: [VertexIndex; 3]| {
-                faces.push(TriangulatedFace {
-                    indices: face,
-                    replacing: i as u32,
-                })
+                face_indices.push(face);
+                face_replacing.push(i as u32);
             };
 
             let append_edge = |edge: [VertexIndex; 2]| additional_edges.push(edge);
@@ -127,7 +136,8 @@ where
         })?;
 
     Ok(TriangulatedDiff {
-        faces,
+        face_indices,
+        face_replacing,
         additional_edges,
     })
 }

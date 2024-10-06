@@ -77,6 +77,14 @@ impl File {
                 .map(|frame| FrameRef::NonKey(frame)),
         }
     }
+
+    pub fn frame_count(&self) -> FrameIndex {
+        1u16 + self
+            .frames
+            .as_ref()
+            .map(|v| u16::try_from(v.len()).unwrap())
+            .unwrap_or(0u16)
+    }
 }
 
 #[cfg(test)]

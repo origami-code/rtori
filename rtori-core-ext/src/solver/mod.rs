@@ -36,9 +36,10 @@ pub enum SolverOperationResult {
 #[no_mangle]
 pub unsafe extern "C" fn rtori_solver_load_from_fold<'alloc>(
     solver: *const Solver<'alloc>,
-    fold: *const FoldFile<'_>,
+    fold: *const crate::FoldFile<'_>,
     frame_index: u16,
 ) -> SolverOperationResult {
+    let allocator = unsafe { (&*solver).ctx.allocator };
     let solver = unsafe { crate::Arc::from_raw_in(solver, (&*solver).ctx.allocator) };
     let fold = unsafe { crate::Arc::from_raw_in(fold, (&*fold).ctx.allocator) };
     let res = {
@@ -49,7 +50,7 @@ pub unsafe extern "C" fn rtori_solver_load_from_fold<'alloc>(
             let frame = fold.parsed.frame(frame_index); // TODO: handle None
             match frame {
                 Some(frame) => {
-                    solver.solver.load_fold(&frame.get());
+                    solver.solver.load_fold_in(&frame.get(), allocator);
                     SolverOperationResult::Success
                 }
                 None => SolverOperationResult::ErrorNoSuchFrameInFold,
@@ -117,7 +118,7 @@ pub unsafe extern "C" fn rtori_extract<'solver, 'result>(
     request: *const ExtractOutRequest,
 ) -> SolverOperationResult {
     let solver = unsafe { crate::Arc::from_raw_in(solver, (&*solver).ctx.allocator) };
-    let request: &ExtractOutRequest = unsafe {&* request};
+    let request: &ExtractOutRequest = unsafe { &*request };
 
     let extract_flags = crate::model::ExtractFlags::from_bits_truncate(
         0 | if request.positions.is_some() && request.positions_range.item_count > 0 {
@@ -190,70 +191,3 @@ pub unsafe extern "C" fn rtori_solver_deinit<'alloc>(solver: *mut Solver<'alloc>
     let _fold = unsafe { crate::Arc::from_raw_in(solver, (&*solver).ctx.allocator) };
     // let it drop naturally
 }
-
-/*
-pub extern "C" fn rtori_sim_configure(
-    sim
-)
-
-*/
-
-// TODO: vectored reader
-
-pub struct FoldFile<'alloc> {
-    ctx: crate::Arc<'alloc, crate::Context<'alloc>>,
-    parsed: fold::File,
-}
-
-// TODO: output errors
-/// cbindgen:prefix=RTORI_SLICE_RO(2, 3)
-/// cbindgen:ptrs-as-arrays=[[fold_str; ]]
-#[no_mangle]
-pub unsafe extern "C" fn rtori_fold_parse<'alloc>(
-    ctx: *const crate::Context<'alloc>,
-    fold_str: *const u8,
-    fold_str_len: usize,
-) -> *const FoldFile<'alloc> {
-    let ctx = unsafe { crate::Arc::from_raw_in(ctx, (&*ctx).allocator) };
-
-    let fold_source = unsafe { core::slice::from_raw_parts(fold_str, fold_str_len) };
-    let parsed = serde_json::from_slice::<fold::File>(fold_source).unwrap();
-
-    let allocator = ctx.allocator;
-    let wrapper = FoldFile { ctx, parsed };
-
-    let output = crate::Arc::new_in(wrapper, allocator);
-    crate::Arc::into_raw(output)
-}
-
-#[repr(C)]
-pub struct FoldEncodeResult {
-    pub ok: core::ffi::c_int,
-    pub written: usize,
-}
-
-/// cbindgen:prefix=RTORI_SLICE_WO(2, 3)
-/// cbindgen:ptrs-as-arrays=[[fold_str; ]]
-#[no_mangle]
-pub unsafe extern "C" fn rtori_fold_encode<'alloc>(
-    fold: *const FoldFile<'alloc>,
-    output: *mut u8,
-    output_size: usize,
-) -> FoldEncodeResult {
-    // TODO
-    FoldEncodeResult { ok: 0, written: 0 }
-}
-
-/// Drops a fold object. After dropping, the pointer is freed and it should not be used anymore.
-#[no_mangle]
-pub unsafe extern "C" fn rtori_fold_deinit<'alloc>(fold: *const FoldFile<'alloc>) {
-    let _fold = unsafe { crate::Arc::from_raw_in(fold, (&*fold).ctx.allocator) };
-    // let it drop naturally
-}
-
-//pub unsafe extern "C" fn rtori_fold_copy
-
-// TODO: drop
-// TODO: queries
-
-// TODO: output errors

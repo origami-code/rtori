@@ -33,4 +33,15 @@ pub struct FaceInformation {
     /// Optimized for no more than 8 faces sharing edges with each face
     #[serde(rename = "faces_faces")]
     pub faces: Option<Vec<Handful<Option<FaceIndex>, 8>>>,
+
+    /// For each face, an array of uv indices corresponding to the vertices of the same index
+    /// That is, for `rtori:faces_uvs[n][a] = k` assigns to the vertex index `faces_edges[n][a]` the uv `rtori:uvs[k]`
+    #[serde(rename = "rtori:faces_uvs")]
+    pub uvs: Option<Vec<Handful<u32, 8>>>,
+}
+
+impl FaceInformation {
+    pub fn count(&self) -> usize {
+        self.vertices.as_ref().map(|c| c.len()).unwrap_or(0)
+    }
 }

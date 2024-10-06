@@ -17,7 +17,7 @@ fn test_load() {
             .block_on()
             .unwrap();
 
-    solver.load_fold(&parsed_input.key_frame);
+    solver.load_fold_in(&parsed_input.key_frame, alloc::alloc::Global);
 
     solver.step(50_000_000);
 }
