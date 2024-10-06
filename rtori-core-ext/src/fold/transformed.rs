@@ -8,6 +8,40 @@ pub struct TransformedData<'alloc> {
     transform: transform::TransformedData<crate::ContextAllocator<'alloc>>,
 }
 
+pub unsafe extern "C" fn rtori_fold_transform<'alloc>(
+    fold: *const super::FoldFile<'alloc>,
+    frame_index: u16,
+) -> *mut TransformedData<'alloc> {
+    let alloc = unsafe { &*fold }.ctx.allocator;
+    let fold = unsafe { crate::Arc::from_raw_in(fold, alloc) };
+
+    let transform = {
+        let frame = fold.parsed.frame(frame_index).unwrap();
+        let frame = frame.get();
+
+        let transform = transform::transform_in(&frame, alloc).unwrap();
+
+        transform
+    };
+
+    let result = TransformedData {
+        input: fold,
+        frame: frame_index,
+        transform,
+    };
+
+    let result_boxed = Box::new_in(result, alloc);
+    Box::into_raw(result_boxed)
+}
+
+pub unsafe extern "C" fn rtori_fold_transformed_drop<'alloc>(
+    transform: *mut TransformedData<'alloc>,
+) {
+    let alloc = unsafe { &*transform }.input.ctx.allocator;
+    let boxed = unsafe { Box::from_raw_in(transform, alloc) };
+    drop(boxed);
+}
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub enum TransformedQuery {
