@@ -120,6 +120,13 @@ impl<T: bytemuck::AnyBitPattern> ArrayOutput<T> {
     }
 }
 
+pub type ArrayOutputU8 = ArrayOutput<u8>;
+pub type ArrayOutputVec3F = ArrayOutput<[f32; 3]>;
+pub type ArrayOutputVec2F = ArrayOutput<[f32; 2]>;
+pub type ArrayOutputVec3U = ArrayOutput<[u32; 3]>;
+pub type ArrayOutputVec2U = ArrayOutput<[u32; 2]>;
+pub type ArrayOutputF32 = ArrayOutput<f32>;
+
 #[repr(C)]
 pub union QueryOutput {
     /// Strings are outputted in UTF-8
@@ -130,14 +137,8 @@ pub union QueryOutput {
     pub vec2f_array_output: ArrayOutputVec2F,
     pub vec3u_array_output: ArrayOutputVec3U,
     pub vec2u_array_output: ArrayOutputVec2U,
-    pub vecf_array_output: ArrayOutput<f32>,
+    pub vecf_array_output: ArrayOutputF32,
 }
-
-type ArrayOutputU8 = ArrayOutput<u8>;
-type ArrayOutputVec3F = ArrayOutput<[f32; 3]>;
-type ArrayOutputVec2F = ArrayOutput<[f32; 2]>;
-type ArrayOutputVec3U = ArrayOutput<[u32; 3]>;
-type ArrayOutputVec2U = ArrayOutput<[u32; 2]>;
 
 impl QueryOutput {
     pub(crate) unsafe fn copy_vecf(&mut self, source: Option<&[f32]>) {

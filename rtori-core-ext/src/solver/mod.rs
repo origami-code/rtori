@@ -32,6 +32,38 @@ pub enum SolverOperationResult {
     ErrorOther = 0xFF,
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn rtori_solver_load_from_transformed<'alloc>(
+    solver: *const Solver<'alloc>,
+    transformed: *mut crate::TransformedData<'_>,
+) -> SolverOperationResult {
+    let allocator = unsafe { (&*solver).ctx.allocator };
+    let solver = unsafe { crate::Arc::from_raw_in(solver, (&*solver).ctx.allocator) };
+    let transformed = unsafe { std::boxed::Box::from_raw_in(transformed, allocator) };
+
+    let frame = transformed.input.parsed.frame(transformed.frame);
+    let res = match frame {
+        Some(frame) => {
+            let frame = frame.get();
+            let transformed_input = transformed.transform.with_fold(&frame);
+
+            let mut solver = solver.inner.lock().unwrap();
+            if matches!(solver.state, SolverState::Extracting) {
+                SolverOperationResult::ErrorExtracting
+            } else {
+                solver
+                    .solver
+                    .load_transformed_in(&transformed_input, allocator);
+                SolverOperationResult::Success
+            }
+        }
+        None => SolverOperationResult::ErrorNoSuchFrameInFold,
+    };
+    std::mem::forget(solver);
+
+    res
+}
+
 /// `rtori_solver_load_from_fold` loads the simulator with data from the given `FoldFrame`
 #[no_mangle]
 pub unsafe extern "C" fn rtori_solver_load_from_fold<'alloc>(
@@ -101,14 +133,9 @@ pub struct ExtractOutRange {
 
 #[repr(C)]
 pub struct ExtractOutRequest {
-    pub positions: Option<core::ptr::NonNull<[f32; 3]>>,
-    pub positions_range: ExtractOutRange,
-
-    pub velocity: Option<core::ptr::NonNull<[f32; 3]>>,
-    pub velocity_range: ExtractOutRange,
-
-    pub error: Option<core::ptr::NonNull<f32>>,
-    pub error_range: ExtractOutRange,
+    pub positions: crate::ArrayOutputVec3F,
+    pub velocity: crate::ArrayOutputVec3F,
+    pub error: crate::ArrayOutputF32,
 }
 
 /// Extract a field to an array
@@ -121,15 +148,15 @@ pub unsafe extern "C" fn rtori_extract<'solver, 'result>(
     let request: &ExtractOutRequest = unsafe { &*request };
 
     let extract_flags = crate::model::ExtractFlags::from_bits_truncate(
-        0 | if request.positions.is_some() && request.positions_range.item_count > 0 {
+        0 | if request.positions.buffer_size > 0 {
             crate::model::ExtractFlags::POSITION.bits()
         } else {
             0
-        } | if request.velocity.is_some() && request.velocity_range.item_count > 0 {
+        } | if request.velocity.buffer_size > 0 {
             crate::model::ExtractFlags::VELOCITY.bits()
         } else {
             0
-        } | if request.error.is_some() && request.error_range.item_count > 0 {
+        } | if request.error.buffer_size > 0 {
             crate::model::ExtractFlags::ERROR.bits()
         } else {
             0
@@ -146,33 +173,29 @@ pub unsafe extern "C" fn rtori_extract<'solver, 'result>(
                 solver.state = SolverState::Extracting;
                 let extractor = solver.solver.extract(extract_flags).unwrap();
 
-                if let Some(out) = request.positions {
+                if let Some(out) = request.positions.buffer {
                     let mut out = core::ptr::NonNull::slice_from_raw_parts(
                         out,
-                        request.positions_range.item_count,
+                        request.positions.buffer_size,
                     );
                     let out: &mut [crate::model::Vector3F] =
                         bytemuck::cast_slice_mut(unsafe { out.as_mut() });
-                    extractor.copy_node_position(out, request.positions_range.offset as u32);
+                    extractor.copy_node_position(out, request.positions.offset as u32);
                 }
 
-                if let Some(out) = request.velocity {
-                    let mut out = core::ptr::NonNull::slice_from_raw_parts(
-                        out,
-                        request.velocity_range.item_count,
-                    );
+                if let Some(out) = request.velocity.buffer {
+                    let mut out =
+                        core::ptr::NonNull::slice_from_raw_parts(out, request.velocity.buffer_size);
                     let out: &mut [crate::model::Vector3F] =
                         bytemuck::cast_slice_mut(unsafe { out.as_mut() });
-                    extractor.copy_node_velocity(out, request.velocity_range.offset as u32);
+                    extractor.copy_node_velocity(out, request.velocity.offset as u32);
                 }
 
-                if let Some(out) = request.error {
-                    let mut out = core::ptr::NonNull::slice_from_raw_parts(
-                        out,
-                        request.error_range.item_count,
-                    );
+                if let Some(out) = request.error.buffer {
+                    let mut out =
+                        core::ptr::NonNull::slice_from_raw_parts(out, request.error.buffer_size);
                     let out: &mut [f32] = unsafe { out.as_mut() };
-                    extractor.copy_node_error(out, request.error_range.offset as u32);
+                    extractor.copy_node_error(out, request.error.offset as u32);
                 }
 
                 SolverOperationResult::Success

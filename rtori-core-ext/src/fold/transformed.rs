@@ -1,13 +1,13 @@
 use rtori_core::fold_importer::transform;
 
 /// A transformed fold (opaque)
-/// cbindgen:ignore
 pub struct TransformedData<'alloc> {
-    input: crate::Arc<'alloc, super::FoldFile<'alloc>>,
-    frame: u16,
-    transform: transform::TransformedData<crate::ContextAllocator<'alloc>>,
+    pub(crate) input: crate::Arc<'alloc, super::FoldFile<'alloc>>,
+    pub(crate) frame: u16,
+    pub(crate) transform: transform::TransformedData<crate::ContextAllocator<'alloc>>,
 }
 
+#[no_mangle]
 pub unsafe extern "C" fn rtori_fold_transform<'alloc>(
     fold: *const super::FoldFile<'alloc>,
     frame_index: u16,
@@ -34,12 +34,22 @@ pub unsafe extern "C" fn rtori_fold_transform<'alloc>(
     Box::into_raw(result_boxed)
 }
 
+#[no_mangle]
 pub unsafe extern "C" fn rtori_fold_transformed_drop<'alloc>(
     transform: *mut TransformedData<'alloc>,
 ) {
     let alloc = unsafe { &*transform }.input.ctx.allocator;
     let boxed = unsafe { Box::from_raw_in(transform, alloc) };
     drop(boxed);
+}
+
+/// The returned value must be dropped with `rtori_fold_drop`
+#[no_mangle]
+pub unsafe extern "C" fn rtori_fold_transformed_get_fold<'alloc>(
+    transformed: *mut TransformedData<'alloc>,
+) -> *const crate::FoldFile<'alloc> {
+    let transformed = unsafe { &*transformed };
+    crate::Arc::into_raw(transformed.input.clone())
 }
 
 #[derive(Copy, Clone)]

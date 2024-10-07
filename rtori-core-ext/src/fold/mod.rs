@@ -103,6 +103,7 @@ pub enum FoldMetadataQuery {
     FrameCount,
 }
 
+#[no_mangle]
 pub unsafe extern "C" fn rtori_fold_query_metadata<'alloc>(
     fold: *const FoldFile<'alloc>,
     query: FoldMetadataQuery,
@@ -155,6 +156,7 @@ pub enum FoldFrameQuery {
     UVs,
 }
 
+#[no_mangle]
 pub unsafe extern "C" fn rtori_fold_query_frame<'alloc>(
     fold: *const FoldFile<'alloc>,
     frame_index: u16,

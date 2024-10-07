@@ -4,6 +4,10 @@ cargo-features = ["profile-rustflags"]
 resolver = "2"
 members = ["fold", "rtori-core-simd","rtori-core-wgpu", "rtori-server", "rtori-cli", "rtori-os-fold-importer", "rtori-core", "rtori-core-ext", "rtori-os-model"]
 
+
+[patch.crates-io]
+cbindgen = { git = 'https://github.com/0e4ef622/cbindgen.git', branch = "array-mangle" }
+
 [profile.bench]
 lto = true
 codegen-units = 1
