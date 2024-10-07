@@ -35,14 +35,13 @@ corrosion_import_crate(
 corrosion_experimental_cbindgen(
     TARGET "rtori_core"
     HEADER_NAME "rtori_core.h"
-    --config "${CMAKE_CURRENT_LIST_DIR}/cbindgen_c.toml" --lang c
+    FLAGS --config "${CMAKE_CURRENT_LIST_DIR}/cbindgen_c.toml" --lang c
 )
 
 corrosion_experimental_cbindgen(
     TARGET "rtori_core"
     HEADER_NAME "rtori_core.hpp"
-    --config "${CMAKE_CURRENT_LIST_DIR}/cbindgen_cpp.toml" --lang cxx
+    FLAGS --config "${CMAKE_CURRENT_LIST_DIR}/cbindgen_cpp.toml" --lang c++
 )
 
-target_link_libraries(rtori_core INTERFACE rtori_core_ext)
-target_sources(rtori_core INTERFACE FILE_SET HEADERS TYPE HEADERS BASE_DIRS include FILES include/rtori/attributes.h)
+target_sources(rtori_core INTERFACE FILE_SET HEADERS TYPE HEADERS BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/rtori/attributes.h)

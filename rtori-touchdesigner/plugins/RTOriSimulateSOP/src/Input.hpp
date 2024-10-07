@@ -1,9 +1,6 @@
 #pragma once
 
-#include <optional>
-#include <vector>
 #include <string_view>
-
 namespace rtori_td {
 
 struct Input {
@@ -11,7 +8,7 @@ struct Input {
 	int64_t inputNumber;
 
 	std::string_view fold;
-	bool extractPositions;
+	bool extractPosition;
 	bool extractError;
 	bool extractNormals;
 	bool extractVelocity;

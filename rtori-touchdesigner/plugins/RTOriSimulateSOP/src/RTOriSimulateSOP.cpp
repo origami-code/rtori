@@ -79,6 +79,10 @@ void DestroySOPInstance(SOP_CPlusPlusBase* instance) {
 }
 
 constexpr float DEFAULT_IDLE_THRESHOLD = 0.0001f;
+constexpr const char* PARAMETER_KEY_FOLD_SOURCE = "Foldsource";
+constexpr const char* PARAMETER_KEY_POSITION = "Extractposition";
+constexpr const char* PARAMETER_KEY_ERROR = "Extracterror";
+constexpr const char* PARAMETER_KEY_VELOCITY = "Extractvelocity";
 
 SimulateSOP::SimulateSOP(const OP_NodeInfo*) {
 	// TODO: create thread
@@ -90,7 +94,9 @@ SimulateSOP::~SimulateSOP() {
 	this->m_threadSignaller.notify_all();
 
 	// joining thread - may block
-	this->m_simulationThread.join();
+	if (this->m_simulationThread.joinable()) {
+		this->m_simulationThread.join();
+	}
 };
 
 void SimulateSOP::getGeneralInfo(SOP_GeneralInfo* ginfo, const TD::OP_Inputs* inputs, void*) {
@@ -197,100 +203,84 @@ void SimulateSOP::executeVBO(SOP_VBOOutput* output, const TD::OP_Inputs* inputs,
 void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 	// myParms.setup(manager);
 	{
-		OP_NumericParameter np;
+		OP_NumericParameter parameter;
 
-		np.name = "Gpudirect";
-		np.label = "GPU Direct";
+		parameter.name = "Gpudirect";
+		parameter.label = "GPU Direct";
 
-		const OP_ParAppendResult res = manager->appendToggle(np);
+		const OP_ParAppendResult res = manager->appendToggle(parameter);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
 	{
-		OP_NumericParameter np;
+		OP_NumericParameter parameter;
 
-		np.name = "Simulationmode";
-		np.label = "GPU Direct";
+		parameter.name = "Simulationmode";
+		parameter.label = "GPU Direct";
 
-		const OP_ParAppendResult res = manager->appendToggle(np);
+		const OP_ParAppendResult res = manager->appendToggle(parameter);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
 	{
-		OP_StringParameter foldParameter;
-		foldParameter.name = "Foldsource";
-		foldParameter.label = "Fold Source";
+		OP_StringParameter parameter;
+		parameter.name = PARAMETER_KEY_FOLD_SOURCE;
+		parameter.label = "Fold Source";
 
-		const OP_ParAppendResult res = manager->appendString(foldParameter);
+		const OP_ParAppendResult res = manager->appendString(parameter);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
 	{
-		OP_NumericParameter extractPointsParameter;
-		extractPointsParameter.name = "Extractpoints";
-		extractPointsParameter.label = "Extract points";
-		extractPointsParameter.defaultValues[0] = 1;
+		OP_NumericParameter parameter;
+		parameter.name = PARAMETER_KEY_POSITION;
+		parameter.label = "Extract position";
+		parameter.defaultValues[0] = 1;
 
-		const OP_ParAppendResult res = manager->appendToggle(extractPointsParameter);
+		const OP_ParAppendResult res = manager->appendToggle(parameter);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
 	{
-		OP_NumericParameter extractUVsParameter;
-		extractUVsParameter.name = "Extractuvs";
-		extractUVsParameter.label = "Extract UVs";
+		OP_NumericParameter parameter;
+		parameter.name = PARAMETER_KEY_VELOCITY;
+		parameter.label = "Extract velocity";
+		parameter.defaultValues[0] = 0;
 
-		const OP_ParAppendResult res = manager->appendToggle(extractUVsParameter);
+		const OP_ParAppendResult res = manager->appendToggle(parameter);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
 	{
-		OP_NumericParameter extractErrorParameter;
-		extractErrorParameter.name = "Extracterror";
-		extractErrorParameter.label = "Extract Error";
+		OP_NumericParameter parameter;
+		parameter.name = PARAMETER_KEY_ERROR;
+		parameter.label = "Extract Error";
+		parameter.defaultValues[0] = 0;
 
-		const OP_ParAppendResult res = manager->appendToggle(extractErrorParameter);
+		const OP_ParAppendResult res = manager->appendToggle(parameter);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
 	{
-		OP_StringParameter outputKindParameter;
-		outputKindParameter.name = "Outputkind";
-		outputKindParameter.label = "Output Kind ";
-		outputKindParameter.defaultValue = "point-per-vertex";
+		OP_NumericParameter parameter;
+		parameter.name = "Creasepercentage";
+		parameter.label = "Crease Percentage";
 
-		const char** choices = new const char* [2] { "point-per-node", "point-per-vertex" };
-		const char** labels = new const char* [2]
-		{
-			"One point per node (more efficient - no UVs)",
-			  "one point per Vertex (less efficient - UV copied)"
-		};
+		parameter.clampMins[0] = true;
+		parameter.clampMaxes[0] = true;
+		parameter.minSliders[0] = -1.0f;
+		parameter.maxSliders[0] = 1.0f;
+		parameter.defaultValues[0] = 0.0f;
 
-		const OP_ParAppendResult res =
-		  manager->appendMenu(outputKindParameter, 2, choices, labels);
+		const OP_ParAppendResult res = manager->appendFloat(parameter, 1);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
 	{
-		OP_NumericParameter creasePercentageParameter;
-		creasePercentageParameter.name = "Creasepercentage";
-		creasePercentageParameter.label = "Crease Percentage";
-
-		creasePercentageParameter.clampMins[0] = true;
-		creasePercentageParameter.clampMaxes[0] = true;
-		creasePercentageParameter.minSliders[0] = -1.0f;
-		creasePercentageParameter.maxSliders[0] = 1.0f;
-		creasePercentageParameter.defaultValues[0] = 0.0f;
-
-		const OP_ParAppendResult res = manager->appendFloat(creasePercentageParameter, 1);
-		assert(res == OP_ParAppendResult::Success);
-	}
-
-	{
-		auto idleThresholdParameter = OP_NumericParameter();
-		idleThresholdParameter.name = "Idlethreshold";
-		idleThresholdParameter.label = "Idle threshold",
-		idleThresholdParameter.defaultValues[0] = DEFAULT_IDLE_THRESHOLD;
+		auto parameter = OP_NumericParameter();
+		parameter.name = "Idlethreshold";
+		parameter.label = "Idle threshold";
+		parameter.defaultValues[0] = DEFAULT_IDLE_THRESHOLD;
 	}
 }
 
@@ -369,10 +359,11 @@ void SimulateSOP::getInfoPopupString(TD::OP_String* info, void* reserved1) {
 }
 
 Input SimulateSOP::consolidateParameters(const TD::OP_Inputs* inputs) const {
-	auto input = Input{.fold = inputs->getParString("Foldsource"),
-					   .extractPositions = inputs->getParInt("Extractpositions") != 0,
-					   .extractError = inputs->getParInt("Extracterror") != 0,
-					   .extractVelocity = inputs->getParInt("Extractvelocity") != 0};
+	Input input = Input{.inputNumber = 0,
+						.fold = inputs->getParString(PARAMETER_KEY_FOLD_SOURCE),
+						.extractPosition = inputs->getParInt(PARAMETER_KEY_POSITION) != 0,
+						.extractError = inputs->getParInt(PARAMETER_KEY_ERROR) != 0,
+						.extractVelocity = inputs->getParInt(PARAMETER_KEY_VELOCITY) != 0};
 
 	return input;
 }
