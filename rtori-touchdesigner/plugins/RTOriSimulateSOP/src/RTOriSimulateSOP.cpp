@@ -1,5 +1,11 @@
 /* rtori touchdesigner */
 
+#include <chrono>
+#include <cstddef>
+#include <iterator>
+#include <mutex>
+#include <thread>
+#include <cassert>
 #ifndef RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MAJOR
 #warning "RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MAJOR undefined, setting to 0"
 #define RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MAJOR 0
@@ -13,6 +19,13 @@
 #include "RTOriSimulateSOP.hpp"
 #include "CPlusPlus_Common.h"
 
+#include "rtori_core.hpp"
+
+#ifdef _MSC_VER
+#define MSVC
+#endif
+
+#include <optional>
 #include <cassert>
 
 using namespace TD;
@@ -53,10 +66,34 @@ void FillSOPPluginInfo(SOP_PluginInfo* info) {
 }
 
 static int32_t instance_count = 0;
+static rtori::Context const* rtori_ctx = nullptr;
+
+#include <stdlib.h>
+
+static void* rtori_alloc(const void* alloc_ctx, size_t size, size_t alignment) {
+#ifdef MSVC
+	return _aligned_malloc(size, alignment);
+#else
+	return aligned_malloc(size, alignment);
+#endif
+}
+
+static void rtori_dealloc(const void* dealloc_ctx, void* ptr, size_t size, size_t alignment) {
+#ifdef MSVC
+	_aligned_free(ptr);
+#else
+	aligned_free(ptr, size, alignment);
+#endif
+}
 
 DLLEXPORT
 SOP_CPlusPlusBase* CreateSOPInstance(const OP_NodeInfo* info) {
+	if (instance_count == 0) {
+		rtori_ctx = rtori::rtori_ctx_init(nullptr);
+	}
+
 	instance_count += 1;
+
 	// Return a new instance of your class every time this is called.
 	// It will be called once per SOP that is using the .dll
 	return new SimulateSOP(info);
@@ -73,7 +110,8 @@ void DestroySOPInstance(SOP_CPlusPlusBase* instance) {
 	instance_count -= 1;
 
 	if (instance_count == 0) {
-		// TODO: Do work on DLL unload
+		assert(rtori_ctx != nullptr);
+		rtori::rtori_ctx_deinit(rtori_ctx);
 	}
 };
 }
@@ -84,14 +122,12 @@ constexpr const char* PARAMETER_KEY_POSITION = "Extractposition";
 constexpr const char* PARAMETER_KEY_ERROR = "Extracterror";
 constexpr const char* PARAMETER_KEY_VELOCITY = "Extractvelocity";
 
-SimulateSOP::SimulateSOP(const OP_NodeInfo*) {
-	// TODO: create thread
-	this->m_simulationThread = std::thread();
+SimulateSOP::SimulateSOP(const OP_NodeInfo* _info) {
+	this->m_simulationThread = std::thread(&SimulateSOP::runWorkerThread, this);
 };
 
 SimulateSOP::~SimulateSOP() {
-	this->m_simulationThreadExitFlag.test_and_set();
-	this->m_threadSignaller.notify_all();
+	this->m_workerShouldExit.test_and_set();
 
 	// joining thread - may block
 	if (this->m_simulationThread.joinable()) {
@@ -366,4 +402,136 @@ Input SimulateSOP::consolidateParameters(const TD::OP_Inputs* inputs) const {
 						.extractVelocity = inputs->getParInt(PARAMETER_KEY_VELOCITY) != 0};
 
 	return input;
+}
+
+void importInputIntoSolver(rtori::Solver const* solver, const Input& input) {
+	// TODO
+}
+
+bool SimulateSOP::shouldPack() const {
+	return true;
+}
+
+void SimulateSOP::runWorkerThread() {
+	int64_t outputCounter = 0;
+	int64_t lastInputNumber = 0;
+
+	bool extractPosition = false;
+	bool extractVelocity = false;
+	bool extractError = false;
+
+	const rtori::Parameters solverCreationParams = {.solver =
+													  rtori::SolverKind::OrigamiSimulator,
+													.backend = rtori::BackendFlags_ANY};
+
+	rtori::Solver const* solver =
+	  rtori::rtori_ctx_create_solver(rtori_ctx, &solverCreationParams);
+
+	while (!this->m_workerShouldExit.test()) {
+		{
+			const std::unique_lock<std::mutex> lock(this->m_inputMutex, std::try_to_lock);
+			if (lock.owns_lock()) {
+				const Input& input = this->m_input;
+				if (input.inputNumber != lastInputNumber) {
+					extractPosition = input.extractPosition;
+					extractVelocity = input.extractVelocity;
+					extractError = input.extractError;
+
+					importInputIntoSolver(solver, input);
+				}
+			}
+		}
+
+		if ((extractPosition || extractVelocity || extractError) && this->shouldPack()) {
+			size_t positions_written = 0;
+			size_t error_written = 0;
+			size_t velocity_written = 0;
+
+			rtori::ExtractOutRequest extractRequest = {
+			  .positions = rtori::ArrayOutput<float[3]>{.buffer = nullptr,
+														.buffer_size = 0,
+														.written_size = &positions_written},
+			  .velocity = rtori::ArrayOutput<float[3]>{.buffer = nullptr,
+														.buffer_size = 0,
+														.written_size = &velocity_written },
+			  .error = rtori::ArrayOutput<float>{.buffer = nullptr,
+														.buffer_size = 0,
+														.written_size = &error_written	   }
+			};
+
+			int32_t vertex_count = 0; // TODO: Query number of vertices
+
+			const std::unique_lock<std::mutex> lock(this->m_outputMutex, std::try_to_lock);
+			if (lock.owns_lock()) {
+				size_t cursor = 0;
+
+				if (extractPosition) {
+					// In floats
+					const size_t sizeNeeded = 3 /* x y z */ * vertex_count;
+
+					this->m_output.positions = std::make_tuple(cursor, sizeNeeded);
+
+					using val_t = float[3];
+					val_t* buffer =
+					  reinterpret_cast<val_t*>(this->m_output.backingBuffer.data() + cursor);
+
+					extractRequest.positions.buffer = buffer;
+					extractRequest.positions.buffer_size =
+					  vertex_count; /* as its a buffer of arrays */
+
+					cursor += sizeNeeded;
+				}
+
+				if (extractVelocity) {
+					// In floats
+					const size_t sizeNeeded = 3 /* x y z */ * vertex_count;
+
+					this->m_output.velocity = std::make_tuple(cursor, sizeNeeded);
+
+					using val_t = float[3];
+					val_t* buffer =
+					  reinterpret_cast<val_t*>(this->m_output.backingBuffer.data() + cursor);
+
+					extractRequest.velocity.buffer = buffer;
+					extractRequest.velocity.buffer_size =
+					  vertex_count; /* as its a buffer of arrays */
+
+					cursor += sizeNeeded;
+				}
+
+				if (extractError) {
+					// In floats
+					const size_t sizeNeeded = vertex_count;
+
+					this->m_output.velocity = std::make_tuple(cursor, sizeNeeded);
+
+					using val_t = float;
+					val_t* buffer =
+					  reinterpret_cast<val_t*>(this->m_output.backingBuffer.data() + cursor);
+
+					extractRequest.error.buffer = buffer;
+					extractRequest.error.buffer_size =
+					  vertex_count; /* as its a buffer of arrays */
+
+					cursor += sizeNeeded;
+				}
+
+				const rtori::SolverOperationResult result =
+				  rtori::rtori_extract(solver, &extractRequest);
+				assert((void("extraction should never fail"),
+						result == rtori::SolverOperationResult::Success));
+			}
+		}
+
+		if (this->m_cookRequested.test()) {
+			// Fill in output
+			// TODO: try lock, not lock
+			const std::unique_lock<std::mutex> lock(this->m_outputMutex, std::try_to_lock);
+			if (lock.owns_lock()) {
+				// TODO: Pack output
+
+				this->m_cookRequested.clear();
+			}
+		}
+	}
 }

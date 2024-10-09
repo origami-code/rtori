@@ -48,18 +48,24 @@ class SimulateSOP : public TD::SOP_CPlusPlusBase {
   private:
 	Input consolidateParameters(const TD::OP_Inputs* inputs) const;
 
+	/// Runs the core of the worker
+	void runWorkerThread();
+	/// Returns true if we should pack data out for output
+	bool shouldPack() const;
+
 	/// The thread _actually_ running the simulation
 	std::thread m_simulationThread;
 
-	std::mutex m_mutex;
+	/// This mutex protects the input & output data from being accessed concurrently
+	/// between the TD thread and the worker thread
+	std::atomic_flag m_cookRequested;
+	std::atomic_flag m_workerShouldExit;
+
+	std::mutex m_inputMutex;
 	Input m_input;
+
+	std::mutex m_outputMutex;
 	Output m_output;
-
-	std::atomic_flag m_shouldCook;
-	std::condition_variable m_threadSignaller;
-
-	/// A flag for the thread to exit
-	std::atomic_flag m_simulationThreadExitFlag;
 };
 
 #endif // !__SimulateSOP__

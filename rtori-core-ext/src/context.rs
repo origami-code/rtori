@@ -75,7 +75,7 @@ impl Parameters {
 #[no_mangle]
 pub unsafe extern "C" fn rtori_ctx_create_solver<'alloc>(
     ctx: *const Context<'alloc>,
-    parameters: Option<core::ptr::NonNull<Parameters>>,
+    parameters: *const Parameters,
 ) -> *const crate::Solver<'alloc> {
     let ctx = {
         let ctx = unsafe { crate::Arc::from_raw_in(ctx, (&*ctx).allocator) };
