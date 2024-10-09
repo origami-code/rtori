@@ -37,7 +37,6 @@ pub enum Solver {
         Option<
             os_cpu::owned::OwnedRunner<
                 'static,
-                'static,
                 { os_cpu::PREFERRED_WIDTH },
                 alloc::alloc::Global,
             >,
@@ -102,7 +101,7 @@ impl Solver {
                 let size = preprocessed.size();
                 let mut owned_runner = os_cpu::owned::OwnedRunner::with_size(&size);
                 {
-                    let runner = &mut owned_runner.runner;
+                    let runner = owned_runner.runner_mut();
                     let mut loader = os_cpu::Loader::new(runner);
                     rtori_os_fold_importer::import_preprocessed_in(
                         &mut loader,

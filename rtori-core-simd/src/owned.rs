@@ -10,20 +10,30 @@ use core::{
 // This is a self-referential struct
 // Hence, we need to
 #[derive(Debug)]
-pub struct OwnedRunner<'allocator, 'runner, const L: usize, A>
+pub struct OwnedRunner<'allocator, const L: usize, A>
 where
-    'allocator: 'runner,
     LaneCount<L>: SupportedLaneCount,
     A: Allocator + 'allocator,
 {
-    pub runner: crate::Runner<'runner, L>,
+    runner: crate::Runner<'allocator, L>,
     buffer: alloc::boxed::Box<[u8], A>,
     _allocator_marker: PhantomData<&'allocator A>,
 }
 
-impl<'allocator, 'runner, const L: usize, A> OwnedRunner<'allocator, 'runner, L, A>
-where
-    'allocator: 'runner,
+impl<'allocator, const L: usize, A> OwnedRunner<'allocator, L, A> where
+    LaneCount<L>: SupportedLaneCount,
+        A: Allocator + 'allocator,
+{
+    pub const fn runner(&self) -> &crate::Runner<'allocator, L> {
+        &self.runner
+    }
+
+    pub const fn runner_mut(&mut self) -> &mut crate::Runner<'allocator, L> {
+        &mut self.runner
+    }
+}
+
+impl<'allocator, const L: usize, A> OwnedRunner<'allocator, L, A> where
     LaneCount<L>: SupportedLaneCount,
     simba::simd::Simd<core::simd::Simd<f32, L>>: simba::simd::SimdRealField,
     A: Allocator + 'allocator,
@@ -52,7 +62,7 @@ where
     }
 }
 
-impl<'runner, const L: usize> OwnedRunner<'static, 'runner, L, alloc::alloc::Global>
+impl<const L: usize> OwnedRunner<'static, L, alloc::alloc::Global>
 where
     LaneCount<L>: SupportedLaneCount,
     simba::simd::Simd<core::simd::Simd<f32, L>>: simba::simd::SimdRealField,
@@ -62,28 +72,26 @@ where
     }
 }
 
-impl<'allocator, 'runner, const L: usize, A> core::ops::Deref
-    for OwnedRunner<'allocator, 'runner, L, A>
+impl<'allocator, const L: usize, A> core::ops::Deref
+    for OwnedRunner<'allocator, L, A>
 where
-    'allocator: 'runner,
     LaneCount<L>: SupportedLaneCount,
     A: Allocator + 'allocator,
 {
-    type Target = crate::Runner<'runner, L>;
+    type Target = crate::Runner<'allocator, L>;
 
     fn deref(&self) -> &Self::Target {
-        &self.runner
+        self.runner()
     }
 }
 
-impl<'allocator, 'runner, const L: usize, A> core::ops::DerefMut
-    for OwnedRunner<'allocator, 'runner, L, A>
+impl<'allocator, const L: usize, A> core::ops::DerefMut
+    for OwnedRunner<'allocator, L, A>
 where
-    'allocator: 'runner,
     LaneCount<L>: SupportedLaneCount,
     A: Allocator + 'allocator,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.runner
+        self.runner_mut()
     }
 }

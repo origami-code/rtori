@@ -86,7 +86,7 @@ impl<T: bytemuck::AnyBitPattern> ArrayOutput<T> {
     ) {
         let offset = self.offset as usize;
 
-        let source = source.skip(if offset_already {0} else {offset});
+        let source = source.skip(if offset_already { 0 } else { offset });
 
         let len = source.len();
         let apply = move |destination: &mut [MaybeUninit<T>], _, len| {
