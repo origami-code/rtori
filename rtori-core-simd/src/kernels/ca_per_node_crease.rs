@@ -34,8 +34,6 @@ where
     pub crease_percentage: f32,
 }
 
-const TAU: f32 = 6.283185307179586476925286766559;
-
 #[inline]
 pub fn calculate_node_crease_forces<'a, const L: usize>(
     inputs: &'a PerNodeCreaseInput<'a, L>,

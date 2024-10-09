@@ -80,14 +80,14 @@ where
 
         if true {
             let zero = simba::simd::Simd(SimdF32::splat(0.0));
-            let tau = simba::simd::Simd(SimdF32::splat(3.1415 * 2.0));
+            let tau = simba::simd::Simd(SimdF32::splat(core::f32::consts::TAU));
             let diff = fold_angle - simba::simd::Simd(*previous_fold_angles);
 
             let under = diff.simd_le(simba::simd::Simd(SimdF32::splat(-5.0)));
             let under_diff = tau.select(under, zero);
 
             let over = diff.simd_ge(simba::simd::Simd(SimdF32::splat(5.0)));
-            let over_diff = (tau * simba::simd::Simd(SimdF32::splat(-1.0))).select(over, zero);
+            let over_diff = (-tau).select(over, zero);
 
             let corrected = simba::simd::Simd(*previous_fold_angles) + under_diff + over_diff;
 

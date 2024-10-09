@@ -34,8 +34,6 @@ where
     pub error: SimdF32<L>,
 }
 
-const TAU: f32 = 6.283185307179586476925286766559;
-
 pub fn calculate_node_beam_forces<'a, const L: usize>(
     inputs: &'a PerNodeBeamInput<'a, L>,
 ) -> impl ExactSizeIterator<Item = PerNodeBeamOutput<L>> + use<'a, L>

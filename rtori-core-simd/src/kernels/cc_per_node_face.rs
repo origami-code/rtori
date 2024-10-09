@@ -35,7 +35,6 @@ where
     pub error: SimdF32<L>,
 }
 
-const TAU: f32 = 6.283185307179586476925286766559;
 const TOL: f32 = 0.0000001;
 
 pub fn calculate_node_face_forces<'a, const L: usize>(
