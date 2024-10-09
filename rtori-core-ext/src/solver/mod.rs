@@ -12,7 +12,7 @@ pub enum SolverState {
 
 pub(crate) struct SolverInner {
     pub(crate) solver: rtori_core::os_solver::Solver,
-    pub(crate) state: SolverState,
+    //pub(crate) state: SolverState,
 }
 
 pub struct Solver<'alloc> {
@@ -48,14 +48,11 @@ pub unsafe extern "C" fn rtori_solver_load_from_transformed<'alloc>(
             let transformed_input = transformed.transform.with_fold(&frame);
 
             let mut solver = solver.inner.lock().unwrap();
-            if matches!(solver.state, SolverState::Extracting) {
-                SolverOperationResult::ErrorExtracting
-            } else {
-                solver
-                    .solver
-                    .load_transformed_in(&transformed_input, allocator);
-                SolverOperationResult::Success
-            }
+
+            solver
+                .solver
+                .load_transformed_in(&transformed_input, allocator);
+            SolverOperationResult::Success
         }
         None => SolverOperationResult::ErrorNoSuchFrameInFold,
     };
@@ -76,17 +73,14 @@ pub unsafe extern "C" fn rtori_solver_load_from_fold<'alloc>(
     let fold = unsafe { crate::Arc::from_raw_in(fold, (&*fold).ctx.allocator) };
     let res = {
         let mut solver = solver.inner.lock().unwrap();
-        if matches!(solver.state, SolverState::Extracting) {
-            SolverOperationResult::ErrorExtracting
-        } else {
-            let frame = fold.parsed.frame(frame_index); // TODO: handle None
-            match frame {
-                Some(frame) => {
-                    solver.solver.load_fold_in(&frame.get(), allocator);
-                    SolverOperationResult::Success
-                }
-                None => SolverOperationResult::ErrorNoSuchFrameInFold,
+
+        let frame = fold.parsed.frame(frame_index); // TODO: handle None
+        match frame {
+            Some(frame) => {
+                solver.solver.load_fold_in(&frame.get(), allocator);
+                SolverOperationResult::Success
             }
+            None => SolverOperationResult::ErrorNoSuchFrameInFold,
         }
     };
     std::mem::forget(solver);
@@ -104,22 +98,16 @@ pub unsafe extern "C" fn rtori_solver_step<'alloc>(
         let solver = unsafe { crate::Arc::from_raw_in(solver, (&*solver).ctx.allocator) };
         let res = {
             let mut solver = solver.inner.lock().unwrap();
-            match solver.state {
-                SolverState::Extracting => None,
-                _ => Some(solver.solver.step(step_count)),
-            }
+            solver.solver.step(step_count)
         };
         std::mem::forget(solver);
         res
     };
 
     match res {
-        None => SolverOperationResult::ErrorExtracting,
-        Some(Ok(_)) => SolverOperationResult::Success,
-        Some(Err(rtori_core::os_solver::StepError::NotLoaded)) => {
-            SolverOperationResult::ErrorNotLoaded
-        }
-        Some(Err(_)) => SolverOperationResult::ErrorOther,
+        Ok(_) => SolverOperationResult::Success,
+        Err(rtori_core::os_solver::StepError::NotLoaded) => SolverOperationResult::ErrorNotLoaded,
+        Err(_) => SolverOperationResult::ErrorOther,
     }
 }
 
@@ -164,43 +152,38 @@ pub unsafe extern "C" fn rtori_extract<'solver, 'result>(
     );
 
     let res = {
-        let mut solver = solver.inner.lock().unwrap();
+        let solver = solver
+            .inner
+            .lock()
+            .expect("Expected the solver to already be established");
         // Critical section
-        match solver.state {
-            SolverState::Extracting => SolverOperationResult::ErrorExtracting,
-            _ => {
-                use rtori_core::model::ExtractorDyn as _;
-                solver.state = SolverState::Extracting;
-                let extractor = solver.solver.extract(extract_flags).unwrap();
 
-                if let Some(out) = request.positions.buffer {
-                    let mut out = core::ptr::NonNull::slice_from_raw_parts(
-                        out,
-                        request.positions.buffer_size,
-                    );
-                    let out: &mut [crate::model::Vector3F] =
-                        bytemuck::cast_slice_mut(unsafe { out.as_mut() });
-                    extractor.copy_node_position(out, request.positions.offset as u32);
-                }
+        use rtori_core::model::ExtractorDyn as _;
+        let extractor = solver.solver.extract(extract_flags).unwrap();
 
-                if let Some(out) = request.velocity.buffer {
-                    let mut out =
-                        core::ptr::NonNull::slice_from_raw_parts(out, request.velocity.buffer_size);
-                    let out: &mut [crate::model::Vector3F] =
-                        bytemuck::cast_slice_mut(unsafe { out.as_mut() });
-                    extractor.copy_node_velocity(out, request.velocity.offset as u32);
-                }
-
-                if let Some(out) = request.error.buffer {
-                    let mut out =
-                        core::ptr::NonNull::slice_from_raw_parts(out, request.error.buffer_size);
-                    let out: &mut [f32] = unsafe { out.as_mut() };
-                    extractor.copy_node_error(out, request.error.offset as u32);
-                }
-
-                SolverOperationResult::Success
-            }
+        if let Some(out) = request.positions.buffer {
+            let mut out =
+                core::ptr::NonNull::slice_from_raw_parts(out, request.positions.buffer_size);
+            let out: &mut [crate::model::Vector3F] =
+                bytemuck::cast_slice_mut(unsafe { out.as_mut() });
+            extractor.copy_node_position(out, request.positions.offset as u32);
         }
+
+        if let Some(out) = request.velocity.buffer {
+            let mut out =
+                core::ptr::NonNull::slice_from_raw_parts(out, request.velocity.buffer_size);
+            let out: &mut [crate::model::Vector3F] =
+                bytemuck::cast_slice_mut(unsafe { out.as_mut() });
+            extractor.copy_node_velocity(out, request.velocity.offset as u32);
+        }
+
+        if let Some(out) = request.error.buffer {
+            let mut out = core::ptr::NonNull::slice_from_raw_parts(out, request.error.buffer_size);
+            let out: &mut [f32] = unsafe { out.as_mut() };
+            extractor.copy_node_error(out, request.error.offset as u32);
+        }
+
+        SolverOperationResult::Success
     };
 
     std::mem::forget(solver);

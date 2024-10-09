@@ -58,7 +58,7 @@ class SimulateSOP : public TD::SOP_CPlusPlusBase {
 
 	/// This mutex protects the input & output data from being accessed concurrently
 	/// between the TD thread and the worker thread
-	std::atomic_flag m_cookRequested;
+	std::atomic<int32_t> m_cookRequest;
 	std::atomic_flag m_workerShouldExit;
 
 	std::mutex m_inputMutex;
@@ -66,6 +66,11 @@ class SimulateSOP : public TD::SOP_CPlusPlusBase {
 
 	std::mutex m_outputMutex;
 	Output m_output;
+
+	/// No need to lock the mutex to get that one
+	/// We can remove it as we only change it from the same thread that
+	/// also needs the cachedInput
+	Input m_cachedInput;
 };
 
 #endif // !__SimulateSOP__

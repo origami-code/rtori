@@ -22,10 +22,67 @@ pub enum FoldOperationStatus {
     ErrorNoSuchFrame,
 }
 
+#[repr(u8)]
+pub enum FoldParseStatus {
+    Success = 0x00,
+    /// No data given
+    Empty,
+    Error,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub enum JsonParseErrorCategory {
+    /// failure to read or write bytes on an I/O stream
+    IO,
+    ///  input that is not syntactically valid JSON
+    Syntax,
+    /// input data that is semantically incorrect
+    Data,
+    /// unexpected end of the input data
+    Eof,
+}
+
+impl From<serde_json::error::Category> for JsonParseErrorCategory {
+    fn from(value: serde_json::error::Category) -> Self {
+        match value {
+            serde_json::error::Category::Io => Self::IO,
+            serde_json::error::Category::Syntax => Self::Syntax,
+            serde_json::error::Category::Data => Self::Data,
+            serde_json::error::Category::Eof => Self::Eof,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct JsonParseError {
+    pub line: usize,
+    pub column: usize,
+    pub category: JsonParseErrorCategory,
+}
+
+impl From<serde_json::Error> for JsonParseError {
+    fn from(value: serde_json::Error) -> Self {
+        Self {
+            line: value.line(),
+            column: value.column(),
+            category: JsonParseErrorCategory::from(value.classify()),
+        }
+    }
+}
+
+#[repr(C)]
+pub union FoldParsePayload<'alloc> {
+    pub file: *const FoldFile<'alloc>,
+    pub error: JsonParseError,
+    pub nothing: PhantomData<u8>,
+}
+
 #[repr(C)]
 pub struct FoldParseResult<'alloc> {
-    pub status: FoldOperationStatus,
-    pub file: Option<core::ptr::NonNull<FoldFile<'alloc>>>,
+    pub status: FoldParseStatus,
+    pub payload: FoldParsePayload<'alloc>,
 }
 
 // TODO: output errors
@@ -37,6 +94,15 @@ pub unsafe extern "C" fn rtori_fold_parse<'alloc>(
     fold_str: *const u8,
     fold_str_len: usize,
 ) -> FoldParseResult<'alloc> {
+    if fold_str_len == 0 {
+        return FoldParseResult {
+            status: FoldParseStatus::Empty,
+            payload: FoldParsePayload {
+                nothing: PhantomData,
+            },
+        };
+    }
+
     let ctx = {
         let ctx = unsafe { crate::Arc::from_raw_in(ctx, (&*ctx).allocator) };
         let ctx_clone = ctx.clone();
@@ -49,8 +115,10 @@ pub unsafe extern "C" fn rtori_fold_parse<'alloc>(
         Ok(parsed) => parsed,
         Err(e) => {
             return FoldParseResult {
-                status: FoldOperationStatus::ParseError,
-                file: None,
+                status: FoldParseStatus::Error,
+                payload: FoldParsePayload {
+                    error: JsonParseError::from(e),
+                },
             }
         }
     };
@@ -62,8 +130,10 @@ pub unsafe extern "C" fn rtori_fold_parse<'alloc>(
     let output_raw = crate::Arc::into_raw(output);
 
     FoldParseResult {
-        status: FoldOperationStatus::Success,
-        file: core::ptr::NonNull::new(output_raw as *mut _),
+        status: FoldParseStatus::Success,
+        payload: FoldParsePayload {
+            file: output_raw as *mut _,
+        },
     }
 }
 
@@ -213,6 +283,8 @@ pub unsafe extern "C" fn rtori_fold_query_frame<'alloc>(
 
 // TODO: drop
 // TODO: queries
+
+use std::marker::PhantomData;
 
 // TODO: output errors
 pub use transformed::*;

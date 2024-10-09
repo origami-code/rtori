@@ -94,7 +94,7 @@ pub unsafe extern "C" fn rtori_ctx_create_solver<'alloc>(
         ctx,
         inner: std::sync::Mutex::new(crate::SolverInner {
             solver,
-            state: crate::SolverState::Standby,
+            //state: crate::SolverState::Standby,
         }),
     };
 
