@@ -7,10 +7,10 @@ pub struct Context<'alloc> {
 /// Call `rtori_deinit` to deinitialize
 #[no_mangle]
 pub unsafe extern "C" fn rtori_ctx_init(
-    parameters: Option<&crate::CustomAllocator>,
-) -> *const Context<'_> {
+    parameters: Option<std::ptr::NonNull<crate::CustomAllocator>>,
+) -> *const Context<'static> {
     let allocator = parameters
-        .map(|custom| crate::ContextAllocator::Custom(custom))
+        .map(|custom| crate::ContextAllocator::Custom(unsafe { &*(custom.as_ref()) }))
         .unwrap_or(crate::ContextAllocator::Global);
 
     let context = Context { allocator };
@@ -30,6 +30,8 @@ pub unsafe extern "C" fn rtori_ctx_clone(ctx: *const Context<'_>) -> *const Cont
 
 #[no_mangle]
 pub unsafe extern "C" fn rtori_ctx_deinit(ctx: *const Context) {
+    println!("DEINIT CTX");
+
     let _ctx = unsafe { crate::Arc::from_raw_in(ctx, (&*ctx).allocator) };
     // let it drop naturally
 }

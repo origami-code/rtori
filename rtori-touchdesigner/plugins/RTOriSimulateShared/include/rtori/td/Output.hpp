@@ -3,7 +3,7 @@
 #include <optional>
 #include <vector>
 
-namespace rtori_td {
+namespace rtori::rtori_td {
 
 struct Output {
   public:
@@ -27,4 +27,4 @@ struct Output {
 	bool validInput;
 };
 
-} // namespace rtori_td
+} // namespace rtori::rtori_td

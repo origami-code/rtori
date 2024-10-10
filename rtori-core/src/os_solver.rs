@@ -35,11 +35,7 @@ pub enum Solver {
     #[cfg(feature = "cpu")]
     CPU(
         Option<
-            os_cpu::owned::OwnedRunner<
-                'static,
-                { os_cpu::PREFERRED_WIDTH },
-                alloc::alloc::Global,
-            >,
+            os_cpu::owned::OwnedRunner<'static, { os_cpu::PREFERRED_WIDTH }, alloc::alloc::Global>,
         >,
     ),
     #[cfg(feature = "gpu")]

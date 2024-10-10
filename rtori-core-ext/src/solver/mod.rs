@@ -20,6 +20,14 @@ pub struct Solver<'alloc> {
     pub(crate) inner: std::sync::Mutex<SolverInner>,
 }
 
+/// The context pointer returned is only guaranteed to be valid as long as the solver itself hasn't be de-initialized
+#[no_mangle]
+pub unsafe extern "C" fn rtori_solver_get_context<'alloc>(
+    solver: *const Solver<'alloc>,
+) -> *const crate::Context<'alloc> {
+    unsafe { &*solver }.ctx.as_ref()
+}
+
 #[derive(Debug, Clone, Copy)]
 #[repr(u32)]
 pub enum SolverOperationResult {
@@ -39,13 +47,13 @@ pub unsafe extern "C" fn rtori_solver_load_from_transformed<'alloc>(
 ) -> SolverOperationResult {
     let allocator = unsafe { (&*solver).ctx.allocator };
     let solver = unsafe { crate::Arc::from_raw_in(solver, (&*solver).ctx.allocator) };
-    let transformed = unsafe { std::boxed::Box::from_raw_in(transformed, allocator) };
+    let transformed = unsafe { &*transformed };
 
     let frame = transformed.input.parsed.frame(transformed.frame);
     let res = match frame {
         Some(frame) => {
             let frame = frame.get();
-            let transformed_input = transformed.transform.with_fold(&frame);
+            let transformed_input = &transformed.transform.with_fold(&frame);
 
             let mut solver = solver.inner.lock().unwrap();
 
@@ -69,8 +77,8 @@ pub unsafe extern "C" fn rtori_solver_load_from_fold<'alloc>(
     frame_index: u16,
 ) -> SolverOperationResult {
     let allocator = unsafe { (&*solver).ctx.allocator };
-    let solver = unsafe { crate::Arc::from_raw_in(solver, (&*solver).ctx.allocator) };
-    let fold = unsafe { crate::Arc::from_raw_in(fold, (&*fold).ctx.allocator) };
+    let solver = unsafe { &*solver };
+    let fold = unsafe { &*fold };
     let res = {
         let mut solver = solver.inner.lock().unwrap();
 
@@ -83,8 +91,6 @@ pub unsafe extern "C" fn rtori_solver_load_from_fold<'alloc>(
             None => SolverOperationResult::ErrorNoSuchFrameInFold,
         }
     };
-    std::mem::forget(solver);
-    std::mem::forget(fold);
 
     res
 }
@@ -95,12 +101,11 @@ pub unsafe extern "C" fn rtori_solver_step<'alloc>(
     step_count: u32,
 ) -> SolverOperationResult {
     let res = {
-        let solver = unsafe { crate::Arc::from_raw_in(solver, (&*solver).ctx.allocator) };
+        let solver = unsafe { &*solver };
         let res = {
             let mut solver = solver.inner.lock().unwrap();
             solver.solver.step(step_count)
         };
-        std::mem::forget(solver);
         res
     };
 
@@ -132,7 +137,7 @@ pub unsafe extern "C" fn rtori_extract<'solver, 'result>(
     solver: *const Solver<'solver>,
     request: *const ExtractOutRequest,
 ) -> SolverOperationResult {
-    let solver = unsafe { crate::Arc::from_raw_in(solver, (&*solver).ctx.allocator) };
+    let solver = unsafe { &*solver };
     let request: &ExtractOutRequest = unsafe { &*request };
 
     let extract_flags = crate::model::ExtractFlags::from_bits_truncate(
@@ -186,14 +191,13 @@ pub unsafe extern "C" fn rtori_extract<'solver, 'result>(
         SolverOperationResult::Success
     };
 
-    std::mem::forget(solver);
-
     res
 }
 
 /// Drops a solver object. After dropping, the pointer is freed and it should not be used anymore.
 #[no_mangle]
-pub unsafe extern "C" fn rtori_solver_deinit<'alloc>(solver: *mut Solver<'alloc>) {
+pub unsafe extern "C" fn rtori_solver_deinit<'alloc>(solver: *const Solver<'alloc>) {
+    println!("DEINIT SOLVER");
     let _fold = unsafe { crate::Arc::from_raw_in(solver, (&*solver).ctx.allocator) };
     // let it drop naturally
 }

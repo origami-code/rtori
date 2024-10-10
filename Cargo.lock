@@ -2225,8 +2225,3 @@ dependencies = [
  "quote",
  "syn 2.0.74",
 ]
-
-[[patch.unused]]
-name = "cbindgen"
-version = "0.27.0"
-source = "git+https://github.com/0e4ef622/cbindgen.git?branch=array-mangle#fd10272f331469adb647a297e018d0e2e06cde23"

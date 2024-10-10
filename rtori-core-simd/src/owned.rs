@@ -20,9 +20,10 @@ where
     _allocator_marker: PhantomData<&'allocator A>,
 }
 
-impl<'allocator, const L: usize, A> OwnedRunner<'allocator, L, A> where
+impl<'allocator, const L: usize, A> OwnedRunner<'allocator, L, A>
+where
     LaneCount<L>: SupportedLaneCount,
-        A: Allocator + 'allocator,
+    A: Allocator + 'allocator,
 {
     pub const fn runner(&self) -> &crate::Runner<'allocator, L> {
         &self.runner
@@ -33,7 +34,8 @@ impl<'allocator, const L: usize, A> OwnedRunner<'allocator, L, A> where
     }
 }
 
-impl<'allocator, const L: usize, A> OwnedRunner<'allocator, L, A> where
+impl<'allocator, const L: usize, A> OwnedRunner<'allocator, L, A>
+where
     LaneCount<L>: SupportedLaneCount,
     simba::simd::Simd<core::simd::Simd<f32, L>>: simba::simd::SimdRealField,
     A: Allocator + 'allocator,
@@ -72,8 +74,7 @@ where
     }
 }
 
-impl<'allocator, const L: usize, A> core::ops::Deref
-    for OwnedRunner<'allocator, L, A>
+impl<'allocator, const L: usize, A> core::ops::Deref for OwnedRunner<'allocator, L, A>
 where
     LaneCount<L>: SupportedLaneCount,
     A: Allocator + 'allocator,
@@ -85,8 +86,7 @@ where
     }
 }
 
-impl<'allocator, const L: usize, A> core::ops::DerefMut
-    for OwnedRunner<'allocator, L, A>
+impl<'allocator, const L: usize, A> core::ops::DerefMut for OwnedRunner<'allocator, L, A>
 where
     LaneCount<L>: SupportedLaneCount,
     A: Allocator + 'allocator,

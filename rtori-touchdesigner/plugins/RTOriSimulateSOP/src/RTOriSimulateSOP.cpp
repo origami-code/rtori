@@ -1,5 +1,6 @@
 /* rtori touchdesigner */
 
+#include "rtori/td/SimulationThread.hpp"
 #include <chrono>
 #include <cstddef>
 #include <iterator>
@@ -21,6 +22,7 @@
 #include "RTOriSimulateSOP.hpp"
 #include "CPlusPlus_Common.h"
 
+#include "rtori/td/Context.hpp"
 #include "rtori_core.hpp"
 
 #ifdef _MSC_VER
@@ -32,6 +34,7 @@
 #include <format>
 
 using namespace TD;
+using namespace rtori::rtori_td;
 
 // These functions are basic C function, which the DLL loader can find
 // much easier than finding a C++ Class.
@@ -68,38 +71,13 @@ void FillSOPPluginInfo(SOP_PluginInfo* info) {
 	customInfo.maxInputs = 0;
 }
 
-static int32_t instance_count = 0;
-static rtori::Context const* rtori_ctx = nullptr;
-
-#include <stdlib.h>
-
-static void* rtori_alloc(const void* alloc_ctx, size_t size, size_t alignment) {
-#ifdef MSVC
-	return _aligned_malloc(size, alignment);
-#else
-	return aligned_malloc(size, alignment);
-#endif
-}
-
-static void rtori_dealloc(const void* dealloc_ctx, void* ptr, size_t size, size_t alignment) {
-#ifdef MSVC
-	_aligned_free(ptr);
-#else
-	aligned_free(ptr, size, alignment);
-#endif
-}
-
 DLLEXPORT
 SOP_CPlusPlusBase* CreateSOPInstance(const OP_NodeInfo* info) {
-	if (instance_count == 0) {
-		rtori_ctx = rtori::rtori_ctx_init(nullptr);
-	}
-
-	instance_count += 1;
+	const rtori::Context* const rtoriCtx = rtori::rtori_td::init();
 
 	// Return a new instance of your class every time this is called.
 	// It will be called once per SOP that is using the .dll
-	return new SimulateSOP(info);
+	return new SimulateSOP(info, rtoriCtx);
 }
 
 DLLEXPORT
@@ -107,35 +85,28 @@ void DestroySOPInstance(SOP_CPlusPlusBase* instance) {
 	// Delete the instance here, this will be called when
 	// Touch is shutting down, when the SOP using that instance is deleted, or
 	// if the SOP loads a different DLL
-	delete (SimulateSOP*)instance;
+	SimulateSOP* instanceCasted = static_cast<SimulateSOP*>(instance);
+	const rtori::Context* const rtoriCtx = instanceCasted->rtoriCtx;
+	delete instanceCasted;
 
-	assert(instance_count >= 1);
-	instance_count -= 1;
-
-	if (instance_count == 0) {
-		assert(rtori_ctx != nullptr);
-		rtori::rtori_ctx_deinit(rtori_ctx);
-	}
-};
+	rtori::rtori_td::deinit(rtoriCtx);
+}
 }
 
 constexpr float DEFAULT_IDLE_THRESHOLD = 0.0001f;
 constexpr const char* PARAMETER_KEY_FOLD_SOURCE = "Foldsource";
+constexpr const char* PARAMETER_KEY_FOLD_FRAME_INDEX = "Foldframeindex";
 constexpr const char* PARAMETER_KEY_POSITION = "Extractposition";
 constexpr const char* PARAMETER_KEY_ERROR = "Extracterror";
 constexpr const char* PARAMETER_KEY_VELOCITY = "Extractvelocity";
 
-SimulateSOP::SimulateSOP(const OP_NodeInfo* _info) {
-	this->m_simulationThread = std::thread(&SimulateSOP::runWorkerThread, this);
-};
+SimulateSOP::SimulateSOP(const OP_NodeInfo* _info, rtori::Context const* rtoriCtx)
+	: m_simulation(rtori::rtori_td::SimulationThread(rtoriCtx)), rtoriCtx(rtoriCtx){
 
-SimulateSOP::~SimulateSOP() {
-	this->m_workerShouldExit.test_and_set();
+																 };
 
-	// joining thread - may block
-	if (this->m_simulationThread.joinable()) {
-		this->m_simulationThread.join();
-	}
+SimulateSOP::~SimulateSOP(){
+
 };
 
 void SimulateSOP::getGeneralInfo(SOP_GeneralInfo* ginfo, const TD::OP_Inputs* inputs, void*) {
@@ -151,74 +122,67 @@ void SimulateSOP::getGeneralInfo(SOP_GeneralInfo* ginfo, const TD::OP_Inputs* in
 
 void SimulateSOP::execute(SOP_Output* output, const TD::OP_Inputs* inputs, void*) {
 	// It's time to cook ! Let's mark it
-	this->m_cookRequest++;
+	this->m_simulation.notifyCook();
 
 	// We convert the parameters into an Input
-	const Input consolidated = consolidateParameters(inputs);
+	const rtori::rtori_td::Input consolidated = consolidateParameters(inputs);
 	if (consolidated.changed()) {
-		std::cout << "Changed ! Input Number " << consolidated.inputNumber << std::endl;
-
-		const std::unique_lock<std::mutex> lock(this->m_inputMutex, std::try_to_lock);
-		if (lock.owns_lock()) {
-			this->m_input = consolidated;
-			this->m_cachedInput = consolidated;
-		}
+		this->m_simulation.update(consolidated);
 	}
 
-	// We read out the output
-	Output simulationOutput;
 	{
-		const std::lock_guard<std::mutex> lock(this->m_inputMutex);
-		simulationOutput = Output(this->m_output);
-	}
+		rtori::rtori_td::OutputGuard simulationOutputGuard = this->m_simulation.getOutput();
+		rtori::rtori_td::Output const& simulationOutput = simulationOutputGuard.output;
 
-	// TODO:
-	// Refactor into a single DLL called by both SimulateSOP and SimulateDAT
-	// Computation should happen on another thread (launched at the start of
-	// SimulateSOP, and killed when torn down)
-	// There is a target simulation speed (see oslib-streamer)
-	// A flag indicates that it is ready to harvest the data
-	// If it is, then the data is copied out here
-	// If the flag is skipped, then we're not fast enough to be realtime
-	// If the mode is "dynamic speed (realtime rendering)", then we mark that as a
-	// warning, and adjust the speed down. Otherwise if it's "static speed (might
-	// skip frames)" we don't care. In both cases the speed parameter is followed
-	// as a target taking into account the frame time (given as a parameter,
-	// coming from global) and the dt
-	// That also means we need to keep a cache
-	// The attributes like UVs are kept the same (in point-per-vertex mode)
+		// Setting the positions
+		if (simulationOutput.positions.has_value()) {
+			std::tuple<int32_t, int32_t> range = simulationOutput.positions.value();
+			assert((void("Range for the positions should divide evenly by 3 (x, y, z)"),
+					(std::get<1>(range) - std::get<0>(range)) % 3 == 0));
 
-	const char* normalsCustomAttributeName = "N";
-	const char* errorCustomAttributeName = "Error";
+			for (size_t i = std::get<0>(range); i < std::get<1>(range); i += 3) {
+				// Here, copy
+				TD::Position position(simulationOutput.backingBuffer[i],
+									  simulationOutput.backingBuffer[i + 1],
+									  simulationOutput.backingBuffer[i + 2]);
+				output->addPoint(position);
+			}
+		}
 
-	// Set positions
+		// Setting the error (they are an attribute of nodes as well)
+		if (simulationOutput.error.has_value()) {
+			SOP_CustomAttribData nodeErrorAttrib{"Error", 1, AttribType::Float};
+			nodeErrorAttrib.floatData =
+			  const_cast<float*>(simulationOutput.backingBuffer.data() +
+								 std::get<0>(simulationOutput.error.value()));
+			output->setCustomAttribute(&nodeErrorAttrib, output->getNumPoints());
+		}
 
-	// Setting the normals (they are an attribute of nodes, which are points here)
-	if (simulationOutput.positions.has_value()) {
-		SOP_CustomAttribData nodeNormalAttrib{normalsCustomAttributeName, 3, AttribType::Float};
-		nodeNormalAttrib.floatData = simulationOutput.backingBuffer.data() +
-									 std::get<0>(simulationOutput.positions.value());
-		output->setCustomAttribute(&nodeNormalAttrib, output->getNumPoints());
-	}
-
-	// Setting the error (they are an attribute of nodes as well)
-	if (simulationOutput.error.has_value()) {
-		SOP_CustomAttribData nodeErrorAttrib{"Error", 1, AttribType::Float};
-		nodeErrorAttrib.floatData =
-		  simulationOutput.backingBuffer.data() + std::get<0>(simulationOutput.error.value());
-		output->setCustomAttribute(&nodeErrorAttrib, output->getNumPoints());
+		// TODO:
+		// Cache the indices and do it outside the mutex
+		// As they should only change on geometry change
+		output->addTriangles(simulationOutput.indices.data(), simulationOutput.indices.size());
 	}
 
 	// Unfortunately, UVs need to be per-vertex, and I haven't found a way to set
 	// vertex attributes from an SOP
 	// See
-	// https://forum.derivative.ca/t/c-trouble-adding-more-than-1-set-of-uv-coords-using-settexcoord/257147
-	// So we need to duplicate points for each triangle if we want to set UVs
-	// That could be a split mode of that SOP
-	// OR we call python which can do it
+	//
+	// forum.derivative.ca/t/c-trouble-adding-more-than-1-set-of-uv-coords-using-settexcoord/257147
+	//  So we need to duplicate points for each triangle if we want to set UVs
+	//  That could be a split mode of that SOP
+	//  OR we call python which can do it
 }
 
 void SimulateSOP::executeVBO(SOP_VBOOutput* output, const TD::OP_Inputs* inputs, void*) {
+	// It's time to cook ! Let's mark it
+	this->m_simulation.notifyCook();
+
+	// We convert the parameters into an Input
+	const rtori::rtori_td::Input consolidated = consolidateParameters(inputs);
+	if (consolidated.changed()) {
+		this->m_simulation.update(consolidated);
+	}
 	// ShapeMenuItems shape = myParms.evalShape(inputs);
 	// Color color = myParms.evalColor(inputs);
 
@@ -288,6 +252,16 @@ void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 		parameter.label = "Fold Source";
 
 		const OP_ParAppendResult res = manager->appendString(parameter);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	{
+		OP_NumericParameter parameter;
+
+		parameter.name = PARAMETER_KEY_FOLD_FRAME_INDEX;
+		parameter.label = "Fold Frame Index";
+
+		const OP_ParAppendResult res = manager->appendToggle(parameter);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
@@ -418,244 +392,27 @@ void SimulateSOP::getInfoPopupString(TD::OP_String* info, void* reserved1) {
 	info->setString("Not loaded");
 }
 
-Input SimulateSOP::consolidateParameters(const TD::OP_Inputs* inputs) const {
-	Input input = {
-	  .inputNumber = this->m_cachedInput.inputNumber,
-	  .foldFileSource = this->m_cachedInput.foldFileSource.update(
+rtori::rtori_td::Input SimulateSOP::consolidateParameters(const TD::OP_Inputs* inputs) const {
+	const rtori::rtori_td::Input& cachedInput = this->m_simulation.getInput();
+
+	rtori::rtori_td::Input input = {
+	  .inputNumber = cachedInput.inputNumber,
+	  .foldFileSource = cachedInput.foldFileSource.update(
 		std::string(inputs->getParString(PARAMETER_KEY_FOLD_SOURCE))),
-	  .extractPosition = this->m_cachedInput.extractPosition.update(
-		inputs->getParInt(PARAMETER_KEY_POSITION) != 0),
+	  .frameIndex =
+		cachedInput.frameIndex.update(inputs->getParInt(PARAMETER_KEY_FOLD_FRAME_INDEX)),
+	  .extractPosition =
+		cachedInput.extractPosition.update(inputs->getParInt(PARAMETER_KEY_POSITION) != 0),
 	  .extractError =
-		this->m_cachedInput.extractError.update(inputs->getParInt(PARAMETER_KEY_ERROR) != 0),
-	  .extractVelocity = this->m_cachedInput.extractVelocity.update(
-		inputs->getParInt(PARAMETER_KEY_VELOCITY) != 0),
+		cachedInput.extractError.update(inputs->getParInt(PARAMETER_KEY_ERROR) != 0),
+	  .extractVelocity =
+		cachedInput.extractVelocity.update(inputs->getParInt(PARAMETER_KEY_VELOCITY) != 0),
 	};
 
 	if (input.changed()) {
+		std::cout << "Input changed" << std::endl;
 		input.inputNumber += 1;
 	}
 
 	return input;
-}
-
-enum class ImportInputIntoSolverResultKind {
-	Success,
-	FoldEmpty,
-	FoldParseError,
-	FoldLoadError,
-};
-
-struct ImportInputIntoSolverResult {
-  public:
-	ImportInputIntoSolverResultKind kind;
-	union {
-		rtori::JsonParseError parseError;
-	} payload;
-
-	std::string format() const {
-		switch (kind) {
-		case ImportInputIntoSolverResultKind::FoldParseError: {
-			rtori::JsonParseError const& details = this->payload.parseError;
-			return std::format("[ERROR] Fold parse error \"{}\" on line {}, column {}",
-							   (int32_t)details.category,
-							   details.line,
-							   details.column);
-		}
-		case ImportInputIntoSolverResultKind::FoldLoadError:
-			return std::string("[ERROR] Fold load error");
-		case ImportInputIntoSolverResultKind::FoldEmpty:
-			return std::string("[ERROR] Fold input is empty");
-		case ImportInputIntoSolverResultKind::Success:
-			return std::string("[SUCCESS] Fold loaded successfully");
-		default:
-			return std::string("[ERROR] Unknown error kind");
-		}
-	}
-};
-
-/// [TD-THREAD]
-ImportInputIntoSolverResult importInputIntoSolver(rtori::Solver const* solver,
-												  const Input& input) {
-	const std::string_view fold = input.foldFileSource.value;
-
-	if (fold.length() == 0) {
-		return ImportInputIntoSolverResult{.kind = ImportInputIntoSolverResultKind::FoldEmpty};
-	}
-
-	// First, parse
-	const rtori::FoldParseResult foldParseResult =
-	  rtori::rtori_fold_parse(rtori_ctx,
-							  reinterpret_cast<const uint8_t*>(fold.data()),
-							  fold.length());
-
-	if (foldParseResult.status != rtori::FoldParseStatus::Success) {
-		std::cout << "Error while parsing fold file" << std::endl;
-
-		if (foldParseResult.status == rtori::FoldParseStatus::Error) {
-			return ImportInputIntoSolverResult{
-			  .kind = ImportInputIntoSolverResultKind::FoldParseError,
-			  .payload{.parseError = foldParseResult.payload.error}};
-		} else if (foldParseResult.status == rtori::FoldParseStatus::Empty) {
-			return ImportInputIntoSolverResult{
-			  .kind = ImportInputIntoSolverResultKind::FoldEmpty,
-			};
-		} else {
-			assert(false);
-		}
-	}
-	std::cout << "Parsed fold file" << std::endl;
-
-	const rtori::FoldFile* foldFile = foldParseResult.payload.file;
-
-	// Then load
-	const rtori::SolverOperationResult solverLoadResult =
-	  rtori::rtori_solver_load_from_fold(solver, foldFile, 0);
-	if (solverLoadResult != rtori::SolverOperationResult::Success) {
-		std::cout << "Error while loading fold file" << std::endl;
-
-		return ImportInputIntoSolverResult{.kind =
-											 ImportInputIntoSolverResultKind::FoldLoadError};
-	}
-	std::cout << "Loaded fold file" << std::endl;
-
-	// Done
-	return ImportInputIntoSolverResult{.kind = ImportInputIntoSolverResultKind::Success};
-}
-
-bool SimulateSOP::shouldPack() const {
-	return true;
-}
-
-void SimulateSOP::runWorkerThread() {
-	int64_t outputCounter = 0;
-	int64_t lastInputNumber = 0;
-
-	bool extractPosition = false;
-	bool extractVelocity = false;
-	bool extractError = false;
-
-	const rtori::Parameters solverCreationParams = {.solver =
-													  rtori::SolverKind::OrigamiSimulator,
-													.backend = rtori::BackendFlags_ANY};
-
-	rtori::Solver const* solver =
-	  rtori::rtori_ctx_create_solver(rtori_ctx, &solverCreationParams);
-	bool hasLoaded = false;
-
-	while (!this->m_workerShouldExit.test()) {
-		{
-			const std::unique_lock<std::mutex> lock(this->m_inputMutex, std::try_to_lock);
-			if (lock.owns_lock()) {
-				const Input& input = this->m_input;
-				if (input.inputNumber != lastInputNumber) {
-					extractPosition = input.extractPosition.value;
-					extractVelocity = input.extractVelocity.value;
-					extractError = input.extractError.value;
-
-					ImportInputIntoSolverResult result = importInputIntoSolver(solver, input);
-
-					if (result.kind == ImportInputIntoSolverResultKind::Success) {
-						hasLoaded = true;
-					} else {
-						// TODO: report error
-						std::cout << std::format("Error importing: {}", result.format())
-								  << std::endl;
-					}
-				}
-			}
-		}
-
-		rtori::SolverOperationResult stepResult = rtori::rtori_solver_step(solver, 1);
-		if (stepResult != rtori::SolverOperationResult::Success) {
-			// ERROR
-			std::cout << "ERROR: Solver step failed" << (uint32_t)stepResult << std::endl;
-		}
-		if (hasLoaded && (extractPosition || extractVelocity || extractError) &&
-			this->shouldPack()) {
-			size_t positions_written = 0;
-			size_t error_written = 0;
-			size_t velocity_written = 0;
-
-			rtori::ExtractOutRequest extractRequest = {
-			  .positions = rtori::ArrayOutput<float[3]>{.buffer = nullptr,
-														.buffer_size = 0,
-														.written_size = &positions_written},
-			  .velocity = rtori::ArrayOutput<float[3]>{.buffer = nullptr,
-														.buffer_size = 0,
-														.written_size = &velocity_written },
-			  .error = rtori::ArrayOutput<float>{.buffer = nullptr,
-														.buffer_size = 0,
-														.written_size = &error_written	   }
-			};
-
-			int32_t vertex_count = 0; // TODO: Query number of vertices
-
-			const std::unique_lock<std::mutex> lock(this->m_outputMutex, std::try_to_lock);
-			if (lock.owns_lock()) {
-				size_t cursor = 0;
-
-				if (extractPosition) {
-					// In floats
-					const size_t sizeNeeded = 3 /* x y z */ * vertex_count;
-
-					this->m_output.positions =
-					  std::make_tuple(static_cast<uint32_t>(cursor),
-									  static_cast<uint32_t>(sizeNeeded));
-
-					using val_t = float[3];
-					val_t* buffer =
-					  reinterpret_cast<val_t*>(this->m_output.backingBuffer.data() + cursor);
-
-					extractRequest.positions.buffer = buffer;
-					extractRequest.positions.buffer_size =
-					  vertex_count; /* as its a buffer of arrays */
-
-					cursor += sizeNeeded;
-				}
-
-				if (extractVelocity) {
-					// In floats
-					const size_t sizeNeeded = 3 /* x y z */ * vertex_count;
-
-					this->m_output.velocity =
-					  std::make_tuple(static_cast<uint32_t>(cursor),
-									  static_cast<uint32_t>(sizeNeeded));
-
-					using val_t = float[3];
-					val_t* buffer =
-					  reinterpret_cast<val_t*>(this->m_output.backingBuffer.data() + cursor);
-
-					extractRequest.velocity.buffer = buffer;
-					extractRequest.velocity.buffer_size =
-					  vertex_count; /* as its a buffer of arrays */
-
-					cursor += sizeNeeded;
-				}
-
-				if (extractError) {
-					// In floats
-					const size_t sizeNeeded = vertex_count;
-
-					this->m_output.velocity =
-					  std::make_tuple(static_cast<uint32_t>(cursor),
-									  static_cast<uint32_t>(sizeNeeded));
-
-					using val_t = float;
-					val_t* buffer =
-					  reinterpret_cast<val_t*>(this->m_output.backingBuffer.data() + cursor);
-
-					extractRequest.error.buffer = buffer;
-					extractRequest.error.buffer_size =
-					  vertex_count; /* as its a buffer of arrays */
-
-					cursor += sizeNeeded;
-				}
-
-				const rtori::SolverOperationResult result =
-				  rtori::rtori_extract(solver, &extractRequest);
-				assert((void("extraction should never fail"),
-						result == rtori::SolverOperationResult::Success));
-			}
-		}
-	}
 }

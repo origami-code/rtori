@@ -13,7 +13,12 @@ pub unsafe extern "C" fn rtori_fold_transform<'alloc>(
     frame_index: u16,
 ) -> *mut TransformedData<'alloc> {
     let alloc = unsafe { &*fold }.ctx.allocator;
-    let fold = unsafe { crate::Arc::from_raw_in(fold, alloc) };
+    let fold = {
+        let fold = unsafe { crate::Arc::from_raw_in(fold, alloc) };
+        let cloned = fold.clone();
+        core::mem::forget(fold);
+        cloned
+    };
 
     let transform = {
         let frame = fold.parsed.frame(frame_index).unwrap();

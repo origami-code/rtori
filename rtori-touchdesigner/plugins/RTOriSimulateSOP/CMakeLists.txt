@@ -17,7 +17,7 @@ target_link_libraries(
     PUBLIC
     TouchDesigner_Common
     TouchDesigner_SOP
-    rtori_core
+    RTOriSimulateShared
 )
 
 target_compile_definitions(

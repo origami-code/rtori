@@ -131,9 +131,7 @@ pub unsafe extern "C" fn rtori_fold_parse<'alloc>(
 
     FoldParseResult {
         status: FoldParseStatus::Success,
-        payload: FoldParsePayload {
-            file: output_raw as *mut _,
-        },
+        payload: FoldParsePayload { file: output_raw },
     }
 }
 
@@ -158,6 +156,8 @@ pub unsafe extern "C" fn rtori_fold_encode<'alloc>(
 /// Drops a fold object. After dropping, the pointer is freed and it should not be used anymore.
 #[no_mangle]
 pub unsafe extern "C" fn rtori_fold_deinit<'alloc>(fold: *const FoldFile<'alloc>) {
+    println!("DEINIT FOLD");
+
     let _fold = unsafe { crate::Arc::from_raw_in(fold, (&*fold).ctx.allocator) };
     // let it drop naturally
 }

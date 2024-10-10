@@ -135,7 +135,7 @@ where
     A: Allocator,
 {
     pub const fn with_fold<'frame>(
-        self,
+        &'frame self,
         frame: &'frame fold::FrameCore,
     ) -> TransformedInput<'frame, A> {
         TransformedInput::new(frame, self)
@@ -147,14 +147,17 @@ where
     A: Allocator,
 {
     pub source: &'frame fold::FrameCore,
-    pub transformed: TransformedData<A>,
+    pub transformed: &'frame TransformedData<A>,
 }
 
 impl<'frame, A> TransformedInput<'frame, A>
 where
     A: Allocator,
 {
-    pub const fn new(fold: &'frame fold::FrameCore, transformed: TransformedData<A>) -> Self {
+    pub const fn new(
+        fold: &'frame fold::FrameCore,
+        transformed: &'frame TransformedData<A>,
+    ) -> Self {
         {
             Self {
                 transformed,
