@@ -34,7 +34,7 @@ where
     const fn from_array(arr: [SimdU32<L>; 4]) -> Self {
         Self {
             complement_node_indices: [arr[0], arr[1]],
-            adjacent_node_indices: [arr[1], arr[2]],
+            adjacent_node_indices: [arr[2], arr[3]],
         }
     }
 }

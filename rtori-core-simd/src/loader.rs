@@ -344,13 +344,15 @@ where
         {
             let crease_idx = usize::try_from(crease_idx).unwrap();
 
-            let (target_complement, inner_index) = scope_access::<L, _>(&mut data.0, crease_idx);
+            let (target_neighbourhood, inner_index) = scope_access::<L, _>(&mut data.0, crease_idx);
 
             let (target_face_indices, _) = scope_access::<L, _>(&mut data.1, crease_idx);
 
             for i in 0..2 {
-                target_complement.complement_node_indices[i][inner_index] =
+                target_neighbourhood.complement_node_indices[i][inner_index] =
                     geometry.complementary_node_indices[i];
+                target_neighbourhood.adjacent_node_indices[i][inner_index] =
+                    geometry.adjacent_node_indices[i];
                 target_face_indices.0[i][inner_index] = geometry.face_indices[i];
             }
         }

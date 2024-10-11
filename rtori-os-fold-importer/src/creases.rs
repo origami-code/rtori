@@ -171,7 +171,7 @@ pub fn extract_creases<'a, FI: ExtractCreasesInput>(
                     complement_vertex_index
                 };
 
-                let flip = (v1_idx - v0_idx == 1) || (v0_idx == v1_idx + 2);
+                let flip = (v1_idx == 1 + v0_idx) || (v0_idx == v1_idx + 2);
 
                 Ok((result, flip))
             };

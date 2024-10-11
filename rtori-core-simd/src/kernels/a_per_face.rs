@@ -28,13 +28,15 @@ pub fn calculate_normals<'a, const L: usize>(
 ) -> impl ExactSizeIterator<Item = PerFaceOutput<L>> + use<'a, L>
 where
     LaneCount<L>: SupportedLaneCount,
-    simba::simd::Simd<core::simd::Simd<f32, L>>: simba::simd::SimdComplexField,
+    simba::simd::Simd<core::simd::Simd<f32, L>>:
+        simba::simd::SimdComplexField<SimdRealField = simba::simd::Simd<core::simd::Simd<f32, L>>>,
 {
     // First, we calculate every combined position using SIMD
     inputs
         .face_node_indices
         .iter()
         .map(move |idx: &SimdVec3U<L>| {
+            println!("PerFaceInput: processing faces {:?}", idx);
             let f = #[inline(always)]
             |indices: SimdU32<L>| {
                 position::get_positions_for_indices(
@@ -47,10 +49,23 @@ where
             // Gather
             let [a, b, c] = idx.map(f);
 
-            let ba = b - a;
-            let ca = c - a;
+            let ab = b - a;
+            let ac = c - a;
+            let cross = ab.cross(&ac);
 
-            let result = ba.cross(&ca).normalize();
+            let norm = {
+                let norm: simba::simd::Simd<SimdF32<L>> = cross.norm();
+                use std::simd::cmp::SimdPartialEq as _;
+                let norm_is_zero = norm.0.simd_eq(SimdF32::splat(0.0));
+                let norm_corrected = norm_is_zero.select(SimdF32::splat(1.0), norm.0);
+                simba::simd::Simd(norm_corrected)
+            };
+
+            let result = cross.unscale(norm);
+            println!(
+                "Normals are: {:?} (ab: {:?}, ac: {:?}, cross: {:?}, cross_norm: {:?})",
+                result, ab, ac, cross, norm
+            );
             PerFaceOutput {
                 face_normals: [result.x.0, result.y.0, result.z.0],
             }

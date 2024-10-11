@@ -42,9 +42,10 @@ pub fn calculate_node_face_forces<'a, const L: usize>(
 ) -> impl ExactSizeIterator<Item = PerNodeFaceOutput<L>> + use<'a, L>
 where
     LaneCount<L>: SupportedLaneCount,
-    simba::simd::Simd<core::simd::Simd<f32, L>>: nalgebra::SimdRealField,
+    simba::simd::Simd<core::simd::Simd<f32, L>>:
+        simba::simd::SimdComplexField<SimdRealField = simba::simd::Simd<core::simd::Simd<f32, L>>>,
 {
-    let tol = simba::simd::Simd(SimdF32::splat(TOL));
+    let tol = SimdF32::splat(TOL);
     let face_stiffness = simba::simd::Simd(SimdF32::splat(inputs.face_stiffness));
     let zero = simba::simd::Simd(SimdF32::splat(0.0));
     let zero_force = nalgebra::Vector3::new(zero, zero, zero);
@@ -82,17 +83,30 @@ where
             let ac_length = ac.norm();
             let bc_length = bc.norm();
 
+            println!("per_node_face: ab {ab:?}, ac {ac:?}, bc {bc:?}");
+
             // TODO Skip if lower than tolerance
+            let mask = {
+                use std::simd::cmp::SimdPartialOrd as _;
+                let ab_mask = ab_length.0.simd_gt(tol);
+                let ac_mask = ac_length.0.simd_gt(tol);
+                let bc_mask = bc_length.0.simd_gt(tol);
+                ab_mask & ac_mask & bc_mask
+            };
 
             let ab = ab / ab_length;
             let ac = ac / ac_length;
             let bc = bc / bc_length;
+
+            println!("per_node_face (normalized): ab {ab:?}, ac {ac:?}, bc {bc:?}");
 
             let angles = [
                 ab.dot(&ac).simd_acos(),
                 simba::simd::Simd(SimdF32::splat(-1.0)) * ab.dot(&bc),
                 ac.dot(&bc),
             ];
+
+            println!("per_node_face angles: {angles:?}");
 
             let [normal, nominal_angles] = super::gather::gather_vec3f(
                 [&inputs.face_normals, &inputs.face_nominal_angles],
@@ -158,10 +172,16 @@ where
             let force = force_a + force_b + force_c;
             let error = zero;
 
-            PerNodeFaceOutput {
-                force: [force.x.0, force.y.0, force.z.0],
-                error: error.0,
-            }
+            let output = PerNodeFaceOutput {
+                force: [
+                    mask.select(force.x.0, zero.0),
+                    mask.select(force.y.0, zero.0),
+                    mask.select(force.z.0, zero.0),
+                ],
+                error: mask.select(error.0, zero.0),
+            };
+            println!("per_node_face: {output:?}");
+            output
         },
     )
 }

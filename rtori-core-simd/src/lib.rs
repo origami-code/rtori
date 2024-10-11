@@ -1,4 +1,4 @@
-#![no_std]
+// #![no_std] temporary for testing
 #![feature(portable_simd)]
 #![feature(iter_array_chunks)]
 #![feature(stmt_expr_attributes)]
