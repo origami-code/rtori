@@ -83,7 +83,7 @@ where
             let ac_length = ac.norm();
             let bc_length = bc.norm();
 
-            println!("per_node_face: ab {ab:?}, ac {ac:?}, bc {bc:?}");
+            // /*2024-10-11*/ println!("per_node_face: ab {ab:?}, ac {ac:?}, bc {bc:?}");
 
             // TODO Skip if lower than tolerance
             let mask = {
@@ -98,7 +98,7 @@ where
             let ac = ac / ac_length;
             let bc = bc / bc_length;
 
-            println!("per_node_face (normalized): ab {ab:?}, ac {ac:?}, bc {bc:?}");
+            // /*2024-10-11*/ println!("per_node_face (normalized): ab {ab:?}, ac {ac:?}, bc {bc:?}");
 
             let angles = [
                 ab.dot(&ac).simd_acos(),
@@ -106,7 +106,7 @@ where
                 ac.dot(&bc),
             ];
 
-            println!("per_node_face angles: {angles:?}");
+            // /*2024-10-11*/ println!("per_node_face angles: {angles:?}");
 
             let [normal, nominal_angles] = super::gather::gather_vec3f(
                 [&inputs.face_normals, &inputs.face_nominal_angles],
@@ -180,7 +180,7 @@ where
                 ],
                 error: mask.select(error.0, zero.0),
             };
-            println!("per_node_face: {output:?}");
+            // /*2024-10-11*/ println!("per_node_face: {output:?}");
             output
         },
     )

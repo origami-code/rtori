@@ -224,6 +224,9 @@ pub enum FoldFrameQuery {
     /// Outputs the frame's `rtori:uvs`
     /// Implies the use of a [`QueryOutput::vec2f_array_output`] as data parameter
     UVs,
+    /// Outputs the frame's `vertices_coords`
+    /// Implies the use of a [`QueryOutput::vec3f_array_output`] as data parameter
+    VerticesCoords,
 }
 
 #[no_mangle]
@@ -274,6 +277,27 @@ pub unsafe extern "C" fn rtori_fold_query_frame<'alloc>(
         FoldFrameQuery::UVs => {
             let source = frame.uvs.as_ref().map(|v| v.as_slice());
             unsafe { output.as_mut().copy_vec2f(source) };
+            FoldOperationStatus::Success
+        }
+        FoldFrameQuery::VerticesCoords => {
+            let source = frame.vertices.coords.as_ref().map(|v| v.as_slice());
+            match source {
+                Some(source) => {
+                    let it = source.iter().map(|vertex| {
+                        [
+                            vertex.get(0).copied().unwrap_or(0.0),
+                            vertex.get(1).copied().unwrap_or(0.0),
+                            vertex.get(2).copied().unwrap_or(0.0),
+                        ]
+                    });
+
+                    unsafe { output.as_mut().extend_vec3f(it) };
+                }
+                None => {
+                    unsafe { output.as_mut().empty_vec3f() };
+                }
+            };
+
             FoldOperationStatus::Success
         }
     }

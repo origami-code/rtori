@@ -42,7 +42,6 @@ where
         inputs.crease_fold_angle
     )
     .map(|(face_indices, neighbourhoods, previous_fold_angles)| {
-
         let g = #[inline(always)]
         |face_index| {
             let face_indices_a = face_indices.0[face_index];
@@ -73,14 +72,13 @@ where
         let vertex_b = get_adjacent(1);
 
         let ab = vertex_b - vertex_a;
-                println!("per_crease_fold_angle: vertex_a {vertex_a:?} vertex_b {vertex_b:?} ab {ab:?} neighbourhoods {neighbourhoods:?}");
+        // /*2024-10-11*/ println!("per_crease_fold_angle: vertex_a {vertex_a:?} vertex_b {vertex_b:?} ab {ab:?} neighbourhoods {neighbourhoods:?}");
         let crease_vector = ab.normalize();
 
         let x = normals_dot_clamped;
         let y = normals_a.cross(&crease_vector).dot(&normals_b);
         let fold_angle = simba::simd::Simd::simd_atan2(y, x);
-            println!("per_crease_fold_angle uncorrected fold angle {fold_angle:?} (y: {y:?}, x: {x:?}, crease_vector: {crease_vector:?})");
-
+        // /*2024-10-11*/ println!("per_crease_fold_angle uncorrected fold angle {fold_angle:?} (y: {y:?}, x: {x:?}, crease_vector: {crease_vector:?})");
 
         if true {
             let zero = simba::simd::Simd(SimdF32::splat(0.0));
@@ -94,7 +92,7 @@ where
             let over_diff = (-tau).select(over, zero);
 
             let corrected = simba::simd::Simd(*previous_fold_angles) + under_diff + over_diff;
-            println!("per_crease_fold_angle Derived fold angle {corrected:?}");
+            // /*2024-10-11*/ println!("per_crease_fold_angle Derived fold angle {corrected:?}");
 
             corrected
         } else {

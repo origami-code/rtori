@@ -36,7 +36,7 @@ where
         .face_node_indices
         .iter()
         .map(move |idx: &SimdVec3U<L>| {
-            println!("PerFaceInput: processing faces {:?}", idx);
+            // /*2024-10-11*/ println!("PerFaceInput: processing faces {:?}", idx);
             let f = #[inline(always)]
             |indices: SimdU32<L>| {
                 position::get_positions_for_indices(
@@ -62,10 +62,11 @@ where
             };
 
             let result = cross.unscale(norm);
-            println!(
-                "Normals are: {:?} (ab: {:?}, ac: {:?}, cross: {:?}, cross_norm: {:?})",
-                result, ab, ac, cross, norm
-            );
+            /*2024-10-11*/
+ /*// /*2024-10-11*/ println!(
+     "Normals are: {:?} (ab: {:?}, ac: {:?}, cross: {:?}, cross_norm: {:?})",
+     result, ab, ac, cross, norm
+ );*/
             PerFaceOutput {
                 face_normals: [result.x.0, result.y.0, result.z.0],
             }

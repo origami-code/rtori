@@ -35,10 +35,10 @@ where
     LaneCount<L>: SupportedLaneCount,
 {
     let [x_indices, y_indices, z_indices] = indices_to_vec_as_scalar_indices(indices);
-    println!(
+    /*  /*2024-10-11*/ println println!(
         "Indices: x: {:?}, y: {:?}, z: {:?}",
         x_indices, y_indices, z_indices
-    );
+    );*/
     slices.map(|origin| {
         let scalars = bytemuck::cast_slice::<[core::simd::Simd<T, L>; 3], T>(origin);
 
@@ -59,10 +59,10 @@ where
     LaneCount<L>: SupportedLaneCount,
 {
     let result = gather_vec3f([input], indices)[0];
-    println!(
+    /* /*2024-10-11*/ println!(
         "gather_vec3f_1: indices: {:?} => result: {:?} [input {:?}]",
         indices, result, input
-    );
+    ); */
     result
 }
 
@@ -75,10 +75,10 @@ where
     LaneCount<L>: SupportedLaneCount,
 {
     let result = gather_vec3(slices, indices);
-    println!(
+    /* /*2024-10-11*/ println!(
         "gather_vec3f: indices: {:?} => result: {:?} [input {:?}]",
         indices, result, slices
-    );
+    ); */
     result
 }
 

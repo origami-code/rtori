@@ -25,10 +25,11 @@ where
     let offset = algebrize(offset);
 
     let position = unchanging + offset;
-    println!(
-        "get_positions_for_indices: indices {:?} => position {:?}",
-        indices, position
-    );
+    /*2024-10-11*/
+ /*println!(
+     "get_positions_for_indices: indices {:?} => position {:?}",
+     indices, position
+ ); */
     position
 }
 
@@ -75,7 +76,7 @@ mod tests {
             &[positions_offsets_simd],
             SimdU32::<4>::from_array([0, 1, 2, 3]),
         );
-        println!("eq {positions} {positions_unchaging_simd:?}");
+        // /*2024-10-11*/ println!("eq {positions} {positions_unchaging_simd:?}");
 
         for i in 0..4 {
             assert_eq!(positions.x.0[i], positions_unchaging_simd[0][i]);

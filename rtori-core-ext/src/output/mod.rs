@@ -150,6 +150,10 @@ impl QueryOutput {
         unsafe { self.vec3f_array_output.extend_from_source(source, false) }
     }
 
+    pub(crate) unsafe fn empty_vec3f(&mut self) {
+        unsafe { self.vec3f_array_output.set_empty() }
+    }
+
     pub(crate) unsafe fn copy_vec2f(&mut self, source: Option<&[[f32; 2]]>) {
         unsafe { self.vec2f_array_output.copy_from_source_opt(source) }
     }

@@ -155,7 +155,7 @@ void SimulationThread::runWorker() {
 															.written_size = &error_written	   }
 				};
 
-				uint32_t vertex_count = 0; // TODO: Query number of vertices
+				uint32_t vertex_count = 0;
 				{
 					QueryOutput queryOutput{.u32_output = &vertex_count};
 					rtori::rtori_fold_query_frame(solver.foldFile,
@@ -238,6 +238,39 @@ void SimulationThread::runWorker() {
 					  rtori::rtori_extract(solver.solver, &extractRequest);
 					assert((void("extraction should never fail"),
 							result == rtori::SolverOperationResult::Success));
+
+					if (this->m_output.positions.has_value()) {
+						// Add in the vertices from the fold file as we only got the offset
+						// TODO: cache them
+						std::vector<float> verticesUnchanging(
+						  static_cast<size_t>(vertex_count) * 3);
+
+						size_t writtenSize = 0;
+						using val_t = float[3];
+
+						rtori::QueryOutput queryOutput = QueryOutput{
+						  .vec3f_array_output = {
+												 .buffer = reinterpret_cast<val_t*>(verticesUnchanging.data()),
+												 .buffer_size = vertex_count,
+												 .written_size = &writtenSize,
+												 .offset = 0}
+						};
+
+						rtori::FoldOperationStatus queryStatus =
+						  rtori::rtori_fold_query_frame(solver.foldFile,
+														solver.frameIndex,
+														FoldFrameQuery::VerticesCoords,
+														&queryOutput);
+
+						assert(queryStatus == rtori::FoldOperationStatus::Success);
+
+						auto dest = this->m_output.backingBuffer.data() +
+									std::get<0>(this->m_output.positions.value());
+
+						for (size_t i = 0; i < vertex_count * 3; i++) {
+							dest[i] += verticesUnchanging[i];
+						}
+					}
 
 					packedThisFrame = true;
 				}
