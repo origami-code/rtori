@@ -33,6 +33,8 @@ struct Input {
 	InputChangeWrapper<std::string> foldFileSource;
 	InputChangeWrapper<uint16_t> frameIndex;
 
+	InputChangeWrapper<float> foldPercentage;
+
 	InputChangeWrapper<bool> extractPosition;
 	InputChangeWrapper<bool> extractError;
 	InputChangeWrapper<bool> extractVelocity;

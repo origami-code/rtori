@@ -149,6 +149,10 @@ where
         loader::Loader::new(self)
     }
 
+    pub fn set_fold_percentage(&mut self, fold_percentage: f32) {
+        self.state.crease_percentage = fold_percentage;
+    }
+
     pub fn extract<'a>(
         &'a self,
         _flags: rtori_os_model::ExtractFlags,

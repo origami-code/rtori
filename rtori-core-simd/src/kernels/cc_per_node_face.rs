@@ -7,6 +7,7 @@ use super::algebra::algebrize;
 use super::position;
 use crate::model::NodeFaceSpec;
 use crate::simd_atoms::*;
+use super::operations::debug::ensure_simd;
 
 #[derive(Debug)]
 pub struct PerNodeFaceInput<'backer, const L: usize>
@@ -43,7 +44,7 @@ pub fn calculate_node_face_forces<'a, const L: usize>(
 where
     LaneCount<L>: SupportedLaneCount,
     simba::simd::Simd<core::simd::Simd<f32, L>>:
-        simba::simd::SimdComplexField<SimdRealField = simba::simd::Simd<core::simd::Simd<f32, L>>>,
+        simba::simd::SimdRealField,
 {
     let tol = SimdF32::splat(TOL);
     let face_stiffness = simba::simd::Simd(SimdF32::splat(inputs.face_stiffness));
@@ -85,7 +86,7 @@ where
 
             // /*2024-10-11*/ println!("per_node_face: ab {ab:?}, ac {ac:?}, bc {bc:?}");
 
-            // TODO Skip if lower than tolerance
+            // Skip if lower than tolerance
             let mask = {
                 use std::simd::cmp::SimdPartialOrd as _;
                 let ab_mask = ab_length.0.simd_gt(tol);
@@ -93,43 +94,61 @@ where
                 let bc_mask = bc_length.0.simd_gt(tol);
                 ab_mask & ac_mask & bc_mask
             };
+            if (!mask).all() {
+                PerNodeFaceOutput {
+                    force: [zero.0, zero.0, zero.0],
+                    error: zero.0,
+                };
+            }
+            
 
-            let ab = ab / ab_length;
-            let ac = ac / ac_length;
-            let bc = bc / bc_length;
-
+            let ab = ensure_simd!(ab / ab_length; v3; @depends(ab, ab_length));
+            let ac = ensure_simd!(ac / ac_length; v3; @depends(ac, ac_length));
+            let bc = ensure_simd!(bc / bc_length; v3; @depends(bc, bc_length));
+            
             // /*2024-10-11*/ println!("per_node_face (normalized): ab {ab:?}, ac {ac:?}, bc {bc:?}");
 
+            // Euleur angles
+            use simba::simd::SimdPartialOrd; // for simd_min
             let angles = [
-                ab.dot(&ac).simd_acos(),
-                simba::simd::Simd(SimdF32::splat(-1.0)) * ab.dot(&bc),
-                ac.dot(&bc),
+                ensure_simd!(
+                    ab.dot(&ac)
+                        .simd_min(simba::simd::Simd(core::simd::Simd::splat(1.0f32)))
+                        .simd_acos();
+                    sw;
+                    @depends(ab, ac, ab.dot(&ac))
+                ), // FIXME: ensure that ab.dot(&ac) is maxed at 1.00f32 as otherwise at -1.0000001
+                ensure_simd!(simba::simd::Simd(SimdF32::splat(-1.0)) * ab.dot(&bc); sw; @depends(ab, bc)),
+                ensure_simd!(ac.dot(&bc); sw; @depends(ac, bc)),
             ];
-
             // /*2024-10-11*/ println!("per_node_face angles: {angles:?}");
 
             let [normal, nominal_angles] = super::gather::gather_vec3f(
                 [&inputs.face_normals, &inputs.face_nominal_angles],
                 spec.face_indices,
             );
+            ensure_simd!(normal; a);
+            ensure_simd!(nominal_angles; a);
 
             let angles_diff =
                 algebrize(nominal_angles) - nalgebra::Vector3::new(angles[0], angles[1], angles[2]);
-            let angles_diff = angles_diff.scale(face_stiffness);
+            ensure_simd!(angles_diff; v3);
+            
+            let angles_diff = ensure_simd!(angles_diff.scale(face_stiffness); v3);
 
             let is_a = spec.node_indices.simd_eq(face_vertex_indices[0]);
             let is_b = spec.node_indices.simd_eq(face_vertex_indices[1]);
             let is_c = spec.node_indices.simd_eq(face_vertex_indices[2]);
 
-            let left = select(is_b, ab, ac);
+            let left = ensure_simd!(select(is_b, ab, ac); v3);
             let left_length = simba::simd::Simd(is_b.select(ab_length.0, ac_length.0));
 
-            let right = select(is_a, ab, bc);
+            let right = ensure_simd!(select(is_a, ab, bc); v3);
             let right_length = simba::simd::Simd(is_a.select(ab_length.0, bc_length.0));
 
             let normal = algebrize(normal);
-            let cross_left = normal.cross(&left) / left_length;
-            let cross_right = normal.cross(&right) / right_length;
+            let cross_left = ensure_simd!(normal.cross(&left) / left_length; v3);
+            let cross_right = ensure_simd!(normal.cross(&right) / right_length; v3);
 
             let force_a = select(
                 is_a,
@@ -143,6 +162,7 @@ where
                 },
                 zero_force,
             );
+            ensure_simd!(force_a; v3);
 
             let force_b = select(
                 is_b,
@@ -156,6 +176,7 @@ where
                 },
                 zero_force,
             );
+            ensure_simd!(force_b; v3);
 
             let force_c = select(
                 is_c,
@@ -168,17 +189,22 @@ where
                 },
                 zero_force,
             );
+            ensure_simd!(force_c; v3);
 
-            let force = force_a + force_b + force_c;
+            let force = ensure_simd!(force_a + force_b + force_c; v3);
             let error = zero;
 
+            let force_selected =  ensure_simd!([
+                mask.select(force.x.0, zero.0),
+                mask.select(force.y.0, zero.0),
+                mask.select(force.z.0, zero.0),
+            ]; a);
+
+            let error_selected = mask.select(error.0, zero.0);
+
             let output = PerNodeFaceOutput {
-                force: [
-                    mask.select(force.x.0, zero.0),
-                    mask.select(force.y.0, zero.0),
-                    mask.select(force.z.0, zero.0),
-                ],
-                error: mask.select(error.0, zero.0),
+                force: force_selected,
+                error: error_selected,
             };
             // /*2024-10-11*/ println!("per_node_face: {output:?}");
             output

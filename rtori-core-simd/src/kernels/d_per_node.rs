@@ -2,8 +2,9 @@ use core::simd::{cmp::SimdPartialEq, LaneCount, SupportedLaneCount};
 
 use nalgebra::{SimdComplexField, SimdRealField};
 
-use super::algebra::algebrize;
+use super::{algebra::algebrize, operations};
 use crate::simd_atoms::*;
+use super::operations::debug::ensure_simd;
 
 #[derive(Debug)]
 pub struct PerNodeInput<'backer, const L: usize>
@@ -111,14 +112,20 @@ where
     let dt = simba::simd::Simd(SimdF32::splat(inputs.dt));
 
     inputs.into_iter().map(move |per_node| {
+        let valid_input = per_node.mass.simd_ne(SimdF32::splat(0.0));
+
         let force = algebrize(*per_node.external_forces)
             + algebrize(*per_node.crease_force)
             + algebrize(*per_node.beam_force)
             + algebrize(*per_node.face_force);
+        ensure_simd!(force; v3);
 
         let velocity_diff = force.scale(dt) / simba::simd::Simd(*per_node.mass);
+        ensure_simd!(velocity_diff; v3; @mask(valid_input));
 
         let velocity_new = algebrize(*per_node.velocity) + velocity_diff;
+        ensure_simd!(velocity_new; v3; @mask(valid_input));
+
         let is_fixed_mask = per_node.fixed.simd_eq(SimdU32::splat(1));
 
         let position_offset_diff =

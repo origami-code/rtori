@@ -56,7 +56,7 @@ pub struct EdgeInformation {
     pub assignments: Lockstep<EdgeAssignment>,
 
     #[serde(rename = "edges_foldAngle")]
-    pub fold_angles: Lockstep<f32>,
+    pub fold_angles: Lockstep<Option<f32>>,
 
     #[serde(rename = "edges_length")]
     pub length: Lockstep<f32>,

@@ -165,6 +165,15 @@ impl Solver {
         }
     }
 
+    pub fn set_fold_percentage(&mut self, fold_percentage: f32) -> Result<(), ()> {
+        match self {
+            Self::CPU(runner) => runner
+                .as_mut()
+                .ok_or(())
+                .map(|runner| runner.set_fold_percentage(fold_percentage)),
+        }
+    }
+
     /*
     pub fn extract(&self) -> impl rtori_os_model::Extractor<'_> {
         todo!()

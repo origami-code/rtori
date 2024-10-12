@@ -75,6 +75,7 @@ where
     LaneCount<L>: SupportedLaneCount,
 {
     let result = gather_vec3(slices, indices);
+
     /* /*2024-10-11*/ println!(
         "gather_vec3f: indices: {:?} => result: {:?} [input {:?}]",
         indices, result, slices

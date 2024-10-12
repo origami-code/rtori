@@ -1,4 +1,5 @@
 use core::simd::{LaneCount, SupportedLaneCount};
+use std::simd::num::SimdFloat;
 
 use nalgebra as na;
 

@@ -55,7 +55,8 @@ class Solver {
 	~Solver();
 
 	SolverImportResult update(std::optional<std::string_view> fold,
-							  std::optional<uint16_t> frameIndex);
+							  std::optional<uint16_t> frameIndex,
+							  std::optional<float> foldPercentage);
 };
 
 } // namespace rtori::rtori_td

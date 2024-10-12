@@ -46,7 +46,7 @@ crate::input::subclass! {
         edges_vertices -> (req, EdgeVertices, Vector2U);
         edges_faces -> (req, EdgeFaces, &'a [u32]);
         edges_assignment -> (req, EdgeAssignment, FoldAssignment);
-        edges_fold_angles -> (opt, EdgeFoldAngles, f32);
+        edges_fold_angles -> (opt, EdgeFoldAngles, Option<f32>);
         faces_vertices -> (req, FaceVertices, Vector3U);
     }
 }
@@ -68,7 +68,7 @@ pub fn iter_edges<'a, FI: ExtractCreasesInput>(
             // No such field
             || itertools::Either::Right(core::iter::repeat(None)),
             // Such a field
-            |v| itertools::Either::Left(v.iter().map(|i| Some(i))),
+            |v| itertools::Either::Left(v.iter().map(|i| i)),
         )
         .into_iter();
 

@@ -5,7 +5,7 @@
 //  - Groups: 2
 //  - Buffers: 5 (G0: 2, G1: 3)
 
-const TAU: f32 = 6.283185307179586476925286766559;
+const TAU: f32 = core::f32::consts::TAU;
 
 // Common
 @group(0)

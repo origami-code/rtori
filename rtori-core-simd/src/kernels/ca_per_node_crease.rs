@@ -126,7 +126,23 @@ where
                 crease_reaction_mask.select(force_crease_reaction.z.0, force_other.z.0),
             ];
 
-            force
+            let force_selected = super::operations::select_n(
+                invalid_physics,
+                [
+                    SimdF32::splat(0.0),
+                    SimdF32::splat(0.0),
+                    SimdF32::splat(0.0),
+                ],
+                force,
+            );
+
+            super::operations::debug::check_nans_simd_vec_msg(
+                force_selected,
+                "ca_per_node_crease",
+                "force_selected",
+            );
+
+            force_selected
         },
     )
 }

@@ -6,7 +6,7 @@
 //  - Buffers: 10 (G0: 10)
 //  - Variables: 1 (G0)
 
-const TAU: f32 = 6.283185307179586476925286766559;
+const TAU: f32 = core::f32::consts::TAU;
 
 /// Output
 @group(0)

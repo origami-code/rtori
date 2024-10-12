@@ -4,7 +4,7 @@ use core::simd::{LaneCount, SupportedLaneCount};
 
 use nalgebra::{RealField, SimdComplexField};
 
-use super::position;
+use super::{operations, position};
 use crate::model::CreaseNeighbourhood;
 use crate::{model::CreasesPhysicsLens, simd_atoms::*};
 
@@ -79,11 +79,25 @@ where
             // Second check: distances too small
             let invalids = too_short.bitor(dist_a_too_small).bitor(dist_b_too_small);
 
-            CreasesPhysicsLens {
+            let res = CreasesPhysicsLens {
                 a_height: invalids.select(invalid_value, dist_a.0),
                 a_coef: invalids.select(invalid_value, (proj_a_length / crease_length).0),
                 b_height: invalids.select(invalid_value, dist_b.0),
                 b_coef: invalids.select(invalid_value, (proj_b_length / crease_length).0),
-            }
+            };
+            operations::debug::check_nans_simd_msg(
+                res.a_height,
+                "bb_per_crease_physics",
+                "a_height",
+            );
+            operations::debug::check_nans_simd_msg(res.a_coef, "bb_per_crease_physics", "a_coef");
+            operations::debug::check_nans_simd_msg(
+                res.b_height,
+                "bb_per_crease_physics",
+                "b_height",
+            );
+            operations::debug::check_nans_simd_msg(res.b_coef, "bb_per_crease_physics", "b_coef");
+
+            res
         })
 }

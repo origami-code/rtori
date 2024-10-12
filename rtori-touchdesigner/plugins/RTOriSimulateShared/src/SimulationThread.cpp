@@ -272,6 +272,49 @@ void SimulationThread::runWorker() {
 						}
 					}
 
+					{
+						// Get the number of faces
+						uint32_t faceCount = 0;
+
+						{
+							rtori::QueryOutput faceCountQueryOutput = {.u32_output =
+																		 &faceCount};
+
+							rtori::FoldOperationStatus faceCountOperationStatus =
+							  rtori::rtori_fold_transformed_query(
+								solver.transformedData,
+								rtori::TransformedQuery::FacesCount,
+								&faceCountQueryOutput);
+
+							assert(faceCountOperationStatus ==
+								   rtori::FoldOperationStatus::Success);
+						}
+
+						// Ensure we can host that amount of faces
+						size_t indicesCount = static_cast<size_t>(faceCount) * 3;
+						if (this->m_output.indices.size() != indicesCount) {
+							this->m_output.indices.resize(indicesCount);
+						}
+
+						using val_t = uint32_t[3];
+
+						size_t faceOutputCount = 0;
+						rtori::QueryOutput output = {
+						  .vec3u_array_output = {
+												 .buffer = reinterpret_cast<val_t*>(this->m_output.indices.data()),
+												 .buffer_size = faceCount,
+												 .written_size = &faceOutputCount}
+						 };
+
+						rtori::FoldOperationStatus result = rtori::rtori_fold_transformed_query(
+						  solver.transformedData,
+						  rtori::TransformedQuery::FacesVertexIndices,
+						  &output);
+
+						assert(result == rtori::FoldOperationStatus::Success);
+						assert(faceOutputCount == faceCount);
+					}
+
 					packedThisFrame = true;
 				}
 			}
@@ -293,7 +336,9 @@ void SimulationThread::runWorker() {
 					  input.foldFileSource.changed ? std::optional(input.foldFileSource.value)
 												   : std::nullopt,
 					  input.frameIndex.changed ? std::optional(input.frameIndex.value)
-											   : std::nullopt);
+											   : std::nullopt,
+					  input.foldPercentage.changed ? std::optional(input.foldPercentage.value)
+												   : std::nullopt);
 
 					if (result.kind == SolverImportResultKind::Success) {
 						// hasLoaded = true;

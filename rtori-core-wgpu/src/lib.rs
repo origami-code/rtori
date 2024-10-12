@@ -12,8 +12,7 @@ mod loader;
 mod storage_buffers;
 mod uniform_buffers;
 
-mod model_size;
-pub use model_size::ModelSize;
+pub use rtori_os_model::{self as model, ModelSize};
 
 mod bind_groups;
 

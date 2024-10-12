@@ -96,6 +96,7 @@ void DestroySOPInstance(SOP_CPlusPlusBase* instance) {
 constexpr float DEFAULT_IDLE_THRESHOLD = 0.0001f;
 constexpr const char* PARAMETER_KEY_FOLD_SOURCE = "Foldsource";
 constexpr const char* PARAMETER_KEY_FOLD_FRAME_INDEX = "Foldframeindex";
+constexpr const char* PARAMETER_KEY_FOLD_PERCENTAGE = "Foldpercentage";
 constexpr const char* PARAMETER_KEY_POSITION = "Extractposition";
 constexpr const char* PARAMETER_KEY_ERROR = "Extracterror";
 constexpr const char* PARAMETER_KEY_VELOCITY = "Extractvelocity";
@@ -161,7 +162,8 @@ void SimulateSOP::execute(SOP_Output* output, const TD::OP_Inputs* inputs, void*
 		// TODO:
 		// Cache the indices and do it outside the mutex
 		// As they should only change on geometry change
-		output->addTriangles(simulationOutput.indices.data(), simulationOutput.indices.size());
+		output->addTriangles(simulationOutput.indices.data(),
+							 simulationOutput.indices.size() / 3);
 	}
 
 	// Unfortunately, UVs need to be per-vertex, and I haven't found a way to set
@@ -297,7 +299,7 @@ void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 
 	{
 		OP_NumericParameter parameter;
-		parameter.name = "Creasepercentage";
+		parameter.name = PARAMETER_KEY_FOLD_PERCENTAGE;
 		parameter.label = "Crease Percentage";
 
 		parameter.clampMins[0] = true;
@@ -401,12 +403,15 @@ rtori::rtori_td::Input SimulateSOP::consolidateParameters(const TD::OP_Inputs* i
 		std::string(inputs->getParString(PARAMETER_KEY_FOLD_SOURCE))),
 	  .frameIndex =
 		cachedInput.frameIndex.update(inputs->getParInt(PARAMETER_KEY_FOLD_FRAME_INDEX)),
+	  .foldPercentage = cachedInput.foldPercentage.update(
+		static_cast<float>(inputs->getParDouble(PARAMETER_KEY_FOLD_PERCENTAGE))),
 	  .extractPosition =
 		cachedInput.extractPosition.update(inputs->getParInt(PARAMETER_KEY_POSITION) != 0),
 	  .extractError =
 		cachedInput.extractError.update(inputs->getParInt(PARAMETER_KEY_ERROR) != 0),
 	  .extractVelocity =
-		cachedInput.extractVelocity.update(inputs->getParInt(PARAMETER_KEY_VELOCITY) != 0),
+		cachedInput.extractVelocity.update(inputs->getParInt(PARAMETER_KEY_VELOCITY) != 0)
+
 	};
 
 	if (input.changed()) {

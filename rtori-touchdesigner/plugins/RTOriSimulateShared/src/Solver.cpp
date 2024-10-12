@@ -32,7 +32,8 @@ Solver::~Solver() {
 }
 
 SolverImportResult Solver::update(std::optional<std::string_view> fold,
-								  std::optional<uint16_t> frameIndex) {
+								  std::optional<uint16_t> frameIndex,
+								  std::optional<float> foldPercentage) {
 	assert(this->solver != nullptr);
 	rtori::Context const* context = rtori_solver_get_context(this->solver);
 
@@ -104,6 +105,12 @@ SolverImportResult Solver::update(std::optional<std::string_view> fold,
 		  .kind = SolverImportResultKind::FoldEmpty,
 		};
 	} else {
+		if (foldPercentage.has_value()) {
+			SolverOperationResult result =
+			  rtori::rtori_solver_set_fold_percentage(solver, foldPercentage.value());
+			assert(result == SolverOperationResult::Success);
+		}
+
 		// Done
 		return SolverImportResult{.kind = SolverImportResultKind::Success};
 	}

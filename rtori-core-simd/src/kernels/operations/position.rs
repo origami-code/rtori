@@ -25,11 +25,17 @@ where
     let offset = algebrize(offset);
 
     let position = unchanging + offset;
+    super::debug::check_nans_simd_vec_msg::<{ L }, 3>(
+        [position.x.0, position.y.0, position.z.0],
+        "get_positions_for_indices",
+        "position",
+    );
+
     /*2024-10-11*/
- /*println!(
-     "get_positions_for_indices: indices {:?} => position {:?}",
-     indices, position
- ); */
+    /*println!(
+        "get_positions_for_indices: indices {:?} => position {:?}",
+        indices, position
+    ); */
     position
 }
 

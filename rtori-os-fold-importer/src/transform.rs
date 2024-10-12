@@ -272,12 +272,12 @@ impl<'a> Proxy<'a> for TranslatingProxy<'a> {
     }
 }
 
-pub struct DegreesToRadiansProxy<'a>(&'a [f32]);
+pub struct DegreesToRadiansProxy<'a>(&'a [Option<f32>]);
 impl<'a> DegreesToRadiansProxy<'a> {
     const DEGREES_TO_RADIANS_FACTOR: f32 = core::f32::consts::PI / 180.0f32;
 }
 impl<'a> Proxy<'a> for DegreesToRadiansProxy<'a> {
-    type Output = f32;
+    type Output = Option<f32>;
 
     fn count(&self) -> usize {
         self.0.len()
@@ -286,7 +286,7 @@ impl<'a> Proxy<'a> for DegreesToRadiansProxy<'a> {
     fn get(&self, idx: usize) -> Option<Self::Output> {
         self.0
             .get(idx)
-            .map(|value| value * Self::DEGREES_TO_RADIANS_FACTOR)
+            .map(|value| value.map(|val| val * Self::DEGREES_TO_RADIANS_FACTOR))
     }
 
     type Iter
@@ -297,7 +297,7 @@ impl<'a> Proxy<'a> for DegreesToRadiansProxy<'a> {
     fn iter(&self) -> Self::Iter {
         self.0
             .iter()
-            .map(|value| value * Self::DEGREES_TO_RADIANS_FACTOR)
+            .map(|value| value.map(|val| val * Self::DEGREES_TO_RADIANS_FACTOR))
     }
 }
 

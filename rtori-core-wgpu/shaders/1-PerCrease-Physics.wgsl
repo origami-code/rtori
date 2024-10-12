@@ -1,4 +1,4 @@
-const TAU: f32 = 6.283185307179586476925286766559;
+const TAU: f32 = core::f32::consts::TAU;
 const TOL: f32 = 0.000001;
 // Common
 

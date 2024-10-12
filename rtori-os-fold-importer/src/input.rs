@@ -103,7 +103,7 @@ pub trait ImportInput {
     where
         'call: 'output;
 
-    type EdgeFoldAngles<'a>: Proxy<'a, Output = f32>
+    type EdgeFoldAngles<'a>: Proxy<'a, Output = Option<f32>>
     where
         Self: 'a;
     fn edges_fold_angles<'call, 'output>(&'call self) -> Option<Self::EdgeFoldAngles<'output>>

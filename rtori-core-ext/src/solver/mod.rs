@@ -116,6 +116,26 @@ pub unsafe extern "C" fn rtori_solver_step<'alloc>(
     }
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn rtori_solver_set_fold_percentage<'alloc>(
+    solver: *const Solver<'alloc>,
+    fold_percentage: f32,
+) -> SolverOperationResult {
+    let res = {
+        let solver = unsafe { &*solver };
+        let res = {
+            let mut solver = solver.inner.lock().unwrap();
+            solver.solver.set_fold_percentage(fold_percentage)
+        };
+        res
+    };
+
+    match res {
+        Ok(_) => SolverOperationResult::Success,
+        Err(_) => SolverOperationResult::ErrorOther,
+    }
+}
+
 #[repr(C)]
 pub struct ExtractOutRange {
     pub offset: usize,
