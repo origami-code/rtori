@@ -4,10 +4,10 @@ use core::simd::SupportedLaneCount;
 use nalgebra::SimdComplexField;
 
 use super::algebra::algebrize;
+use super::operations::debug::ensure_simd;
 use super::position;
 use crate::model::NodeFaceSpec;
 use crate::simd_atoms::*;
-use super::operations::debug::ensure_simd;
 
 #[derive(Debug)]
 pub struct PerNodeFaceInput<'backer, const L: usize>
@@ -43,8 +43,7 @@ pub fn calculate_node_face_forces<'a, const L: usize>(
 ) -> impl ExactSizeIterator<Item = PerNodeFaceOutput<L>> + use<'a, L>
 where
     LaneCount<L>: SupportedLaneCount,
-    simba::simd::Simd<core::simd::Simd<f32, L>>:
-        simba::simd::SimdRealField,
+    simba::simd::Simd<core::simd::Simd<f32, L>>: simba::simd::SimdRealField,
 {
     let tol = SimdF32::splat(TOL);
     let face_stiffness = simba::simd::Simd(SimdF32::splat(inputs.face_stiffness));
@@ -111,13 +110,20 @@ where
             // Euleur angles
             use simba::simd::SimdPartialOrd; // for simd_min
             let angles = [
+                // We have to ensure that the dot product ab·ac has, for each lane (as it's SIMD), a value between -1 and 1.
+                // Unfortunately, sometimes, due to precision issues, the dot product gives values exceeding that range by miniscule values
+                // Calling acos on these cause NaNs, which then propagate everywhere
+                // Thus, we clamp the value
                 ensure_simd!(
                     ab.dot(&ac)
-                        .simd_min(simba::simd::Simd(core::simd::Simd::splat(1.0f32)))
+                        .simd_clamp(
+                            simba::simd::Simd(core::simd::Simd::splat(-1.0f32)),
+                            simba::simd::Simd(core::simd::Simd::splat(1.0f32))
+                        )
                         .simd_acos();
                     sw;
                     @depends(ab, ac, ab.dot(&ac))
-                ), // FIXME: ensure that ab.dot(&ac) is maxed at 1.00f32 as otherwise at -1.0000001
+                ), 
                 ensure_simd!(simba::simd::Simd(SimdF32::splat(-1.0)) * ab.dot(&bc); sw; @depends(ab, bc)),
                 ensure_simd!(ac.dot(&bc); sw; @depends(ac, bc)),
             ];

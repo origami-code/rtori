@@ -11,7 +11,7 @@ pub fn check_nans_simd_msg<const L: usize>(
     for i in 0..L {
         debug_assert!(
             (!data[i].is_nan()) && (!data[i].is_infinite()),
-            "[NAN-FAILURE({context}: `{variable}`)] Got an unexpected NaN in lane {i}."
+            "[NAN-FAILURE({context}: `{variable}`)] Got an unexpected NaN in lane {i}. Whole: {data:?}."
         );
     }
 }
@@ -63,8 +63,11 @@ pub(crate) fn check_nozero(value: f32) -> bool {
 pub(crate) fn check_a<const L: usize, const N: usize, F>(
     data: [core::simd::Simd<f32, L>; N],
     mask: core::simd::Mask<i32, L>,
-    check: F
-) -> Option<(usize, usize)> where LaneCount<L>: SupportedLaneCount, F: Fn(f32) -> bool
+    check: F,
+) -> Option<(usize, usize)>
+where
+    LaneCount<L>: SupportedLaneCount,
+    F: Fn(f32) -> bool,
 {
     for n in 0..N {
         for l in 0..L {
@@ -79,8 +82,11 @@ pub(crate) fn check_a<const L: usize, const N: usize, F>(
 pub(crate) fn check_aw<const L: usize, const N: usize, F>(
     data: [simba::simd::Simd<core::simd::Simd<f32, L>>; N],
     mask: core::simd::Mask<i32, L>,
-    check: F
-) -> Option<(usize, usize)> where LaneCount<L>: SupportedLaneCount, F: Fn(f32) -> bool
+    check: F,
+) -> Option<(usize, usize)>
+where
+    LaneCount<L>: SupportedLaneCount,
+    F: Fn(f32) -> bool,
 {
     for n in 0..N {
         for l in 0..L {
@@ -95,8 +101,11 @@ pub(crate) fn check_aw<const L: usize, const N: usize, F>(
 pub(crate) fn check_v3<const L: usize, F>(
     data: nalgebra::Vector3<simba::simd::Simd<core::simd::Simd<f32, L>>>,
     mask: core::simd::Mask<i32, L>,
-    check: F
-) -> Option<(usize, usize)> where LaneCount<L>: SupportedLaneCount, F: Fn(f32) -> bool
+    check: F,
+) -> Option<(usize, usize)>
+where
+    LaneCount<L>: SupportedLaneCount,
+    F: Fn(f32) -> bool,
 {
     for n in 0..3 {
         for l in 0..L {
@@ -111,23 +120,29 @@ pub(crate) fn check_v3<const L: usize, F>(
 pub(crate) fn check_s<const L: usize, F>(
     data: core::simd::Simd<f32, L>,
     mask: core::simd::Mask<i32, L>,
-    check: F
-) -> Option<usize> where LaneCount<L>: SupportedLaneCount, F: Fn(f32) -> bool
+    check: F,
+) -> Option<usize>
+where
+    LaneCount<L>: SupportedLaneCount,
+    F: Fn(f32) -> bool,
 {
     for l in 0..L {
         if mask.test(l) && !check(data[l]) {
             return Some(l);
         }
     }
-    
+
     None
 }
 
 pub(crate) fn check_sw<const L: usize, F>(
     data: simba::simd::Simd<core::simd::Simd<f32, L>>,
     mask: core::simd::Mask<i32, L>,
-    check: F
-) -> Option<usize> where LaneCount<L>: SupportedLaneCount, F: Fn(f32) -> bool
+    check: F,
+) -> Option<usize>
+where
+    LaneCount<L>: SupportedLaneCount,
+    F: Fn(f32) -> bool,
 {
     check_s(data.0, mask, check)
 }
@@ -190,7 +205,7 @@ macro_rules! ensure_simd(
             $crate::kernels::operations::debug::ensure_simd!($expr; $shape; @mask(mask); @upholds($($property),+); @depends())
         }
     };
-    
+
 
     ($expr:expr; $shape:tt; @mask($mask:expr)) => {
         {

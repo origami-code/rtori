@@ -45,6 +45,8 @@ where
                 )
             };
 
+            // /* 2025-01-13 */ println!("node_positions_offset: {:?}", &inputs.node_positions_offset);
+
             let node_fa = get_position(neighbourhood.complement_node_indices[0]);
             let node_fb = get_position(neighbourhood.complement_node_indices[1]);
 
@@ -75,7 +77,6 @@ where
             let proj_b_length = crease_vector_normalized.dot(&vector_b);
             let dist_b = vector_b_mag_sq - proj_b_length * proj_b_length;
             let dist_b_too_small = dist_b.0.simd_le(tol.0);
-
             // Second check: distances too small
             let invalids = too_short.bitor(dist_a_too_small).bitor(dist_b_too_small);
 
