@@ -13,6 +13,6 @@ where
     na::Vector3::<simba::simd::Simd<core::simd::Simd<f32, L>>>::new(
         simba::simd::Simd(input[0]),
         simba::simd::Simd(input[1]),
-        simba::simd::Simd(input[1]),
+        simba::simd::Simd(input[2]),
     )
 }

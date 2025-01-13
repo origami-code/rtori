@@ -62,8 +62,7 @@ where
             };
 
             let result = cross.unscale(norm);
-            /*2024-10-11*/
-            /*// /*2024-10-11*/ println!(
+            /* 2025-01-13 */ /*println!(
                 "Normals are: {:?} (ab: {:?}, ac: {:?}, cross: {:?}, cross_norm: {:?})",
                 result, ab, ac, cross, norm
             );*/

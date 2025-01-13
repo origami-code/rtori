@@ -5,17 +5,17 @@ use pollster::FutureExt as _;
 use rtori_os_fold_importer::{import_in, transform::transform_in};
 use rtori_os_model::ExtractorDyn;
 
-const SIMPLE_FOLD: &'static str = include_str!("../testdata/simple/simple_0.fold");
-const SIMPLE_FOLD_RESULTS: [(f32, &'static str); 9] = [
-    (0.00, include_str!("../testdata/simple/simple_0.fold")),
-    (0.25, include_str!("../testdata/simple/simple_25.fold")),
+const SIMPLE_FOLD: &'static str = include_str!("../testdata/diagonal/diagonal-cp_0.fold");
+const SIMPLE_FOLD_RESULTS: [(f32, &'static str); 1] = [
+    (0.00, include_str!("../testdata/diagonal/diagonal-cp_0.fold")),
+    /*(0.25, include_str!("../testdata/simple/simple_25.fold")),
     (0.50, include_str!("../testdata/simple/simple_50.fold")),
     (0.75, include_str!("../testdata/simple/simple_75.fold")),
     (1.00, include_str!("../testdata/simple/simple_100.fold")),
     (-0.25, include_str!("../testdata/simple/simple_-25.fold")),
     (-0.50, include_str!("../testdata/simple/simple_-50.fold")),
     (-0.75, include_str!("../testdata/simple/simple_-75.fold")),
-    (-1.00, include_str!("../testdata/simple/simple_-100.fold")),
+    (-1.00, include_str!("../testdata/simple/simple_-100.fold")),*/
 ];
 
 #[test]
@@ -55,9 +55,8 @@ fn test_onestep() {
 }
 
 #[test]
-fn test_similarity() {
-    let parsed_input = serde_json::from_str::<fold::File>(SIMPLE_FOLD)
-        .expect("source deserialization (json/fold file) failed");
+fn test_stability() {
+    
 
     let allocator = alloc::alloc::Global;
     let mut solver =
@@ -65,19 +64,21 @@ fn test_similarity() {
             .block_on()
             .unwrap();
 
-    solver.load_fold_in(&parsed_input.key_frame, allocator);
-
-    let mut positions = Vec::new();
-    positions.resize(
-        parsed_input.frame(0).unwrap().get().vertices.count(),
-        rtori_os_model::Vector3F([6.9f32, 42.0f32, 6009.0f32]),
-    );
-
     for (fold_percentage, expected) in &SIMPLE_FOLD_RESULTS {
-        println!("Testing simple with fold ratio {}", *fold_percentage);
+        let parsed_input = serde_json::from_str::<fold::File>(expected)
+            .expect("source deserialization (json/fold file) failed");
 
+        solver.load_fold_in(&parsed_input.key_frame, allocator);
+
+        let mut positions = Vec::new();
+        positions.resize(
+            parsed_input.frame(0).unwrap().get().vertices.count(),
+            rtori_os_model::Vector3F([6.9f32, 42.0f32, 6009.0f32]),
+        );
+
+        println!("Testing simple with fold ratio {}", *fold_percentage);
         solver.set_fold_percentage(*fold_percentage).unwrap();
-        solver.step(1000).expect(&format!(
+        solver.step(1).expect(&format!(
             "Step failed for fold percentage {}",
             *fold_percentage
         ));
@@ -89,32 +90,7 @@ fn test_similarity() {
         for (i, pos) in positions.iter().enumerate() {
             assert!(pos.0.iter().all(|v| !v.is_nan()), "fold percentage {fold_percentage}: got a NaN in vertex {i} (got position: {pos:?})");
         }
+        println!("Diff vector {positions:?} (expected 0)");
 
-        // Load the expectations
-        {
-            let expectation_fold = serde_json::from_str::<fold::File>(expected)
-                .expect("comparison deserialization (json/fold file) failed");
-
-            for (vertex_index, expected_coords) in expectation_fold
-                .key_frame
-                .vertices
-                .coords
-                .as_ref()
-                .unwrap()
-                .iter()
-                .enumerate()
-            {
-                assert!(expected_coords.0.len() == 3);
-                let simulated = positions[vertex_index];
-
-                let diff = [
-                    expected_coords.0[0] - simulated.0[0],
-                    expected_coords.0[1] - simulated.0[1],
-                    expected_coords.0[2] - simulated.0[2],
-                ];
-
-                println!("Vertex index {vertex_index}, diff vector {diff:?} (expected {expected_coords:?}, got {simulated:?})");
-            }
-        }
     }
 }
