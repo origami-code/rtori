@@ -5,22 +5,22 @@ use pollster::FutureExt as _;
 use rtori_os_fold_importer::{import_in, transform::transform_in};
 use rtori_os_model::ExtractorDyn;
 
-const SIMPLE_FOLD: &'static str = include_str!("../testdata/diagonal/diagonal-cp_0.fold");
-const SIMPLE_FOLD_RESULTS: [(f32, &'static str); 1] = [
-    (0.00, include_str!("../testdata/diagonal/diagonal-cp_0.fold")),
-    /*(0.25, include_str!("../testdata/simple/simple_25.fold")),
+const DIAGONAL_FOLD: &'static str = include_str!("../testdata/diagonal/diagonal-cp_0.fold");
+const SIMPLE_FOLD_RESULTS: [(f32, &'static str); 9] = [
+    (0.00, include_str!("../testdata/simple/simple_0.fold")),
+    (0.25, include_str!("../testdata/simple/simple_25.fold")),
     (0.50, include_str!("../testdata/simple/simple_50.fold")),
     (0.75, include_str!("../testdata/simple/simple_75.fold")),
     (1.00, include_str!("../testdata/simple/simple_100.fold")),
     (-0.25, include_str!("../testdata/simple/simple_-25.fold")),
     (-0.50, include_str!("../testdata/simple/simple_-50.fold")),
     (-0.75, include_str!("../testdata/simple/simple_-75.fold")),
-    (-1.00, include_str!("../testdata/simple/simple_-100.fold")),*/
+    (-1.00, include_str!("../testdata/simple/simple_-100.fold")),
 ];
 
 #[test]
 fn test_onestep() {
-    let parsed_input = serde_json::from_str::<fold::File>(SIMPLE_FOLD)
+    let parsed_input = serde_json::from_str::<fold::File>(DIAGONAL_FOLD)
         .expect("source deserialization (json/fold file) failed");
 
     let allocator = alloc::alloc::Global;
@@ -56,8 +56,6 @@ fn test_onestep() {
 
 #[test]
 fn test_stability() {
-    
-
     let allocator = alloc::alloc::Global;
     let mut solver =
         rtori_core::os_solver::Solver::create(rtori_core::os_solver::BackendFlags::CPU)
@@ -91,6 +89,5 @@ fn test_stability() {
             assert!(pos.0.iter().all(|v| !v.is_nan()), "fold percentage {fold_percentage}: got a NaN in vertex {i} (got position: {pos:?})");
         }
         println!("Diff vector {positions:?} (expected 0)");
-
     }
 }

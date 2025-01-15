@@ -2,9 +2,9 @@ use core::simd::{cmp::SimdPartialEq, LaneCount, SupportedLaneCount};
 
 use nalgebra::{SimdComplexField, SimdRealField};
 
+use super::operations::debug::ensure_simd;
 use super::{algebra::algebrize, operations};
 use crate::simd_atoms::*;
-use super::operations::debug::ensure_simd;
 
 #[derive(Debug)]
 pub struct PerNodeInput<'backer, const L: usize>

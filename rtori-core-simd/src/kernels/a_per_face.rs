@@ -62,10 +62,11 @@ where
             };
 
             let result = cross.unscale(norm);
-            /* 2025-01-13 */ /*println!(
-                "Normals are: {:?} (ab: {:?}, ac: {:?}, cross: {:?}, cross_norm: {:?})",
-                result, ab, ac, cross, norm
-            );*/
+            /* 2025-01-13 */
+ /*println!(
+     "Normals are: {:?} (ab: {:?}, ac: {:?}, cross: {:?}, cross_norm: {:?})",
+     result, ab, ac, cross, norm
+ );*/
             PerFaceOutput {
                 face_normals: [result.x.0, result.y.0, result.z.0],
             }
