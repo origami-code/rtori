@@ -132,14 +132,14 @@ where
             super::operations::select(is_fixed_mask, zero_force, velocity_new * dt);
 
         let position_offset = algebrize(*per_node.positions_offset) + position_offset_diff;
-        /* 2025-01-13 */ /*println!("
+        println!("
 mass: {:?}
 positions: {:?}
 force from crease {:?}
 force from beam {:?}
 force from face {:?}
 force (unscaled by dt): {:?}
-dt: {:?}", *per_node.mass, position_offset, per_node.crease_force, per_node.beam_force, per_node.face_force, force, dt);*/
+dt: {:?}", *per_node.mass, position_offset, per_node.crease_force, per_node.beam_force, per_node.face_force, force, dt);
 
         PerNodeOutput {
             position_offset: [

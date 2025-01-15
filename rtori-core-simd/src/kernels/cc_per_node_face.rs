@@ -58,30 +58,49 @@ where
             let face_vertex_indices =
                 super::gather::gather_vec3([&inputs.face_node_indices], spec.face_indices)[0];
 
-            // We have the node indices, so we don't need to do that weird magic
-            let a = position::get_positions_for_indices(
-                &inputs.node_positions_unchanging,
-                &inputs.node_positions_offset,
-                face_vertex_indices[0],
-            );
-            let b = position::get_positions_for_indices(
-                &inputs.node_positions_unchanging,
-                &inputs.node_positions_offset,
-                face_vertex_indices[1],
-            );
-            let c = position::get_positions_for_indices(
-                &inputs.node_positions_unchanging,
-                &inputs.node_positions_offset,
-                face_vertex_indices[2],
-            );
+            // Unnormalized ab, ac & bc vectors, as well as their lengths
+            let (
+                [ab, ac, bc],
+                [ab_length, ac_length, bc_length]
+            ) = {
+                // We have the node indices, so we don't need to do that weird magic
+                let [a,b,c] = {
+                    let a = position::get_positions_for_indices(
+                        &inputs.node_positions_unchanging,
+                        &inputs.node_positions_offset,
+                        face_vertex_indices[0],
+                    );
+                    let b = position::get_positions_for_indices(
+                        &inputs.node_positions_unchanging,
+                        &inputs.node_positions_offset,
+                        face_vertex_indices[1],
+                    );
+                    let c = position::get_positions_for_indices(
+                        &inputs.node_positions_unchanging,
+                        &inputs.node_positions_offset,
+                        face_vertex_indices[2],
+                    );
 
-            let ab = b - a;
-            let ac = c - a;
-            let bc = c - b;
+                    [a, b, c]
+                };
 
-            let ab_length = ab.norm();
-            let ac_length = ac.norm();
-            let bc_length = bc.norm();
+                let [ab, ac, bc] = [
+                    b - a,
+                    c - a,
+                    c - b
+                ];
+
+                let [ab_length, ac_length, bc_length] = [
+                    ab.norm(),
+                    ac.norm(),
+                    bc.norm()
+                ];
+
+                (
+                    [ab, ac, bc],
+                    [ab_length, ac_length, bc_length]
+                )
+            };
 
             // /*2024-10-11*/ println!("per_node_face: ab {ab:?}, ac {ac:?}, bc {bc:?}");
 
@@ -93,40 +112,53 @@ where
                 let bc_mask = bc_length.0.simd_gt(tol);
                 ab_mask & ac_mask & bc_mask
             };
+
             if (!mask).all() {
-                PerNodeFaceOutput {
+                return PerNodeFaceOutput {
                     force: [zero.0, zero.0, zero.0],
                     error: zero.0,
                 };
             }
             
-
-            let ab = ensure_simd!(ab / ab_length; v3; @depends(ab, ab_length));
-            let ac = ensure_simd!(ac / ac_length; v3; @depends(ac, ac_length));
-            let bc = ensure_simd!(bc / bc_length; v3; @depends(bc, bc_length));
+            // Normalize ab, ac & bc
+            let [ab, ac, bc] = [
+                ensure_simd!(ab / ab_length; v3; @depends(ab, ab_length)),
+                ensure_simd!(ac / ac_length; v3; @depends(ac, ac_length)),
+                ensure_simd!(bc / bc_length; v3; @depends(bc, bc_length))
+            ];
             
             // /*2024-10-11*/ println!("per_node_face (normalized): ab {ab:?}, ac {ac:?}, bc {bc:?}");
 
             // Euleur angles
             use simba::simd::SimdPartialOrd; // for simd_min
-            let angles = [
-                // We have to ensure that the dot product ab·ac has, for each lane (as it's SIMD), a value between -1 and 1.
-                // Unfortunately, sometimes, due to precision issues, the dot product gives values exceeding that range by miniscule values
-                // Calling acos on these cause NaNs, which then propagate everywhere
-                // Thus, we clamp the value
-                ensure_simd!(
-                    ab.dot(&ac)
-                        .simd_clamp(
-                            simba::simd::Simd(core::simd::Simd::splat(-1.0f32)),
-                            simba::simd::Simd(core::simd::Simd::splat(1.0f32))
-                        )
-                        .simd_acos();
-                    sw;
-                    @depends(ab, ac, ab.dot(&ac))
-                ), 
-                ensure_simd!(simba::simd::Simd(SimdF32::splat(-1.0)) * ab.dot(&bc); sw; @depends(ab, bc)),
-                ensure_simd!(ac.dot(&bc); sw; @depends(ac, bc)),
-            ];
+            let angles = {
+                // These are not yet the angles, but the values between 0 & 1, result of a dot product (directly or negated)
+                // Unfortunately, sometimes, due to precision issues, the dot product gives values exceeding that range by miniscule values.
+                // See the next operation on how we fix that
+                let dot_products = [
+                    ensure_simd!(
+                        ab.dot(&ac);
+                        sw;
+                        @depends(ab, ac)
+                    ), 
+                    ensure_simd!(simba::simd::Simd(SimdF32::splat(-1.0)) * ab.dot(&bc); sw; @depends(ab, bc)),
+                    ensure_simd!(ac.dot(&bc); sw; @depends(ac, bc)),
+                ];
+
+                // We have to ensure that the input to acos has, for each lane, a value between -1 and 1.
+                // This input comes from the dot product (directly or negated).
+                // Calling acos on these cause NaNs, which then propagate everywhere.
+                // Thus, we clamp the value.
+                let clamped = dot_products.map(|v| v.simd_clamp(
+                    simba::simd::Simd(core::simd::Simd::splat(-1.0f32)),
+                    simba::simd::Simd(core::simd::Simd::splat(1.0f32))
+                ));
+
+                // Finally, we can call acos
+                let acos = clamped.map(|v| v.simd_acos());
+
+                acos
+            };
             // /*2024-10-11*/ println!("per_node_face angles: {angles:?}");
 
             let [normal, nominal_angles] = super::gather::gather_vec3f(
@@ -139,65 +171,75 @@ where
             let angles_diff =
                 algebrize(nominal_angles) - nalgebra::Vector3::new(angles[0], angles[1], angles[2]);
             ensure_simd!(angles_diff; v3);
-            
-            let angles_diff = ensure_simd!(angles_diff.scale(face_stiffness); v3);
+            /* 2025-01-15 */ //println!("cc_per_node_face: Angles Difference: {angles_diff:?}");
 
-            let is_a = spec.node_indices.simd_eq(face_vertex_indices[0]);
-            let is_b = spec.node_indices.simd_eq(face_vertex_indices[1]);
-            let is_c = spec.node_indices.simd_eq(face_vertex_indices[2]);
+            let angles_diff_scaled = ensure_simd!(angles_diff.scale(face_stiffness); v3);
 
-            let left = ensure_simd!(select(is_b, ab, ac); v3);
-            let left_length = simba::simd::Simd(is_b.select(ab_length.0, ac_length.0));
+            let [
+                is_a,
+                is_b,
+                is_c
+            ] = face_vertex_indices.map(|index| spec.node_indices.simd_eq(index));
 
-            let right = ensure_simd!(select(is_a, ab, bc); v3);
-            let right_length = simba::simd::Simd(is_a.select(ab_length.0, bc_length.0));
+            let select_side = |sel, lhs, lhs_length: simba::simd::Simd<core::simd::Simd<f32, {L}>>, rhs, rhs_length: simba::simd::Simd<core::simd::Simd<f32, {L}>>| {
+                let selected = ensure_simd!(select(sel, lhs, rhs); v3);
+                let selected_length = simba::simd::Simd(sel.select(lhs_length.0, rhs_length.0));
+
+                (selected, selected_length)
+            };
+
+            let (left, left_length) = select_side(is_b, ab, ab_length, ac, ac_length);
+            let (right, right_length) = select_side(is_a, ab, ab_length, bc, bc_length);
 
             let normal = algebrize(normal);
             let cross_left = ensure_simd!(normal.cross(&left) / left_length; v3);
             let cross_right = ensure_simd!(normal.cross(&right) / right_length; v3);
 
-            let force_a = select(
-                is_a,
-                {
-                    let mut force = zero_force;
-                    force -= (cross_left - cross_right) * angles_diff.x;
-                    // TODO: face strain
-                    force -= cross_right * angles_diff.y;
-                    force += cross_left * angles_diff.z;
-                    force
-                },
-                zero_force,
-            );
-            ensure_simd!(force_a; v3);
+            let force= {
+                let force_a = select(
+                    is_a,
+                    {
+                        let mut force = zero_force;
+                        force -= (cross_left - cross_right) * angles_diff_scaled.x;
+                        // TODO: face strain
+                        force -= cross_right * angles_diff_scaled.y;
+                        force += cross_left * angles_diff_scaled.z;
+                        force
+                    },
+                    zero_force,
+                );
+                ensure_simd!(force_a; v3);
 
-            let force_b = select(
-                is_b,
-                {
-                    let mut force = zero_force;
-                    force -= left * angles_diff.x;
-                    force += (left + right) * angles_diff.y;
-                    // TODO: face strain
-                    force -= right * angles_diff.z;
-                    force
-                },
-                zero_force,
-            );
-            ensure_simd!(force_b; v3);
+                let force_b = select(
+                    is_b,
+                    {
+                        let mut force = zero_force;
+                        force -= left * angles_diff_scaled.x;
+                        force += (left + right) * angles_diff_scaled.y;
+                        // TODO: face strain
+                        force -= right * angles_diff_scaled.z;
+                        force
+                    },
+                    zero_force,
+                );
+                ensure_simd!(force_b; v3);
 
-            let force_c = select(
-                is_c,
-                {
-                    let mut force = zero_force;
-                    force += left * angles_diff.x;
-                    force -= right * angles_diff.y;
-                    force += (right - left) * angles_diff.z;
-                    force
-                },
-                zero_force,
-            );
-            ensure_simd!(force_c; v3);
+                let force_c = select(
+                    is_c,
+                    {
+                        let mut force = zero_force;
+                        force += left * angles_diff.x;
+                        force -= right * angles_diff.y;
+                        force += (right - left) * angles_diff.z;
+                        force
+                    },
+                    zero_force,
+                );
+                ensure_simd!(force_c; v3);
 
-            let force = ensure_simd!(force_a + force_b + force_c; v3);
+                let force = ensure_simd!(force_a + force_b + force_c; v3);
+                force
+            };
             let error = zero;
 
             let force_selected =  ensure_simd!([

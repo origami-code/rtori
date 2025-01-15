@@ -84,6 +84,7 @@ fn test_stability() {
         let result = solver
             .extract(rtori_os_model::ExtractFlags::all())
             .expect("extract call failed");
+
         result.copy_node_position(&mut positions[..], 0);
         for (i, pos) in positions.iter().enumerate() {
             assert!(pos.0.iter().all(|v| !v.is_nan()), "fold percentage {fold_percentage}: got a NaN in vertex {i} (got position: {pos:?})");
