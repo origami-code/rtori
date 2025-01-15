@@ -140,12 +140,12 @@ where
             );
 
             /* 2025-01-15 */
- /*println!("ca_per_node_crease:
- force selected: {force_selected:?}
- invalid_physics: {invalid_physics:?}
- crease_reaction_mask: {crease_reaction_mask:?}
- force_crease_reaction: {force_crease_reaction:?}
- force_other: {force_other:?}");*/
+            /*println!("ca_per_node_crease:
+            force selected: {force_selected:?}
+            invalid_physics: {invalid_physics:?}
+            crease_reaction_mask: {crease_reaction_mask:?}
+            force_crease_reaction: {force_crease_reaction:?}
+            force_other: {force_other:?}");*/
 
             super::operations::debug::check_nans_simd_vec_msg(
                 force_selected,

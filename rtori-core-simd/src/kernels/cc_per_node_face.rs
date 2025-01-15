@@ -119,14 +119,14 @@ where
                     error: zero.0,
                 };
             }
-            
+
             // Normalize ab, ac & bc
             let [ab, ac, bc] = [
                 ensure_simd!(ab / ab_length; v3; @depends(ab, ab_length)),
                 ensure_simd!(ac / ac_length; v3; @depends(ac, ac_length)),
                 ensure_simd!(bc / bc_length; v3; @depends(bc, bc_length))
             ];
-            
+
             // /*2024-10-11*/ println!("per_node_face (normalized): ab {ab:?}, ac {ac:?}, bc {bc:?}");
 
             // Euleur angles
@@ -140,9 +140,9 @@ where
                         ab.dot(&ac);
                         sw;
                         @depends(ab, ac)
-                    ), 
+                    ),
                     ensure_simd!(simba::simd::Simd(SimdF32::splat(-1.0)) * ab.dot(&bc); sw; @depends(ab, bc)),
-                    ensure_simd!(ac.dot(&bc); sw; @depends(ac, bc)),
+                    ensure_simd!(ac.dot(&bc); sw; @depends(ac, bc))
                 ];
 
                 // We have to ensure that the input to acos has, for each lane, a value between -1 and 1.

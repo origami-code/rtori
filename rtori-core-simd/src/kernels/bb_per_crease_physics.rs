@@ -106,18 +106,18 @@ where
                 };
 
                 /* 2025-01-15 */
- /*println!("
- bb_per_crease_physics:
-     ea: {node_ea:?}
-     eb: {node_eb:?}
-     fa: {node_fa:?}
-     fb: {node_fb:?}
-     complementary_node: {complementary_node:?}
-     crease_vector: {crease_vector:?}
-     crease_vector_normalized: {crease_vector_normalized:?}
-     on vector: {vector:?}
-     proj_length: {proj_length:?} (dot product)
-     dist: {dist:?}");*/
+                /*println!("
+                bb_per_crease_physics:
+                    ea: {node_ea:?}
+                    eb: {node_eb:?}
+                    fa: {node_fa:?}
+                    fb: {node_fb:?}
+                    complementary_node: {complementary_node:?}
+                    crease_vector: {crease_vector:?}
+                    crease_vector_normalized: {crease_vector_normalized:?}
+                    on vector: {vector:?}
+                    proj_length: {proj_length:?} (dot product)
+                    dist: {dist:?}");*/
 
                 let dist_too_small = dist.simd_le(tol.0);
 
@@ -142,13 +142,13 @@ where
             let (a_height, a_coef) = g(dist_a, proj_a_length);
             let (b_height, b_coef) = g(dist_b, proj_b_length);
             /* 2025-01-15 */
- /*println!("bb_per_crease_physics:
-     dist_b_too_small?: {dist_b_too_small:?}
-     dist_b: {dist_b:?}
-     proj_b_length: {proj_b_length:?}
-     b_height: {b_height:?}
-     b_coef: {b_coef:?}
- ");*/
+            /*println!("bb_per_crease_physics:
+                dist_b_too_small?: {dist_b_too_small:?}
+                dist_b: {dist_b:?}
+                proj_b_length: {proj_b_length:?}
+                b_height: {b_height:?}
+                b_coef: {b_coef:?}
+            ");*/
             let res = CreasesPhysicsLens {
                 a_height,
                 a_coef,
