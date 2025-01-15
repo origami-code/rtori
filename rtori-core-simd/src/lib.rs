@@ -153,6 +153,44 @@ where
         self.state.crease_percentage = fold_percentage;
     }
 
+    pub fn compute_dt(&mut self) {
+        /*
+                const naturalFrequencies = input.edges_vertices
+                    .map((_, edgeIndex) => FoldOp.calcNaturalFrequency(input, edgeIndex, this.#axialStiffness, this.#globalMass));
+
+                const maximumNaturalFrequency = Math.max(
+                    ...naturalFrequencies
+                );
+
+                // original note says:
+                // 0.9 of max delta t for good measure
+                const dt = (1.0 / (2.0 * Math.PI * maximumNaturalFrequency)) * 0.9;
+                return dt;
+
+
+                knowing
+
+                export function calcAxialK<V extends number, E extends number, F extends number>(input: Fold<V, E, F>, edgeIndex: number, defaultStiffness: number): number {
+            const axialStiffness = getAxialStiffness(input, edgeIndex) ?? defaultStiffness;
+            const length = calcLength(input, edgeIndex);
+            return axialStiffness / length;
+        }
+
+        export function calcMinimumMass<V extends number, E extends number, F extends number>(input: Fold<V, E, F>, edgeIndex: number, defaultMass: number): number {
+            const nodeMasses = input.edges_vertices[edgeIndex]
+                .flat().map((v) => getNodeMass<V, E, F>(input, v) ?? defaultMass) as FixedArray<number, 2>;
+            const minMass = Math.min(nodeMasses[0], nodeMasses[1]);
+            return minMass;
+        }
+
+        export function calcNaturalFrequency<V extends number, E extends number, F extends number>(input: Fold<V, E, F>, edgeIndex: number, defaultStiffness: number, defaultMass: number): number {
+            const k = calcAxialK(input, edgeIndex, defaultStiffness);
+            const minMass = calcMinimumMass(input, edgeIndex, defaultMass);
+            return Math.sqrt(k / minMass);
+        }
+                */
+    }
+
     pub fn extract<'a>(
         &'a self,
         _flags: rtori_os_model::ExtractFlags,

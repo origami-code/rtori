@@ -72,8 +72,9 @@ where
             let adjusted_target_fold_angles = crease_target_fold_angle * crease_percentage_splat;
             let angular_force =
                 crease_k * (adjusted_target_fold_angles - crease_current_fold_angle);
-
-            // Now it's time to load the geometry
+            /* 2025-01-15 */
+ // println!("Target Fold Angle: {adjusted_target_fold_angles:?} / Angular Force: {angular_force:?}");
+ // Now it's time to load the geometry
             let crease_face_indices =
                 CreaseFaceIndices::gather(&inputs.crease_face_indices, *crease_indices);
 

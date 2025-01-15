@@ -452,7 +452,7 @@ where
             node_face_forces: ScratchData::empty(),
             node_face_error: ScratchData::empty(),
             crease_percentage: 0.66,
-            dt: 0.0001,
+            dt: 0.001,
             face_stiffness: 1.0,
         }
     }

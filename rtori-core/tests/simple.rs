@@ -5,22 +5,21 @@ use pollster::FutureExt as _;
 use rtori_os_fold_importer::{import_in, transform::transform_in};
 use rtori_os_model::ExtractorDyn;
 
-const DIAGONAL_FOLD: &'static str = include_str!("../testdata/diagonal/diagonal-cp_0.fold");
-const SIMPLE_FOLD_RESULTS: [(f32, &'static str); 9] = [
-    (0.00, include_str!("../testdata/simple/simple_0.fold")),
-    (0.25, include_str!("../testdata/simple/simple_25.fold")),
-    (0.50, include_str!("../testdata/simple/simple_50.fold")),
-    (0.75, include_str!("../testdata/simple/simple_75.fold")),
-    (1.00, include_str!("../testdata/simple/simple_100.fold")),
-    (-0.25, include_str!("../testdata/simple/simple_-25.fold")),
-    (-0.50, include_str!("../testdata/simple/simple_-50.fold")),
-    (-0.75, include_str!("../testdata/simple/simple_-75.fold")),
-    (-1.00, include_str!("../testdata/simple/simple_-100.fold")),
-];
+use rstest::rstest;
+use rstest_reuse::{self, *};
 
-#[test]
-fn test_onestep() {
-    let parsed_input = serde_json::from_str::<fold::File>(DIAGONAL_FOLD)
+#[template]
+#[rstest]
+fn pair_test(#[files("./testdata/*/*.fold")] fold_file: std::path::PathBuf) {}
+
+#[apply(pair_test)]
+fn test_onestep(fold_file: std::path::PathBuf) {
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .open(fold_file)
+        .unwrap();
+
+    let parsed_input = serde_json::from_reader::<_, fold::File>(file)
         .expect("source deserialization (json/fold file) failed");
 
     let allocator = alloc::alloc::Global;
@@ -54,41 +53,107 @@ fn test_onestep() {
     }
 }
 
-#[test]
-fn test_stability() {
+fn parse_path(path: &std::path::Path) -> (&str, f32) {
+    let stem = path.file_stem().unwrap();
+    let (name, percentage_str) = stem.to_str().unwrap().rsplit_once('_').unwrap();
+    let percentage: f32 = percentage_str.parse().expect(&format!(
+        "Tried to parse {percentage_str} as a percentage, but failed"
+    ));
+
+    (name, percentage / 100.0)
+}
+
+#[apply(pair_test)]
+fn test_stability(fold_file: std::path::PathBuf) {
     let allocator = alloc::alloc::Global;
+
     let mut solver =
         rtori_core::os_solver::Solver::create(rtori_core::os_solver::BackendFlags::CPU)
             .block_on()
             .unwrap();
 
-    for (fold_percentage, expected) in &SIMPLE_FOLD_RESULTS {
-        let parsed_input = serde_json::from_str::<fold::File>(expected)
-            .expect("source deserialization (json/fold file) failed");
+    let (_, fold_ratio) = parse_path(fold_file.as_ref());
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .open(fold_file)
+        .unwrap();
+    let parsed_input = serde_json::from_reader::<_, fold::File>(file)
+        .expect("source deserialization (json/fold file) failed");
 
-        solver.load_fold_in(&parsed_input.key_frame, allocator);
+    solver.load_fold_in(&parsed_input.key_frame, allocator);
+    solver.set_fold_percentage(fold_ratio).unwrap();
 
-        let mut positions = Vec::new();
-        positions.resize(
-            parsed_input.frame(0).unwrap().get().vertices.count(),
-            rtori_os_model::Vector3F([6.9f32, 42.0f32, 6009.0f32]),
-        );
+    let mut positions_front = Vec::new();
+    positions_front.resize(
+        parsed_input.frame(0).unwrap().get().vertices.count(),
+        rtori_os_model::Vector3F([6.9f32, 42.0f32, 6009.0f32]),
+    );
 
-        println!("Testing simple with fold ratio {}", *fold_percentage);
-        solver.set_fold_percentage(*fold_percentage).unwrap();
-        solver.step(1).expect(&format!(
-            "Step failed for fold percentage {}",
-            *fold_percentage
-        ));
+    let mut positions_back = Vec::new();
+    positions_back.resize(
+        parsed_input.frame(0).unwrap().get().vertices.count(),
+        rtori_os_model::Vector3F([6.9f32, 42.0f32, 6009.0f32]),
+    );
+
+    const MAXIMUM_ITERATIONS: i32 = 32_000;
+    for step_index in 0..MAXIMUM_ITERATIONS {
+        solver
+            .step(1)
+            .expect(&format!("Step failed at iteration {step_index}"));
 
         let result = solver
             .extract(rtori_os_model::ExtractFlags::all())
             .expect("extract call failed");
 
-        result.copy_node_position(&mut positions[..], 0);
-        for (i, pos) in positions.iter().enumerate() {
-            assert!(pos.0.iter().all(|v| !v.is_nan()), "fold percentage {fold_percentage}: got a NaN in vertex {i} (got position: {pos:?})");
+        result.copy_node_position(&mut positions_front[..], 0);
+        for (i, pos) in positions_front.iter().enumerate() {
+            assert!(
+                pos.0.iter().all(|v| !v.is_nan()),
+                "Iteration {step_index}: got a NaN in vertex {i} (got position: {pos:?})"
+            );
         }
-        println!("Diff vector {positions:?} (expected 0)");
+
+        // Check that the distance is not more than a tolerance
+        const FAIL_TOLERANCE: f32 = 0.00001;
+        let max_distance = positions_front
+            .iter()
+            .map(|v| {
+                v.0.into_iter()
+                    .map(|component| component * component)
+                    .sum::<f32>()
+                    .sqrt()
+            })
+            .max_by(|lhs, rhs| lhs.partial_cmp(rhs).unwrap())
+            .unwrap();
+        assert!(
+            max_distance < FAIL_TOLERANCE,
+            "offset should be less than zero (+- {FAIL_TOLERANCE})"
+        );
+
+        // If the distance to the last iteration is even more negligeable, stop here
+        if step_index > 0 {
+            const CONVERGED_TOLERANCE: f32 = f32::EPSILON;
+            let max_diff = positions_front
+                .iter()
+                .zip(&positions_back)
+                .map(|(front, back)| {
+                    front
+                        .0
+                        .into_iter()
+                        .zip(back.0)
+                        .map(|(f, b)| f - b)
+                        .map(|diff| diff * diff)
+                        .sum::<f32>()
+                        .sqrt()
+                })
+                .max_by(|lhs, rhs| lhs.partial_cmp(rhs).unwrap())
+                .unwrap();
+            if max_diff < CONVERGED_TOLERANCE {
+                println!("Early exit as diff is {max_diff} < {CONVERGED_TOLERANCE}");
+                return;
+            }
+        }
+
+        std::mem::swap(&mut positions_front, &mut positions_back);
     }
 }
