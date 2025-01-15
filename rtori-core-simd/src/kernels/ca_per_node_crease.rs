@@ -109,21 +109,24 @@ where
                 .scale(simba::simd::Simd(SimdF32::splat(-1.0) * angular_force))
             };
 
-            // For those who are off the crease
-            let force_other = {
-                let is_1 = node_number.simd_eq(SimdU32::splat(1));
-                let face_indices = is_1.select(crease_face_indices.0[1], crease_face_indices.0[0]);
+            // For those who are off the crease (the complementary nodes)
+            let force_complementary = {
+                let face_is_1 = node_number.simd_eq(SimdU32::splat(1));
+
+                let face_indices =
+                    face_is_1.select(crease_face_indices.0[1], crease_face_indices.0[0]);
                 let normals = gather_vec3f_1(&inputs.face_normals, face_indices);
 
-                let moment_arm = is_1.select(crease_physics.b_coef, crease_physics.a_coef);
+                let moment_arm = face_is_1.select(crease_physics.b_height, crease_physics.a_height);
+                // /* 2025-01-15 */ println!("ca_per_node_crease: moment_arm: {moment_arm:?}, face_is_1: {face_is_1:?}, b_height: {:?}, a_height: {:?}", crease_physics.b_height, crease_physics.a_height);
 
                 algebrize(normals).scale(simba::simd::Simd(angular_force / moment_arm))
             };
 
             let force = [
-                crease_reaction_mask.select(force_crease_reaction.x.0, force_other.x.0),
-                crease_reaction_mask.select(force_crease_reaction.y.0, force_other.y.0),
-                crease_reaction_mask.select(force_crease_reaction.z.0, force_other.z.0),
+                crease_reaction_mask.select(force_crease_reaction.x.0, force_complementary.x.0),
+                crease_reaction_mask.select(force_crease_reaction.y.0, force_complementary.y.0),
+                crease_reaction_mask.select(force_crease_reaction.z.0, force_complementary.z.0),
             ];
 
             let force_selected = super::operations::select_n(
@@ -135,6 +138,14 @@ where
                 ],
                 force,
             );
+
+            /* 2025-01-15 */
+ /*println!("ca_per_node_crease:
+ force selected: {force_selected:?}
+ invalid_physics: {invalid_physics:?}
+ crease_reaction_mask: {crease_reaction_mask:?}
+ force_crease_reaction: {force_crease_reaction:?}
+ force_other: {force_other:?}");*/
 
             super::operations::debug::check_nans_simd_vec_msg(
                 force_selected,
