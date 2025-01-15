@@ -47,6 +47,29 @@ where
 
             // /* 2025-01-13 */ println!("node_positions_offset: {:?}", &inputs.node_positions_offset);
 
+            // The node naming is the following:
+            //
+            // face #
+            //       0  ||  1
+            // diagram:
+            //          ea
+            //         /||\
+            //        / || \
+            //       /  ||  \
+            //      fa••||••fb
+            //       \  ||  /
+            //        \ || /
+            //         \||/
+            //          eb
+            //
+            // names (original paper naming in []):
+            // - fa [p1]: complementary node (from face #0)
+            // - fb [p2]: complementary node (from face #1)
+            // - ea [p3]: adjacent node (vertex 0 from edge)
+            // - eb [p4]: adjacent node (vertex 1 from edge)
+            //
+            // It follows that |eb-ea| is the crease vector
+
             let node_fa = get_position(neighbourhood.complement_node_indices[0]);
             let node_fb = get_position(neighbourhood.complement_node_indices[1]);
 
@@ -66,26 +89,73 @@ where
 
             let crease_vector_normalized = crease_vector / crease_length;
 
-            let vector_a = node_fa - node_ea;
-            let vector_a_mag_sq = vector_a.magnitude_squared();
-            let proj_a_length = crease_vector_normalized.dot(&vector_a);
-            let dist_a = vector_a_mag_sq - proj_a_length * proj_a_length;
-            let dist_a_too_small = dist_a.0.simd_le(tol.0);
+            // Calculates the projection of one of the two complementary nodes
+            let calculate_projection = |complementary_node: nalgebra::Vector3<
+                simba::simd::Simd<core::simd::Simd<f32, { L }>>,
+            >| {
+                let vector = complementary_node - node_ea; // not a typo 'ea'
+                let vector_mag_sq = vector.magnitude_squared();
+                let proj_length = crease_vector_normalized.dot(&vector);
 
-            let vector_b = node_fb - node_ea; // not a typo ('ea')
-            let vector_b_mag_sq = vector_b.magnitude_squared();
-            let proj_b_length = crease_vector_normalized.dot(&vector_b);
-            let dist_b = vector_b_mag_sq - proj_b_length * proj_b_length;
-            let dist_b_too_small = dist_b.0.simd_le(tol.0);
+                let dist = {
+                    use std::simd::num::SimdFloat;
+                    use std::simd::StdFloat;
+
+                    // sqrt(abs(v.x^2 + v.y^2 + v.z^2 - proj^2))
+                    (vector_mag_sq - proj_length * proj_length).0.abs().sqrt()
+                };
+
+                /* 2025-01-15 */
+ /*println!("
+ bb_per_crease_physics:
+     ea: {node_ea:?}
+     eb: {node_eb:?}
+     fa: {node_fa:?}
+     fb: {node_fb:?}
+     complementary_node: {complementary_node:?}
+     crease_vector: {crease_vector:?}
+     crease_vector_normalized: {crease_vector_normalized:?}
+     on vector: {vector:?}
+     proj_length: {proj_length:?} (dot product)
+     dist: {dist:?}");*/
+
+                let dist_too_small = dist.simd_le(tol.0);
+
+                (proj_length, dist, dist_too_small)
+            };
+
+            let (proj_a_length, dist_a, dist_a_too_small) = calculate_projection(node_fa);
+            let (proj_b_length, dist_b, dist_b_too_small) = calculate_projection(node_fb); // not a typo 'ea'
+
             // Second check: distances too small
             let invalids = too_short.bitor(dist_a_too_small).bitor(dist_b_too_small);
 
+            let g =
+                |dist: core::simd::Simd<f32, { L }>,
+                 proj_length: simba::simd::Simd<core::simd::Simd<f32, { L }>>| {
+                    (
+                        invalids.select(invalid_value, dist),
+                        invalids.select(invalid_value, (proj_length / crease_length).0),
+                    )
+                };
+
+            let (a_height, a_coef) = g(dist_a, proj_a_length);
+            let (b_height, b_coef) = g(dist_b, proj_b_length);
+            /* 2025-01-15 */
+ /*println!("bb_per_crease_physics:
+     dist_b_too_small?: {dist_b_too_small:?}
+     dist_b: {dist_b:?}
+     proj_b_length: {proj_b_length:?}
+     b_height: {b_height:?}
+     b_coef: {b_coef:?}
+ ");*/
             let res = CreasesPhysicsLens {
-                a_height: invalids.select(invalid_value, dist_a.0),
-                a_coef: invalids.select(invalid_value, (proj_a_length / crease_length).0),
-                b_height: invalids.select(invalid_value, dist_b.0),
-                b_coef: invalids.select(invalid_value, (proj_b_length / crease_length).0),
+                a_height,
+                a_coef,
+                b_height,
+                b_coef,
             };
+
             operations::debug::check_nans_simd_msg(
                 res.a_height,
                 "bb_per_crease_physics",
