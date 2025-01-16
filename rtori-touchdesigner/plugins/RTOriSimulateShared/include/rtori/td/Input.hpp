@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <iostream>
 
 namespace rtori::rtori_td {
 
@@ -9,10 +10,13 @@ template<typename T> struct InputChangeWrapper {
 	T value;
 	bool changed;
 
-	InputChangeWrapper(T value = T(), bool changed = true) : value(value), changed(true) {}
+	InputChangeWrapper(T value = T(), bool changed = true) : value(value), changed(changed) {}
 
 	template<typename U> InputChangeWrapper<T> update(U newValue) const {
-		if (this->value != newValue) {
+		std::equal_to<> equal_to{};
+		bool changed = !equal_to(this->value, newValue);
+
+		if (changed) {
 			return InputChangeWrapper<T>(T(newValue), true);
 		} else {
 			return InputChangeWrapper<T>(this->value, false);
@@ -52,7 +56,7 @@ struct Input {
 
 	/// An input has changed if any of the data members is marked as such
 	bool changed() const {
-		return foldFileSource.changed || frameIndex.changed || extractPosition.changed ||
+		return foldFileSource.changed || frameIndex.changed || foldPercentage.changed || extractPosition.changed ||
 			   extractError.changed || extractVelocity.changed;
 	}
 };

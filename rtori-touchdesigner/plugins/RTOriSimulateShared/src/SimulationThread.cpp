@@ -10,6 +10,7 @@
 #include <mutex>
 #include <iostream>
 #include <cassert>
+#include <string_view>
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -78,6 +79,28 @@ static void nameThread() {
 #elif defined(MACOSX)
 	pthread_setname_np(WORKER_THREAD_NAME);
 #endif
+}
+
+std::string_view format_SolverOperationResult(rtori::SolverOperationResult result) {
+	using rtori::SolverOperationResult;
+
+	switch (result) {
+	case SolverOperationResult::Success:
+		return "Success";
+	case SolverOperationResult::ErrorNotLoaded:
+		return "Error(ErrorNotLoaded): Attempted to do an operation requiring that "
+			   "a model be "
+			   "loaded, and no model is";
+	case SolverOperationResult::ErrorExtracting:
+		return "Error(ErrorExtracting): Attempted to do an operation that can only "
+			   "be done in "
+			   "the 'Standby' or 'Loaded' state, while it was in the 'Extracting' "
+			   "state";
+	case SolverOperationResult::ErrorNoSuchFrameInFold:
+		return "Error(ErrorNoSuchFrameInFold): No such Frame in fold";
+	default:
+		return "Error(Other): Other error";
+	}
 }
 
 void SimulationThread::runWorker() {
@@ -355,7 +378,8 @@ void SimulationThread::runWorker() {
 		rtori::SolverOperationResult stepResult = rtori::rtori_solver_step(solver.solver, 1);
 		if (stepResult != rtori::SolverOperationResult::Success) {
 			// ERROR
-			std::cout << "ERROR: Solver step failed" << (uint32_t)stepResult << std::endl;
+			std::cout << "ERROR: Solver step failed: "
+					  << format_SolverOperationResult(stepResult) << std::endl;
 		}
 	}
 }

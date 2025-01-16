@@ -66,7 +66,7 @@ void FillSOPPluginInfo(SOP_PluginInfo* info) {
 	customInfo.authorName->setString("Ars Electronica Futurelab");
 	customInfo.authorEmail->setString("futurelab@ars.electronica.art");
 
-	// This SOP takes inputs by parameter (it is a generator)
+	// This SOP takes no inputs by parameter (it is a generator)
 	customInfo.minInputs = 0;
 	customInfo.maxInputs = 0;
 }
@@ -411,11 +411,9 @@ rtori::rtori_td::Input SimulateSOP::consolidateParameters(const TD::OP_Inputs* i
 		cachedInput.extractError.update(inputs->getParInt(PARAMETER_KEY_ERROR) != 0),
 	  .extractVelocity =
 		cachedInput.extractVelocity.update(inputs->getParInt(PARAMETER_KEY_VELOCITY) != 0)
-
 	};
 
 	if (input.changed()) {
-		std::cout << "Input changed" << std::endl;
 		input.inputNumber += 1;
 	}
 
