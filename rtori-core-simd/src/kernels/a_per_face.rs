@@ -22,6 +22,7 @@ where
     pub face_normals: SimdVec3F<L>,
 }
 
+#[tracing::instrument]
 #[inline]
 pub fn calculate_normals<'a, const L: usize>(
     inputs: &'a PerFaceInputs<'a, L>,
@@ -55,18 +56,20 @@ where
 
             let norm = {
                 let norm: simba::simd::Simd<SimdF32<L>> = cross.norm();
+                tracing::event!(tracing::Level::TRACE, "norm: {norm:?}");
+
                 use std::simd::cmp::SimdPartialEq as _;
                 let norm_is_zero = norm.0.simd_eq(SimdF32::splat(0.0));
                 let norm_corrected = norm_is_zero.select(SimdF32::splat(1.0), norm.0);
+
                 simba::simd::Simd(norm_corrected)
             };
 
             let result = cross.unscale(norm);
-            /* 2025-01-13 */
-            /*println!(
-                "Normals are: {:?} (ab: {:?}, ac: {:?}, cross: {:?}, cross_norm: {:?})",
-                result, ab, ac, cross, norm
-            );*/
+            tracing::event!(
+                tracing::Level::TRACE,
+                "normals for \n\ta:{a:?}\n\tb:{b:?}\n\tc:{c:?}\n\tresult: {result:?}"
+            );
             PerFaceOutput {
                 face_normals: [result.x.0, result.y.0, result.z.0],
             }

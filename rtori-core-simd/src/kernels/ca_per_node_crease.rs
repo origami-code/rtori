@@ -34,6 +34,7 @@ where
     pub crease_percentage: f32,
 }
 
+#[tracing::instrument]
 #[inline]
 pub fn calculate_node_crease_forces<'a, const L: usize>(
     inputs: &'a PerNodeCreaseInput<'a, L>,
@@ -73,7 +74,7 @@ where
             let angular_force =
                 crease_k * (adjusted_target_fold_angles - crease_current_fold_angle);
             /* 2025-01-15 */
- // println!("Target Fold Angle: {adjusted_target_fold_angles:?} / Angular Force: {angular_force:?}");
+            tracing::event!(tracing::Level::TRACE, "Crease Percentage: {crease_percentage_splat:?}\n\tTarget Fold Angle:{adjusted_target_fold_angles:?}\n\tCurrent Fold Angle: {crease_current_fold_angle:?}\n\tAngular Force: {angular_force:?}");
  // Now it's time to load the geometry
             let crease_face_indices =
                 CreaseFaceIndices::gather(&inputs.crease_face_indices, *crease_indices);
@@ -141,12 +142,12 @@ where
             );
 
             /* 2025-01-15 */
-            /*println!("ca_per_node_crease:
+            tracing::event!(tracing::Level::TRACE, "Finished
             force selected: {force_selected:?}
             invalid_physics: {invalid_physics:?}
             crease_reaction_mask: {crease_reaction_mask:?}
             force_crease_reaction: {force_crease_reaction:?}
-            force_other: {force_other:?}");*/
+            force_complementary: {force_complementary:?}");
 
             super::operations::debug::check_nans_simd_vec_msg(
                 force_selected,

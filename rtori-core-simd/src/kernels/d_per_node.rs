@@ -98,6 +98,7 @@ where
     pub error: SimdF32<L>,
 }
 
+#[tracing::instrument]
 pub fn calculate_node_position<'a, const L: usize>(
     inputs: PerNodeInput<'a, L>,
 ) -> impl ExactSizeIterator<Item = PerNodeOutput<L>> + use<'a, L>
@@ -133,8 +134,10 @@ where
 
         let position_offset = algebrize(*per_node.positions_offset) + position_offset_diff;
         /* 2025-01-15 */
- /*println!(
-             "
+
+        tracing::event!(
+            tracing::Level::TRACE,
+            "
  mass: {:?}
  positions: {:?}
  force from crease {:?}
@@ -142,14 +145,14 @@ where
  force from face {:?}
  force (unscaled by dt): {:?}
  dt: {:?}",
-             *per_node.mass,
-             position_offset,
-             per_node.crease_force,
-             per_node.beam_force,
-             per_node.face_force,
-             force,
-             dt
-         );*/
+            *per_node.mass,
+            position_offset,
+            per_node.crease_force,
+            per_node.beam_force,
+            per_node.face_force,
+            force,
+            dt
+        );
 
         PerNodeOutput {
             position_offset: [

@@ -38,6 +38,7 @@ where
 
 const TOL: f32 = 0.0000001;
 
+#[tracing::instrument]
 pub fn calculate_node_face_forces<'a, const L: usize>(
     inputs: &'a PerNodeFaceInput<'a, L>,
 ) -> impl ExactSizeIterator<Item = PerNodeFaceOutput<L>> + use<'a, L>
@@ -102,7 +103,7 @@ where
                 )
             };
 
-            // /*2024-10-11*/ println!("per_node_face: ab {ab:?}, ac {ac:?}, bc {bc:?}");
+            tracing::event!(tracing::Level::TRACE, "ab {ab:?}, ac {ac:?}, bc {bc:?}");
 
             // Skip if lower than tolerance
             let mask = {
@@ -127,7 +128,8 @@ where
                 ensure_simd!(bc / bc_length; v3; @depends(bc, bc_length))
             ];
 
-            // /*2024-10-11*/ println!("per_node_face (normalized): ab {ab:?}, ac {ac:?}, bc {bc:?}");
+            // /*2024-10-11*/
+            tracing::event!(tracing::Level::TRACE, "per_node_face (normalized): ab {ab:?}, ac {ac:?}, bc {bc:?}");
 
             // Euleur angles
             use simba::simd::SimdPartialOrd; // for simd_min
@@ -159,7 +161,8 @@ where
 
                 acos
             };
-            // /*2024-10-11*/ println!("per_node_face angles: {angles:?}");
+            // /*2024-10-11*/
+            tracing::event!(tracing::Level::TRACE, "per_node_face angles: {angles:?}");
 
             let [normal, nominal_angles] = super::gather::gather_vec3f(
                 [&inputs.face_normals, &inputs.face_nominal_angles],
@@ -171,9 +174,11 @@ where
             let angles_diff =
                 algebrize(nominal_angles) - nalgebra::Vector3::new(angles[0], angles[1], angles[2]);
             ensure_simd!(angles_diff; v3);
-            /* 2025-01-15 */ //println!("cc_per_node_face: Angles Difference: {angles_diff:?}");
+            /* 2025-01-15 */
+            tracing::event!(tracing::Level::TRACE, "cc_per_node_face: Angles Difference: {angles_diff:?} (nominal: {nominal_angles:?}, current: {angles:?})");
 
             let angles_diff_scaled = ensure_simd!(angles_diff.scale(face_stiffness); v3);
+            tracing::event!(tracing::Level::TRACE, "cc_per_node_face: Angles Difference (scaled): {angles_diff_scaled:?}");
 
             let [
                 is_a,
@@ -254,7 +259,8 @@ where
                 force: force_selected,
                 error: error_selected,
             };
-            // /*2024-10-11*/ println!("per_node_face: {output:?}");
+            // /*2024-10-11*/ 
+            tracing::event!(tracing::Level::TRACE, "per_node_face: {output:?}");
             output
         },
     )

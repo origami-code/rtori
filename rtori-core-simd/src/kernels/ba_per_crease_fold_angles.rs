@@ -28,6 +28,7 @@ where
     crease_fold_angle: &'backer mut [SimdF32<L>],
 }
 
+#[tracing::instrument]
 pub fn calculate_crease_fold_angles<'a, const L: usize>(
     inputs: &'a PerCreaseFoldAngleInput<'a, L>,
 ) -> impl ExactSizeIterator<Item = SimdF32<L>> + use<'a, L>
@@ -53,12 +54,16 @@ where
         let normals_a = g(0);
         let normals_b = g(1);
 
-        let normals_dot_unclamped = normals_a.dot(&normals_b);
-        let normals_dot_clamped = simba::simd::Simd::simd_clamp(
-            normals_dot_unclamped,
-            simba::simd::Simd(SimdF32::splat(-1.0)),
-            simba::simd::Simd(SimdF32::splat(1.0)),
-        );
+        let normals_dot = {
+            let normals_dot_unclamped = normals_a.dot(&normals_b);
+            tracing::event!(tracing::Level::TRACE, "normals_dot_unclamped: {normals_dot_unclamped:?}\n\tnormals_a {:?}: {normals_a:?}\n\tnormals_b {:?}: {normals_b:?}", face_indices.0[0], face_indices.0[1]);
+
+            simba::simd::Simd::simd_clamp(
+                normals_dot_unclamped,
+                simba::simd::Simd(SimdF32::splat(-1.0)),
+                simba::simd::Simd(SimdF32::splat(1.0)),
+            )
+        };
 
         let get_adjacent = |face_index| {
             position::get_positions_for_indices(
@@ -72,17 +77,21 @@ where
         let vertex_b = get_adjacent(1);
 
         let ab = vertex_b - vertex_a;
-        // /*2024-10-11*/ println!("per_crease_fold_angle: vertex_a {vertex_a:?} vertex_b {vertex_b:?} ab {ab:?} neighbourhoods {neighbourhoods:?}");
+        tracing::event!(tracing::Level::TRACE, "\n\tvertex_a (node indices: {:?}) {vertex_a:?}\n\tvertex_b (node indices: {:?}) {vertex_b:?}\n\tab {ab:?}\n\tneighbourhoods {neighbourhoods:?}\n\tnormals_dot: {normals_dot:?}", neighbourhoods.adjacent_node_indices[0], neighbourhoods.adjacent_node_indices[1]);
         let crease_vector = ab.normalize();
 
-        let x = normals_dot_clamped;
-        let y = normals_a.cross(&crease_vector).dot(&normals_b);
+        let x = normals_dot;
+        let y = (normals_a.cross(&crease_vector)).dot(&normals_b);
+        
         let fold_angle = simba::simd::Simd::simd_atan2(y, x);
-        // /*2024-10-11*/ println!("per_crease_fold_angle uncorrected fold angle {fold_angle:?} (y: {y:?}, x: {x:?}, crease_vector: {crease_vector:?})");
+        tracing::event!(tracing::Level::TRACE, "uncorrected fold angle {fold_angle:?} (y: {y:?}, x: {x:?}, crease_vector: {crease_vector:?})");
 
-        if true {
-            let zero = simba::simd::Simd(SimdF32::splat(0.0));
-            let tau = simba::simd::Simd(SimdF32::splat(core::f32::consts::TAU));
+        let zero = simba::simd::Simd(SimdF32::splat(0.0));
+        let tau = simba::simd::Simd(SimdF32::splat(core::f32::consts::TAU));
+
+        // given diff = current - previous:
+        //  delta = diff + (diff < 5) ? TAU + (diff > 5) ? -TAU 
+        let delta = {
             let diff = fold_angle - simba::simd::Simd(*previous_fold_angles);
 
             let under = diff.simd_le(simba::simd::Simd(SimdF32::splat(-5.0)));
@@ -91,13 +100,12 @@ where
             let over = diff.simd_ge(simba::simd::Simd(SimdF32::splat(5.0)));
             let over_diff = (-tau).select(over, zero);
 
-            let corrected = simba::simd::Simd(*previous_fold_angles) + under_diff + over_diff;
-            // /*2024-10-11*/ println!("per_crease_fold_angle Derived fold angle {corrected:?}");
+            diff + under_diff + over_diff
+        };
 
-            corrected
-        } else {
-            fold_angle
-        }
-        .0
+        let corrected_fold_angle = simba::simd::Simd(*previous_fold_angles) + delta;
+        tracing::event!(tracing::Level::TRACE, "corrected fold angle {corrected_fold_angle:?} (diff: {delta:?})");
+
+        corrected_fold_angle.0
     })
 }

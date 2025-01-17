@@ -44,6 +44,7 @@ where
         self.steps
     }
 
+    #[tracing::instrument]
     pub fn step(&mut self) -> Result<(), ()> {
         let state = &mut self.state;
 
