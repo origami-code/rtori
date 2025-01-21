@@ -1,3 +1,20 @@
+# `rtori`: (R)eal-(t)ime (Ori)gami
+
+`rtori` is a **toolkit** for interpreting, simulating and visualizing 3D origami.
+
+## Components
+
+### Main
+
+- `rtori-core-ext`: a library that provides a packaged set of functionality for interpreting and simulating 3D origami (shared library: `.dll`, `.so`, `.dylib`)
+- `rtori-touchdesigner`: a set of plugins for [touchdesigner](https://derivative.ca) exposing the functionality through several components
+- `rtori-cli`: a CLI interface exposing the same functionality
+
+### Supporting
+
+- `rtori-core`: the core behind `rtori-core-ext`, presenting a `rust-based` dylib
+- `fold`: a library to parse and execute operations on [`.fold` files](https://edemaine.github.io/fold/doc/spec.html)
+
 ## Target Architectures
 
 Potential support: (In LLVM/Rust triplet)
