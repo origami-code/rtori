@@ -8,7 +8,6 @@
 #![feature(iter_chain)]
 use core::alloc::Allocator;
 
-use creases::{extract_creases, ExtractCreasesIteratorError};
 pub mod creases;
 pub mod input;
 pub mod triangulation;
