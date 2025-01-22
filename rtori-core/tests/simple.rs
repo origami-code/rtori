@@ -76,7 +76,7 @@ fn test_onestep(fold_file: std::path::PathBuf) {
 #[apply(pair_test)]
 fn test_stability(fold_file: std::path::PathBuf) {
     initialize_tracing();
-
+ 
     let allocator = alloc::alloc::Global;
 
     let mut solver =
@@ -144,7 +144,7 @@ fn test_stability(fold_file: std::path::PathBuf) {
 
         // If the distance to the last iteration is even more negligeable, stop here
         if step_index > 0 {
-            const CONVERGED_TOLERANCE: f32 = f32::EPSILON;
+            const CONVERGED_TOLERANCE: f32 = 0.0;// f32::EPSILON;
             let max_diff = positions_front
                 .iter()
                 .zip(&positions_back)
@@ -160,7 +160,7 @@ fn test_stability(fold_file: std::path::PathBuf) {
                 })
                 .max_by(|lhs, rhs| lhs.partial_cmp(rhs).unwrap())
                 .unwrap();
-            if max_diff < CONVERGED_TOLERANCE {
+            if step_index > 10 && max_diff < CONVERGED_TOLERANCE {
                 println!("Early exit as diff is {max_diff} < {CONVERGED_TOLERANCE}");
                 return;
             }

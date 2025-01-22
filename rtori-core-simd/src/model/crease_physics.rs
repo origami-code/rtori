@@ -35,6 +35,7 @@ where
 
         let zero = SimdF32::splat(0.0);
 
+        // Only checking a_height as it should be less than zero if disabled
         self.a_height.simd_le(zero)
     }
 }

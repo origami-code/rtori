@@ -139,14 +139,20 @@ where
             tracing::Level::TRACE,
             "
  mass: {:?}
- positions: {:?}
+ positions (diff): {:?}
+ positions (new): {:?}
+ velocity (diff): {:?}
+ velocity (new): {:?}
  force from crease {:?}
  force from beam {:?}
  force from face {:?}
  force (unscaled by dt): {:?}
  dt: {:?}",
             *per_node.mass,
+            position_offset_diff,
             position_offset,
+            velocity_diff,
+            velocity_new,
             per_node.crease_force,
             per_node.beam_force,
             per_node.face_force,
@@ -161,6 +167,7 @@ where
                 position_offset.z.0,
             ],
             velocity: [velocity_new.x.0, velocity_new.y.0, velocity_new.z.0],
+            //velocity: [core::simd::Simd::splat(0.0f32), core::simd::Simd::splat(0.0f32), core::simd::Simd::splat(0.0f32)],
             error: zero.0,
         }
     })

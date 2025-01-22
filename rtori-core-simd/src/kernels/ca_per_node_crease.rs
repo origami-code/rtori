@@ -89,18 +89,24 @@ where
                 let face_indices_b = crease_face_indices.0[1];
                 let normal_b = gather_vec3f_1(inputs.face_normals, face_indices_b);
 
-                let node_number_is_3 = node_number.simd_eq(SimdU32::splat(3));
 
-                let coef_a = node_number_is_3.select(
-                    SimdF32::splat(1.0) - crease_physics.a_coef,
-                    crease_physics.a_coef,
-                );
+                let [coef_a, coef_b] = {
+                    let node_number_is_3 = node_number.simd_eq(SimdU32::splat(3));
 
-                let coef_b = node_number_is_3.select(
-                    SimdF32::splat(1.0) - crease_physics.b_coef,
-                    crease_physics.b_coef,
-                );
+                    let coef_a = node_number_is_3.select(
+                        SimdF32::splat(1.0) - crease_physics.a_coef,
+                        crease_physics.a_coef,
+                    );
 
+                    let coef_b = node_number_is_3.select(
+                        SimdF32::splat(1.0) - crease_physics.b_coef,
+                        crease_physics.b_coef,
+                    );
+
+                    [coef_a, coef_b]
+                };
+
+                // Applies the operation (coef / height) * normal
                 let side = #[inline]
                 |normal, coef, height| {
                     algebrize(normal).scale(simba::simd::Simd(coef / height))
@@ -147,7 +153,8 @@ where
             invalid_physics: {invalid_physics:?}
             crease_reaction_mask: {crease_reaction_mask:?}
             force_crease_reaction: {force_crease_reaction:?}
-            force_complementary: {force_complementary:?}");
+            force_complementary: {force_complementary:?}
+            crease_physics: {crease_physics:?}");
 
             super::operations::debug::check_nans_simd_vec_msg(
                 force_selected,

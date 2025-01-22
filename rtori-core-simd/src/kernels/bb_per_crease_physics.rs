@@ -76,6 +76,13 @@ where
             let node_ea = get_position(neighbourhood.adjacent_node_indices[0]);
             let node_eb = get_position(neighbourhood.adjacent_node_indices[1]);
 
+            tracing::event!(tracing::Level::TRACE, "Node Indices In Crease:\n\t
+                fa: {:?}
+                fb: {:?}
+                ea: {:?}
+                eb: {:?}
+            ", neighbourhood.complement_node_indices[0], neighbourhood.complement_node_indices[1], neighbourhood.adjacent_node_indices[0], neighbourhood.adjacent_node_indices[1]); 
+
             let crease_vector = node_eb - node_ea;
             let crease_length = crease_vector.norm();
 
@@ -125,7 +132,7 @@ where
             };
 
             let (proj_a_length, dist_a, dist_a_too_small) = calculate_projection(node_fa);
-            let (proj_b_length, dist_b, dist_b_too_small) = calculate_projection(node_fb); // not a typo 'ea'
+            let (proj_b_length, dist_b, dist_b_too_small) = calculate_projection(node_fb);
 
             // Second check: distances too small
             let invalids = too_short.bitor(dist_a_too_small).bitor(dist_b_too_small);
@@ -142,13 +149,20 @@ where
             let (a_height, a_coef) = g(dist_a, proj_a_length);
             let (b_height, b_coef) = g(dist_b, proj_b_length);
             /* 2025-01-15 */
-            /*println!("bb_per_crease_physics:
+            tracing::event!(tracing::Level::TRACE, "bb_per_crease_physics:
+                dist_a_too_small?: {dist_a_too_small:?}
+                dist_a: {dist_a:?}
+                proj_a_length: {proj_a_length:?}
+                a_height: {a_height:?}
+                a_coef: {a_coef:?}
+            ");
+            tracing::event!(tracing::Level::TRACE, "bb_per_crease_physics:
                 dist_b_too_small?: {dist_b_too_small:?}
                 dist_b: {dist_b:?}
                 proj_b_length: {proj_b_length:?}
                 b_height: {b_height:?}
                 b_coef: {b_coef:?}
-            ");*/
+            ");
             let res = CreasesPhysicsLens {
                 a_height,
                 a_coef,

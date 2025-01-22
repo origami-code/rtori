@@ -4,3 +4,7 @@
 rustc-ice*
 build
 .cache
+
+**/log
+**/.log
+*.log

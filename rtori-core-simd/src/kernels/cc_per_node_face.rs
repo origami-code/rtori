@@ -256,8 +256,8 @@ where
             let error_selected = mask.select(error.0, zero.0);
 
             let output = PerNodeFaceOutput {
-                force: force_selected,
-                error: error_selected,
+                force: [zero.0, zero.0, zero.0], //force_selected,
+                error: zero.0, //error_selected,
             };
             // /*2024-10-11*/ 
             tracing::event!(tracing::Level::TRACE, "per_node_face: {output:?}");
