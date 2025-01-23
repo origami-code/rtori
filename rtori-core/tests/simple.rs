@@ -63,7 +63,7 @@ fn test_onestep(fold_file: std::path::PathBuf) {
     let result = solver
         .extract(rtori_os_model::ExtractFlags::all())
         .expect("extract call failed");
-    result.copy_node_position(&mut positions[..], 0);
+    result.copy_node_position(&mut positions[..], 0); 
 
     for (i, pos) in positions.iter().enumerate() {
         assert!(

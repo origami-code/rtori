@@ -112,6 +112,12 @@ where
 
     let dt = simba::simd::Simd(SimdF32::splat(inputs.dt));
 
+
+    // AAAAH
+    // THIS IS WHERE THE FUCKING BUG IS
+    // I NEED TO TAKE THE FORCES THAT CORRESPOND TO EACH NODE !!!!
+    // RIGHT NOW I DON'T, I JUST ASSUME THAT 1 NODE-X (crease, beam, face) maps to the index of the node 
+
     inputs.into_iter().map(move |per_node| {
         let valid_input = per_node.mass.simd_ne(SimdF32::splat(0.0));
 
