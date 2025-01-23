@@ -3,8 +3,6 @@
 #![feature(iter_array_chunks)]
 #![feature(stmt_expr_attributes)]
 #![feature(impl_trait_in_assoc_type)]
-#![feature(generic_const_exprs)]
-#![feature(const_swap)]
 #![feature(type_alias_impl_trait)]
 #![cfg_attr(feature = "alloc", feature(allocator_api))]
 
