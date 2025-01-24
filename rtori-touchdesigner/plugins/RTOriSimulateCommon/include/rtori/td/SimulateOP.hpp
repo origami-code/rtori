@@ -11,7 +11,7 @@ namespace rtori::rtori_td {
 class SimulateOP {
   public:
 	/// The returned `shared_ptr` might be empty at initialization time
-	virtual std::shared_ptr<Simulator> simulator();
+	virtual std::shared_ptr<Simulator> simulator() = 0;
 };
 
 } // namespace rtori::rtori_td

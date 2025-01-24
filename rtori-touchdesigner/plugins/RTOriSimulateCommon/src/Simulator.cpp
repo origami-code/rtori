@@ -1,5 +1,7 @@
 /* rtori touchdesigner */
 
+#include "rtori/td/Interests.hpp"
+#include "rtori/td/SimulateOP.hpp"
 #include "rtori/td/Simulator.hpp"
 #include "rtori/td/InfoCHOP.hpp"
 
@@ -17,19 +19,40 @@ using namespace rtori::rtori_td;
 
 constexpr float DEFAULT_IDLE_THRESHOLD = 0.0001f;
 
+constexpr const char* PARAMETER_KEY_SOURCE_SIMULATION = "Sourcesimulation";
 constexpr const char* PARAMETER_KEY_FOLD_SOURCE = "Foldsource";
 constexpr const char* PARAMETER_KEY_FOLD_FRAME_INDEX = "Foldframeindex";
 constexpr const char* PARAMETER_KEY_FOLD_PERCENTAGE = "Foldpercentage";
 constexpr const char* PARAMETER_KEY_IDLE_THRESHOLD = "Idlethreshold";
 
-void Simulator::execute(const TD::OP_Inputs* inputs) {
+constexpr const char* PARAMETER_KEYS_SIMULATION[] = {PARAMETER_KEY_FOLD_SOURCE,
+													 PARAMETER_KEY_FOLD_FRAME_INDEX,
+													 PARAMETER_KEY_FOLD_FRAME_INDEX,
+													 PARAMETER_KEY_FOLD_PERCENTAGE,
+													 PARAMETER_KEY_IDLE_THRESHOLD};
+
+Simulator::Simulator(rtori::Context const* ctx)
+	: m_simulation(rtori::rtori_td::SimulationThread(ctx)), rtoriCtx(ctx) {}
+
+Simulator::~Simulator() {}
+
+void Simulator::execute(const TD::OP_Inputs* inputs, const Interests& interests) {
+	// TODO: Always take account of interests
+
 	// It's time to cook ! Let's mark it
 	this->m_simulation.notifyCook();
 
-	// We convert the parameters into an Input
-	const rtori::rtori_td::Input consolidated = consolidateParameters(inputs);
-	if (consolidated.changed()) {
-		this->m_simulation.update(consolidated);
+	// If Sourcesimulation is active, we disable the other parameters
+	if (inputs->getParString(PARAMETER_KEY_SOURCE_SIMULATION) != nullptr) {
+		for (size_t i = 0; i < sizeof(PARAMETER_KEYS_SIMULATION) / sizeof(const char*); i++) {
+			inputs->enablePar(PARAMETER_KEYS_SIMULATION[i], false);
+		}
+	} else {
+		// We convert the parameters into an Input
+		const rtori::rtori_td::Input consolidated = consolidateParameters(inputs, interests);
+		if (consolidated.changed()) {
+			this->m_simulation.update(consolidated);
+		}
 	}
 }
 
@@ -39,21 +62,19 @@ rtori::rtori_td::OutputGuard Simulator::query(void) {
 
 constexpr char const* PARAMETERS_PAGE_NAME = "Simulation Settings";
 
-static void Simulator::setupParameters(TD::OP_ParameterManager* manager,
-									   const char* page) {
+void Simulator::setupParameters(TD::OP_ParameterManager* manager, const char* page) {
 	if (page == nullptr) {
 		page = PARAMETERS_PAGE_NAME;
 	}
-	
-	// myParms.setup(manager);
+
 	{
-		OP_NumericParameter parameter;
+		OP_StringParameter parameter;
 
-		parameter.name = "Gpudirect";
+		parameter.name = PARAMETER_KEY_SOURCE_SIMULATION;
 		parameter.page = page;
-		parameter.label = "GPU Direct";
+		parameter.label = "Source Simulation";
 
-		const OP_ParAppendResult res = manager->appendToggle(parameter);
+		const OP_ParAppendResult res = manager->appendOP(parameter);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
@@ -130,7 +151,7 @@ static void Simulator::setupParameters(TD::OP_ParameterManager* manager,
 constexpr int32_t INFO_CHOP_CHANNEL_COUNT =
   sizeof(INFO_CHOP_CHANNEL_NAMES) / sizeof(const char*);
 
-int32_t Simulator::getNumInfoCHOPChans(void* reserved1) {
+int32_t Simulator::getNumInfoCHOPChans() {
 	// Return the channels
 	// In particular, total node error, dt, that kind of things
 	return INFO_CHOP_CHANNEL_COUNT;
@@ -163,7 +184,8 @@ void Simulator::getInfoPopupString(TD::OP_String* info) {
 	info->setString("Not loaded");
 }
 
-rtori::rtori_td::Input SimulateSOP::consolidateParameters(const TD::OP_Inputs* inputs) const {
+rtori::rtori_td::Input Simulator::consolidateParameters(const TD::OP_Inputs* inputs,
+														const Interests& interests) const {
 	const rtori::rtori_td::Input& cachedInput = this->m_simulation.getInput();
 
 	rtori::rtori_td::Input input = {
@@ -174,13 +196,9 @@ rtori::rtori_td::Input SimulateSOP::consolidateParameters(const TD::OP_Inputs* i
 		cachedInput.frameIndex.update(inputs->getParInt(PARAMETER_KEY_FOLD_FRAME_INDEX)),
 	  .foldPercentage = cachedInput.foldPercentage.update(
 		static_cast<float>(inputs->getParDouble(PARAMETER_KEY_FOLD_PERCENTAGE))),
-	  .extractPosition =
-		cachedInput.extractPosition.update(inputs->getParInt(PARAMETER_KEY_POSITION) != 0),
-	  .extractError =
-		cachedInput.extractError.update(inputs->getParInt(PARAMETER_KEY_ERROR) != 0),
-	  .extractVelocity =
-		cachedInput.extractVelocity.update(inputs->getParInt(PARAMETER_KEY_VELOCITY) != 0)
-	};
+	  .extractPosition = cachedInput.extractPosition.update(interests.position),
+	  .extractError = cachedInput.extractError.update(interests.error),
+	  .extractVelocity = cachedInput.extractVelocity.update(interests.velocity)};
 
 	if (input.changed()) {
 		input.inputNumber += 1;

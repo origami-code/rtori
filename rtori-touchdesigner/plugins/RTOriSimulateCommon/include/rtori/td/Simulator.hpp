@@ -9,15 +9,23 @@
 #include "rtori/td/SimulationThread.hpp"
 #include "rtori_core.hpp"
 
+#include "Interests.hpp"
+
+#ifdef RTORI_TD_BUILD_SHARED
+#define RTORI_TD_EXPORT __declspec(dllexport)
+#else
+#define RTORI_TD_EXPORT
+#endif
+
 namespace rtori::rtori_td {
 
-class Simulator {
+class RTORI_TD_EXPORT Simulator {
   public:
-	Simulator();
-	virtual ~Simulator();
+	Simulator(rtori::Context const* context);
+	~Simulator();
 
 	/// Polls the simulator for the cook results
-	void execute(const TD::OP_Inputs* inputs);
+	void execute(const TD::OP_Inputs* inputs, const Interests& interests);
 
 	/// Retrieves the output of the simulation
 	rtori::rtori_td::OutputGuard query(void);
@@ -26,9 +34,9 @@ class Simulator {
 	static void setupParameters(
 	  TD::OP_ParameterManager* manager,
 	  const char* pageName = nullptr);
-	
-	void getInfoCHOPChan(TD::OP_InfoCHOPChan* chan);
+
 	int32_t getNumInfoCHOPChans(void);
+	void getInfoCHOPChan(int32_t index, TD::OP_InfoCHOPChan* chan);
 
 	bool getInfoDATSize(TD::OP_InfoDATSize* infoSize);
 	void getInfoDATEntries(int32_t index, int32_t nEntries, TD::OP_InfoDATEntries* entries);
@@ -39,8 +47,11 @@ class Simulator {
 	rtori::Context const* rtoriCtx;
 
   private:
-	rtori::rtori_td::Input consolidateParameters(const TD::OP_Inputs* inputs) const;
+	rtori::rtori_td::Input consolidateParameters(const TD::OP_Inputs* inputs,
+												 const Interests& interests) const;
+
 	rtori::rtori_td::SimulationThread m_simulation;
+	Interests m_interests;
 };
 
 } // namespace rtori::rtori_td

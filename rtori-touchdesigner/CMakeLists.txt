@@ -11,3 +11,8 @@ if(NOT TARGET rtori_core)
 endif()
 
 add_subdirectory(plugins)
+
+# Minimum supported of Windows 10
+# This means that every CPU should have SSE4.1
+#    - https://learn.microsoft.com/en-gb/windows-hardware/design/minimum/supported/windows-10-ltsb-1507-supported-intel-processors
+# Thus builds for windows should target that

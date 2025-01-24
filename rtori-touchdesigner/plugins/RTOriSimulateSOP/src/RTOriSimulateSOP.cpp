@@ -93,18 +93,15 @@ void DestroySOPInstance(SOP_CPlusPlusBase* instance) {
 }
 }
 
-constexpr float DEFAULT_IDLE_THRESHOLD = 0.0001f;
-constexpr const char* PARAMETER_KEY_FOLD_SOURCE = "Foldsource";
-constexpr const char* PARAMETER_KEY_FOLD_FRAME_INDEX = "Foldframeindex";
-constexpr const char* PARAMETER_KEY_FOLD_PERCENTAGE = "Foldpercentage";
 constexpr const char* PARAMETER_KEY_POSITION = "Extractposition";
 constexpr const char* PARAMETER_KEY_ERROR = "Extracterror";
 constexpr const char* PARAMETER_KEY_VELOCITY = "Extractvelocity";
 
+// TODO: Do the simulator retrieval magic
 SimulateSOP::SimulateSOP(const OP_NodeInfo* _info, rtori::Context const* rtoriCtx)
-	: m_simulation(rtori::rtori_td::SimulationThread(rtoriCtx)), rtoriCtx(rtoriCtx){
+	: m_simulator(std::make_shared<rtori::rtori_td::Simulator>(rtoriCtx)), rtoriCtx(rtoriCtx){
 
-																 };
+																		   };
 
 SimulateSOP::~SimulateSOP(){
 
@@ -122,17 +119,15 @@ void SimulateSOP::getGeneralInfo(SOP_GeneralInfo* ginfo, const TD::OP_Inputs* in
 }
 
 void SimulateSOP::execute(SOP_Output* output, const TD::OP_Inputs* inputs, void*) {
-	// It's time to cook ! Let's mark it
-	this->m_simulation.notifyCook();
-
-	// We convert the parameters into an Input
-	const rtori::rtori_td::Input consolidated = consolidateParameters(inputs);
-	if (consolidated.changed()) {
-		this->m_simulation.update(consolidated);
-	}
+	// TODO: Use params
+	const rtori::rtori_td::Interests interests = {
+	  inputs->getParInt(PARAMETER_KEY_POSITION) != 0,
+	  inputs->getParInt(PARAMETER_KEY_VELOCITY) != 0,
+	  inputs->getParInt(PARAMETER_KEY_ERROR) != 0};
+	m_simulator->execute(inputs, interests);
 
 	{
-		rtori::rtori_td::OutputGuard simulationOutputGuard = this->m_simulation.getOutput();
+		rtori::rtori_td::OutputGuard simulationOutputGuard = this->m_simulator->query();
 		rtori::rtori_td::Output const& simulationOutput = simulationOutputGuard.output;
 
 		// Setting the positions
@@ -177,14 +172,11 @@ void SimulateSOP::execute(SOP_Output* output, const TD::OP_Inputs* inputs, void*
 }
 
 void SimulateSOP::executeVBO(SOP_VBOOutput* output, const TD::OP_Inputs* inputs, void*) {
-	// It's time to cook ! Let's mark it
-	this->m_simulation.notifyCook();
-
-	// We convert the parameters into an Input
-	const rtori::rtori_td::Input consolidated = consolidateParameters(inputs);
-	if (consolidated.changed()) {
-		this->m_simulation.update(consolidated);
-	}
+	const rtori::rtori_td::Interests interests = {
+	  inputs->getParInt(PARAMETER_KEY_POSITION) != 0,
+	  inputs->getParInt(PARAMETER_KEY_VELOCITY) != 0,
+	  inputs->getParInt(PARAMETER_KEY_ERROR) != 0};
+	m_simulator->execute(inputs, interests);
 	// ShapeMenuItems shape = myParms.evalShape(inputs);
 	// Color color = myParms.evalColor(inputs);
 
@@ -228,40 +220,12 @@ void SimulateSOP::executeVBO(SOP_VBOOutput* output, const TD::OP_Inputs* inputs,
 
 void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 	// myParms.setup(manager);
+
 	{
 		OP_NumericParameter parameter;
 
 		parameter.name = "Gpudirect";
 		parameter.label = "GPU Direct";
-
-		const OP_ParAppendResult res = manager->appendToggle(parameter);
-		assert(res == OP_ParAppendResult::Success);
-	}
-
-	{
-		OP_NumericParameter parameter;
-
-		parameter.name = "Simulationmode";
-		parameter.label = "Simulation Mode";
-
-		const OP_ParAppendResult res = manager->appendToggle(parameter);
-		assert(res == OP_ParAppendResult::Success);
-	}
-
-	{
-		OP_StringParameter parameter;
-		parameter.name = PARAMETER_KEY_FOLD_SOURCE;
-		parameter.label = "Fold Source";
-
-		const OP_ParAppendResult res = manager->appendString(parameter);
-		assert(res == OP_ParAppendResult::Success);
-	}
-
-	{
-		OP_NumericParameter parameter;
-
-		parameter.name = PARAMETER_KEY_FOLD_FRAME_INDEX;
-		parameter.label = "Fold Frame Index";
 
 		const OP_ParAppendResult res = manager->appendToggle(parameter);
 		assert(res == OP_ParAppendResult::Success);
@@ -297,129 +261,36 @@ void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 		assert(res == OP_ParAppendResult::Success);
 	}
 
-	{
-		OP_NumericParameter parameter;
-		parameter.name = PARAMETER_KEY_FOLD_PERCENTAGE;
-		parameter.label = "Crease Percentage";
-
-		parameter.clampMins[0] = true;
-		parameter.clampMaxes[0] = true;
-
-		parameter.minValues[0] = -1.0f;
-		parameter.maxValues[0] = 1.0;
-
-		parameter.minSliders[0] = -1.0f;
-		parameter.maxSliders[0] = 1.0f;
-		parameter.defaultValues[0] = 0.0f;
-
-		const OP_ParAppendResult res = manager->appendFloat(parameter, 1);
-		assert(res == OP_ParAppendResult::Success);
-	}
-
-	{
-		auto parameter = OP_NumericParameter();
-		parameter.name = "Idlethreshold";
-		parameter.label = "Idle threshold";
-		parameter.defaultValues[0] = DEFAULT_IDLE_THRESHOLD;
-	}
+	m_simulator->setupParameters(manager);
 }
 
-constexpr int32_t INFO_CHOP_CHANNEL_LOADED_INDEX = 0;
-constexpr const char* INFO_CHOP_CHANNEL_LOADED_NAME = "rtori_loaded";
-
-constexpr int32_t INFO_CHOP_CHANNEL_DT_INDEX = 1;
-constexpr const char* INFO_CHOP_CHANNEL_DT_NAME = "rtori_dt";
-
-constexpr int32_t INFO_CHOP_CHANNEL_STEPS_PER_COOK_INDEX = 2;
-constexpr const char* INFO_CHOP_CHANNEL_STEPS_PER_COOK_NAME = "rtori_steps_per_cook";
-
-constexpr int32_t INFO_CHOP_CHANNEL_SIMULATION_TIME_INDEX = 3;
-constexpr const char* INFO_CHOP_CHANNEL_SIMULATION_TIME_NAME = "rtori_simulation_time";
-
-constexpr int32_t INFO_CHOP_CHANNEL_TOTAL_STEP_TIME_INDEX = 4;
-constexpr const char* INFO_CHOP_CHANNEL_TOTAL_STEP_TIME_NAME = "rtori_total_step_time";
-
-constexpr int32_t INFO_CHOP_CHANNEL_EXTRACT_TIME_INDEX = 5;
-constexpr const char* INFO_CHOP_CHANNEL_EXTRACT_TIME_NAME = "rtori_extract_time";
-
-constexpr int32_t INFO_CHOP_CHANNEL_RUNNING_INDEX = 6;
-constexpr const char* INFO_CHOP_CHANNEL_RUNNING_NAME = "rtori_running";
-
-constexpr int32_t INFO_CHOP_CHANNEL_MAX_VELOCITY_INDEX = 7;
-constexpr const char* INFO_CHOP_CHANNEL_MAX_VELOCITY_NAME = "rtori_max_velocity";
-
-constexpr int32_t INFO_CHOP_CHANNEL_MAX_ERROR_INDEX = 8;
-constexpr const char* INFO_CHOP_CHANNEL_MAX_ERROR_NAME = "rtori_max_error";
-
-constexpr const char* INFO_CHOP_CHANNEL_NAMES[]{INFO_CHOP_CHANNEL_LOADED_NAME,
-												INFO_CHOP_CHANNEL_DT_NAME,
-												INFO_CHOP_CHANNEL_STEPS_PER_COOK_NAME,
-												INFO_CHOP_CHANNEL_SIMULATION_TIME_NAME,
-												INFO_CHOP_CHANNEL_TOTAL_STEP_TIME_NAME,
-												INFO_CHOP_CHANNEL_EXTRACT_TIME_NAME,
-												INFO_CHOP_CHANNEL_RUNNING_NAME,
-												INFO_CHOP_CHANNEL_MAX_VELOCITY_NAME,
-												INFO_CHOP_CHANNEL_MAX_ERROR_NAME};
-
-constexpr int32_t INFO_CHOP_CHANNEL_COUNT =
-  sizeof(INFO_CHOP_CHANNEL_NAMES) / sizeof(const char*);
-
 int32_t SimulateSOP::getNumInfoCHOPChans(void* reserved1) {
-	// Return the channels
-	// In particular, total node error, dt, that kind of things
-	return INFO_CHOP_CHANNEL_COUNT;
+	return m_simulator->getNumInfoCHOPChans();
 }
 
 void SimulateSOP::getInfoCHOPChan(int32_t index, TD::OP_InfoCHOPChan* chan, void* reserved1) {
-	assert(index < INFO_CHOP_CHANNEL_COUNT);
-
-	chan->name->setString(INFO_CHOP_CHANNEL_NAMES[index]);
-	chan->value = 0.0f;
+	m_simulator->getInfoCHOPChan(index, chan);
 }
 
 bool SimulateSOP::getInfoDATSize(TD::OP_InfoDATSize* infoSize, void* reserved1) {
-	// TODO: Return info
-	return false;
+	return m_simulator->getInfoDATSize(infoSize);
 }
 
 void SimulateSOP::getInfoDATEntries(int32_t index,
 									int32_t nEntries,
 									TD::OP_InfoDATEntries* entries,
 									void* reserved1) {
-	// Fill in info (in particular, if point-per-node is selected, output the UVs
-	// per prims)
+	return m_simulator->getInfoDATEntries(index, nEntries, entries);
 }
 
 void SimulateSOP::getErrorString(TD::OP_String* error, void* reserved1) {
-	// TODO
+	return m_simulator->getErrorString(error);
 }
 
 void SimulateSOP::getInfoPopupString(TD::OP_String* info, void* reserved1) {
-	info->setString("Not loaded");
+	return m_simulator->getInfoPopupString(info);
 }
 
-rtori::rtori_td::Input SimulateSOP::consolidateParameters(const TD::OP_Inputs* inputs) const {
-	const rtori::rtori_td::Input& cachedInput = this->m_simulation.getInput();
-
-	rtori::rtori_td::Input input = {
-	  .inputNumber = cachedInput.inputNumber,
-	  .foldFileSource = cachedInput.foldFileSource.update(
-		std::string(inputs->getParString(PARAMETER_KEY_FOLD_SOURCE))),
-	  .frameIndex =
-		cachedInput.frameIndex.update(inputs->getParInt(PARAMETER_KEY_FOLD_FRAME_INDEX)),
-	  .foldPercentage = cachedInput.foldPercentage.update(
-		static_cast<float>(inputs->getParDouble(PARAMETER_KEY_FOLD_PERCENTAGE))),
-	  .extractPosition =
-		cachedInput.extractPosition.update(inputs->getParInt(PARAMETER_KEY_POSITION) != 0),
-	  .extractError =
-		cachedInput.extractError.update(inputs->getParInt(PARAMETER_KEY_ERROR) != 0),
-	  .extractVelocity =
-		cachedInput.extractVelocity.update(inputs->getParInt(PARAMETER_KEY_VELOCITY) != 0)
-	};
-
-	if (input.changed()) {
-		input.inputNumber += 1;
-	}
-
-	return input;
+std::shared_ptr<rtori::rtori_td::Simulator> SimulateSOP::simulator(void) {
+	return m_simulator;
 }

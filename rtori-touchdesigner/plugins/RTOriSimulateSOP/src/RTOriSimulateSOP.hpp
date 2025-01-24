@@ -2,19 +2,18 @@
 #define __SimulateSOP__
 
 #include "SOP_CPlusPlusBase.h"
-#include <atomic>
-#include <mutex>
-#include <thread>
-#include <vector>
 
-#include "rtori/td/SimulationThread.hpp"
+#include "rtori/td/Simulator.hpp"
+#include "rtori/td/SimulateOP.hpp"
 
 #include "rtori_core.hpp"
+
+#include <cstdint>
 
 namespace rtori::rtori_td {
 
 /// This SOP is a generator and it takes no input, though it does take a lot of parameters
-class SimulateSOP : public TD::SOP_CPlusPlusBase {
+class SimulateSOP : public TD::SOP_CPlusPlusBase, public rtori::rtori_td::SimulateOP {
   public:
 	SimulateSOP(const TD::OP_NodeInfo* info, rtori::Context const* rtoriCtx);
 	virtual ~SimulateSOP();
@@ -46,9 +45,10 @@ class SimulateSOP : public TD::SOP_CPlusPlusBase {
 
 	rtori::Context const* rtoriCtx;
 
+	std::shared_ptr<rtori::rtori_td::Simulator> simulator();
+
   private:
-	rtori::rtori_td::Input consolidateParameters(const TD::OP_Inputs* inputs) const;
-	rtori::rtori_td::SimulationThread m_simulation;
+	std::shared_ptr<rtori::rtori_td::Simulator> m_simulator;
 };
 
 } // namespace rtori::rtori_td

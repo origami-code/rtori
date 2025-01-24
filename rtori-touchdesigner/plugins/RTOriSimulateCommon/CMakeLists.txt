@@ -4,11 +4,15 @@ list(APPEND RTOriSimulateCommon_Impl
 
 list(APPEND RTOriSimulateCommon_Headers
     include/rtori/td/InfoCHOP.hpp
+    include/rtori/td/Interests.hpp
     include/rtori/td/Simulator.hpp
     include/rtori/td/SimulateOP.hpp
 )
 
 add_library(RTOriSimulateCommon SHARED ${RTOriSimulateCommon_Impl})
+
+# To export the interface
+target_compile_definitions(RTOriSimulateCommon PRIVATE RTORI_TD_BUILD_SHARED=1)
 
 target_sources(RTOriSimulateCommon PUBLIC
     FILE_SET HEADERS

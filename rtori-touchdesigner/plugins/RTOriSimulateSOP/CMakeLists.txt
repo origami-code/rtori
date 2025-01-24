@@ -14,7 +14,9 @@ add_library(
 target_compile_features(RTOriSimulateSOP PRIVATE cxx_std_20)
 target_link_libraries(
     RTOriSimulateSOP
+
     PUBLIC
+
     TouchDesigner_Common
     TouchDesigner_SOP
     RTOriSimulateCommon
