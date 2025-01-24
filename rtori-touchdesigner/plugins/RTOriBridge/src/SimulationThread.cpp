@@ -382,7 +382,7 @@ void SimulationThread::runWorker() {
 					  << format_SolverOperationResult(stepResult) << std::endl;
 		}
 
-		using namespace std::chrono_literals;
-		std::this_thread::sleep_for(20ms);
+		// using namespace std::chrono_literals;
+		// std::this_thread::sleep_for(1ms);
 	}
 }

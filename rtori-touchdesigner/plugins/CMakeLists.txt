@@ -1,4 +1,7 @@
-
 add_subdirectory(TouchDesigner)
-add_subdirectory(RTOriSimulateShared)
+
+add_subdirectory(RTOriBridge)
+
+# Simulate Operators
+add_subdirectory(RTOriSimulateCommon)
 add_subdirectory(RTOriSimulateSOP)

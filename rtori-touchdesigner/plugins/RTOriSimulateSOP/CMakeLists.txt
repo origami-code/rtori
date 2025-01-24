@@ -17,7 +17,8 @@ target_link_libraries(
     PUBLIC
     TouchDesigner_Common
     TouchDesigner_SOP
-    RTOriSimulateShared
+    RTOriSimulateCommon
+    RTOriBridge # Temporary, during transition to using only RTOriSimulateCommon
 )
 
 target_compile_definitions(
@@ -32,6 +33,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "apple")
         "-bundle"
     )
     set_target_properties(RTOriSimulateSOP PROPERTIES
-        SUFFIX ".dylib"
+        SUFFIX ".so"
     )
 endif()

@@ -56,7 +56,7 @@ void FillSOPPluginInfo(SOP_PluginInfo* info) {
 	// lower case letters or numbers
 	customInfo.opType->setString("Rtorisimulate");
 	// English readable name
-	customInfo.opLabel->setString("RTOri Simulate");
+	customInfo.opLabel->setString("RTOri Simulate (SOP)");
 	// Will be turned into a 3 letter icon on the nodes
 	customInfo.opIcon->setString("ROS");
 	customInfo.majorVersion = RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MAJOR;
@@ -304,6 +304,10 @@ void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 
 		parameter.clampMins[0] = true;
 		parameter.clampMaxes[0] = true;
+
+		parameter.minValues[0] = -1.0f;
+		parameter.maxValues[0] = 1.0;
+
 		parameter.minSliders[0] = -1.0f;
 		parameter.maxSliders[0] = 1.0f;
 		parameter.defaultValues[0] = 0.0f;
