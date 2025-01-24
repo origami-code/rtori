@@ -53,7 +53,7 @@ fn test_onestep(fold_file: std::path::PathBuf) {
     solver.set_fold_percentage(fold_ratio).unwrap();
 
     solver.step(1).expect(&format!("Step failed"));
-
+ 
     let mut positions = Vec::new();
     positions.resize(
         parsed_input.frame(0).unwrap().get().vertices.count(),
@@ -84,13 +84,15 @@ fn test_stability(fold_file: std::path::PathBuf) {
             .block_on()
             .unwrap();
 
-    let (_, fold_ratio) = parse_path(fold_file.as_ref());
+    let (name, fold_ratio) = parse_path(fold_file.as_ref());
+    let full_name = format!("{name} ({:.1}%)", fold_ratio * 100.0);
+
     let file = std::fs::OpenOptions::new()
         .read(true)
         .open(fold_file)
         .unwrap();
     let parsed_input = serde_json::from_reader::<_, fold::File>(file)
-        .expect("source deserialization (json/fold file) failed");
+        .expect("{full_name}: source deserialization (json/fold file) failed");
 
     solver.load_fold_in(&parsed_input.key_frame, allocator);
     solver.set_fold_percentage(fold_ratio).unwrap();
@@ -111,17 +113,17 @@ fn test_stability(fold_file: std::path::PathBuf) {
     for step_index in 0..MAXIMUM_ITERATIONS {
         solver
             .step(1)
-            .expect(&format!("Step failed at iteration {step_index}"));
+            .expect(&format!("{full_name}: Step failed at iteration {step_index}"));
 
         let result = solver
             .extract(rtori_os_model::ExtractFlags::all())
-            .expect("extract call failed");
+            .expect("{full_name}: extract call failed");
 
         result.copy_node_position(&mut positions_front[..], 0);
         for (i, pos) in positions_front.iter().enumerate() {
             assert!(
                 pos.0.iter().all(|v| !v.is_nan()),
-                "Iteration {step_index}: got a NaN in vertex {i} (got position: {pos:?})"
+                "{full_name}: Iteration {step_index}: got a NaN in vertex {i} (got position: {pos:?})"
             );
         }
 
@@ -139,7 +141,7 @@ fn test_stability(fold_file: std::path::PathBuf) {
             .unwrap();
         assert!(
             max_distance < FAIL_TOLERANCE,
-            "Failure at step count {step_index}, offset should be less than zero (tolerance: +- {FAIL_TOLERANCE}) but is {max_distance}"
+            "{full_name}: Failure at step count {step_index}, offset should be less than zero (tolerance: +- {FAIL_TOLERANCE}) but is {max_distance}"
         );
 
         // If the distance to the last iteration is even more negligeable, stop here
@@ -161,7 +163,7 @@ fn test_stability(fold_file: std::path::PathBuf) {
                 .max_by(|lhs, rhs| lhs.partial_cmp(rhs).unwrap())
                 .unwrap();
             if step_index > 10 && max_diff < CONVERGED_TOLERANCE {
-                println!("Early exit as diff is {max_diff} < {CONVERGED_TOLERANCE}");
+                println!("{full_name}: Early exit as diff is {max_diff} < {CONVERGED_TOLERANCE}");
                 return;
             }
         }
