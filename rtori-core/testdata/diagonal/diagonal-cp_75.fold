@@ -1,0 +1,86 @@
+{
+    "file_spec": 1.1,
+    "file_creator": "Origami Simulator: http://git.amandaghassaei.com/OrigamiSimulator/",
+    "file_author": "",
+    "file_classes": [
+        "singleModel"
+    ],
+    "frame_title": "diagonal-cp_75",
+    "frame_classes": [
+        "foldedForm"
+    ],
+    "frame_attributes": [
+        "3D"
+    ],
+    "frame_unit": "unit",
+    "vertices_coords": [
+        [
+            -0.27059444785118103,
+            -0.4619831144809723,
+            -0.27059805393218994
+        ],
+        [
+            0.7071133255958557,
+            0.4618949294090271,
+            -0.7071033120155334
+        ],
+        [
+            0.27060917019844055,
+            -0.4619823396205902,
+            0.2706056237220764
+        ],
+        [
+            -0.7071002721786499,
+            0.4618942439556122,
+            0.7071101069450378
+        ]
+    ],
+    "edges_vertices": [
+        [
+            0,
+            1
+        ],
+        [
+            1,
+            2
+        ],
+        [
+            2,
+            3
+        ],
+        [
+            3,
+            0
+        ],
+        [
+            3,
+            1
+        ]
+    ],
+    "edges_assignment": [
+        "B",
+        "B",
+        "B",
+        "B",
+        "V"
+    ],
+    "faces_vertices": [
+        [
+            0,
+            1,
+            3
+        ],
+        [
+            1,
+            2,
+            3
+        ]
+    ],
+    "edges_foldAngle": [
+        0,
+        0,
+        0,
+        0,
+        180
+    ]
+}

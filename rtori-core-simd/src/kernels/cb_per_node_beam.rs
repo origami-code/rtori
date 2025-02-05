@@ -48,6 +48,9 @@ where
         inputs.beam_d
     )
     .map(move |(beam_spec, beam_length, beam_k, beam_d)| {
+        super::operations::debug::check_nans_simd_msg(*beam_length, "cb_per_node_beam", "beam_length");
+tracing::event!(tracing::Level::TRACE, "
+    beam_spec: {beam_spec:?}");
         /* 2025-01-13 */ // println!("per_node_beam: spec: {beam_spec:?}, length: {beam_length:?}, k: {beam_k:?}, d: {beam_d:?}");
 
         let [node_position_unchanging, node_position_offset, node_velocity] = gather_vec3f(
@@ -76,31 +79,39 @@ where
 
         // Calculate delta p
         let (delta_p, error) = {
+            // This is the distance which should normally be between the neighbour and this node
             let nominal_distance = neighbour_position_unchanging - node_position_unchanging;
             super::operations::debug::check_nans_simd_vec_msg([nominal_distance.x.0, nominal_distance.y.0, nominal_distance.z.0], "cb_per_node_beam", "nominal_distance");
+
+            // That distance is modified by offset_distance
             let offset_distance = neighbour_position_offset - node_position_offset;
             super::operations::debug::check_nans_simd_vec_msg([offset_distance.x.0, offset_distance.y.0, offset_distance.z.0], "cb_per_node_beam", "offset_distance");
 
+            // The current distance between the neighbour and this node is the combination of both distances
             let delta_p_uncorrected = offset_distance + nominal_distance;
-            /* 2025-01-13 */ /*println!("per_node_beam:
-nominal_distance: {nominal_distance:?}
-offset_distance: {offset_distance:?}
-delta_p: {delta_p_uncorrected:?}");*/
             super::operations::debug::check_nans_simd_vec_msg([delta_p_uncorrected.x.0, delta_p_uncorrected.y.0, delta_p_uncorrected.z.0], "cb_per_node_beam", "delta_p_uncorrected");
+
+            /* 2025-01-13 */
+            tracing::event!(tracing::Level::TRACE, "per_node_beam:
+    nominal_distance: {nominal_distance:?}
+    offset_distance: {offset_distance:?}
+    delta_p: {delta_p_uncorrected:?}");
 
             use std::simd::cmp::SimdPartialEq as _;
 
             // When the length is 0, we instead set it to 1.0
             let delta_p_length = delta_p_uncorrected.norm();
+            super::operations::debug::check_nans_simd_msg(delta_p_length.0, "cb_per_node_beam", "delta_p_length");
+
             let mask = delta_p_length.0.simd_ne(core::simd::Simd::splat(0.0f32));
             let delta_p_length_corrected = simba::simd::Simd(mask.select(delta_p_length.0, core::simd::Simd::splat(1.0f32)));
 
-            super::operations::debug::check_nans_simd_msg(delta_p_length.0, "cb_per_node_beam", "delta_p_length");
-            /* 2025-01-13 */ /*println!("per_node_beam:
+            
+            /* 2025-01-13 */ 
+            tracing::event!(tracing::Level::TRACE, "per_node_beam:
 delta_p pre-correction: {delta_p_uncorrected:?}
 beam_length {beam_length:?}
-delta_p_length {delta_p_length:?}");*/
-            super::operations::debug::check_nans_simd_msg(*beam_length, "cb_per_node_beam", "beam_length");
+delta_p_length {delta_p_length:?}");
 
             // What we want is to apply a force to fight back against the beam being compressed or extended
             // Meaning that the normal beam length != current length
@@ -108,7 +119,9 @@ delta_p_length {delta_p_length:?}");*/
             let beam_length_ratio_corrected = simba::simd::Simd(mask.select(beam_length_ratio.0, core::simd::Simd::splat(1.0f32)));
 
             // Thus the ratio is used to scale the delta_p accordingly
-            let delta_p = delta_p_uncorrected - delta_p_uncorrected * beam_length_ratio_corrected;
+            let delta_p = delta_p_uncorrected - (delta_p_uncorrected * beam_length_ratio_corrected);
+            tracing::event!(tracing::Level::TRACE, "per_node_beam:
+            delta_p corrected: {delta_p:?}");
 
             let error = ((simba::simd::Simd(*beam_length) / delta_p_length_corrected)
                 + simba::simd::Simd(SimdF32::splat(-1.0f32)))
@@ -123,7 +136,10 @@ delta_p_length {delta_p_length:?}");*/
         // Calculate delta v
         let delta_v = neighbour_velocity - node_velocity;
         super::operations::debug::check_nans_simd_vec_msg([delta_v.x.0, delta_v.y.0, delta_v.z.0], "cb_per_node_beam", "delta_v");
-
+tracing::event!(tracing::Level::TRACE, "per_node_beam:
+            delta_v: {delta_v:?}
+            beam_d: {beam_d:?}
+            beam_k: {beam_k:?}");
         /* 2025-01-13 */ //println!("per_node_beam delta_v: {delta_v:?}");
         // Calculate resulting force
         let force =

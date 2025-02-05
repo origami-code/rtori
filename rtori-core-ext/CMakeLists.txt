@@ -44,4 +44,4 @@ corrosion_experimental_cbindgen(
     FLAGS --config "${CMAKE_CURRENT_LIST_DIR}/cbindgen_cpp.toml" --lang c++
 )
 
-target_sources(rtori_core INTERFACE FILE_SET HEADERS TYPE HEADERS BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/rtori/attributes.h)
+target_sources(rtori_core INTERFACE FILE_SET HEADERS TYPE HEADERS BASE_DIRS include FILES include/rtori/attributes.h)

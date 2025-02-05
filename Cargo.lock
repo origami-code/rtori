@@ -467,6 +467,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "diplomat"
+version = "0.9.0"
+source = "git+https://github.com/aabizri/diplomat.git?branch=feature-custom-allocators#a49588df87bc76a8eee2fc6767e84127375463ef"
+dependencies = [
+ "diplomat_core",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
+]
+
+[[package]]
+name = "diplomat-runtime"
+version = "0.9.0"
+source = "git+https://github.com/aabizri/diplomat.git?branch=feature-custom-allocators#a49588df87bc76a8eee2fc6767e84127375463ef"
+
+[[package]]
+name = "diplomat_core"
+version = "0.9.0"
+source = "git+https://github.com/aabizri/diplomat.git?branch=feature-custom-allocators#a49588df87bc76a8eee2fc6767e84127375463ef"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "smallvec",
+ "strck",
+ "syn 2.0.87",
+]
+
+[[package]]
 name = "document-features"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1539,6 +1568,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rtori-core-ffi"
+version = "0.1.0"
+dependencies = [
+ "diplomat",
+ "diplomat-runtime",
+ "fold",
+ "rtori-core",
+ "serde_json",
+]
+
+[[package]]
 name = "rtori-core-simd"
 version = "0.1.0"
 dependencies = [
@@ -1797,6 +1837,15 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "strck"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42316e70da376f3d113a68d138a60d8a9883c604fe97942721ec2068dab13a9f"
+dependencies = [
+ "unicode-ident",
+]
 
 [[package]]
 name = "syn"
@@ -2442,3 +2491,8 @@ dependencies = [
  "quote",
  "syn 2.0.87",
 ]
+
+[[patch.unused]]
+name = "diplomat-tool"
+version = "0.9.0"
+source = "git+https://github.com/aabizri/diplomat.git?branch=feature-custom-allocators#a49588df87bc76a8eee2fc6767e84127375463ef"

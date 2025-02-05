@@ -272,6 +272,7 @@ where
             node_external_forces: &input.node_external_forces,
             node_mass: &input.node_mass,
             node_fixed: &input.node_fixed,
+            node_geometry: &input.node_geometry,
             node_crease_force: per_node_crease_forces,
             node_beam_force: per_node_beam_forces,
             node_face_force: per_node_face_forces,
