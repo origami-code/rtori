@@ -9,6 +9,12 @@
 
 #include <rtori_core.hpp>
 
+#ifdef RTORI_TD_BUILD_SHARED
+#define RTORI_TD_EXPORT __declspec(dllexport)
+#else
+#define RTORI_TD_EXPORT
+#endif
+
 namespace rtori::rtori_td {
 
 struct OutputGuard {
@@ -20,7 +26,7 @@ struct OutputGuard {
 	std::unique_lock<std::mutex> m_guard;
 };
 
-class SimulationThread {
+class RTORI_TD_EXPORT SimulationThread {
   public:
 	SimulationThread(rtori::Context const* ctx);
 	~SimulationThread();

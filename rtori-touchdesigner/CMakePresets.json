@@ -7,5 +7,31 @@
     },
     "include": [
         "../CMakePresetsCommon.json"
+    ],
+    "configurePresets": [
+        {
+            "name": "win-x86_64",
+            "generator": "Visual Studio 17",
+            "architecture": "x64",
+            "binaryDir": "win-x86_64-build",
+            "installDir": "win-x86_64-output"
+        },
+        {
+            "name": "win-arm64ec",
+            "generator": "Visual Studio 17",
+            "architecture": "arm64ec",
+            "binaryDir": "win-arm64ec-build",
+            "installDir": "win-arm64ec-output"
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "win-x86_64",
+            "configurePreset": "win-x86_64"
+        },
+        {
+            "name": "win-arm64ec",
+            "configurePreset": "win-arm64ec"
+        }
     ]
 }

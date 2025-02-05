@@ -26,7 +26,7 @@ target_link_libraries(
     RTOriSimulateCommon
 
     PUBLIC
-    RTOriBridge
+    RTOriCommon
     TouchDesigner_Common
 )
 

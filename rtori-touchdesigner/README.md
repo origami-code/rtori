@@ -2,17 +2,25 @@
 
 ## Plugins
 
-|Kind |Name              |Description                     |State|
-|:---:|:----------------:|:------------------------------:|:---:|
-|SOP  | RTOriSimulateSOP | Simulates an origami folding  :|🚧|
-|CHOP | RTOriSimulateCHOP| Simulates an origami folding  :|🎯|
-|TOP  | RTOriSimulateTOP | Simulates an origami folding  :|🎯|
-|POP *| RTOriSimulatePOP | Simulates an origami folding  :|🎯|
-
-All the `RTOriSimulate...` plugins can be either linked to a fold file,
-or to another one which is linked to a fold file, so as to cheapily add a new output from the same simulation.
+|Kind |Name (prefixed `RTOri`) |Description                                              |State|
+|-----|------------------------|---------------------------------------------------------|:---:|
+|SOP  | `Simulate`             | Simulates an origami folding                            |🚧|
+|CHOP | `Simulate`             | Simulates an origami folding                            |🎯|
+|TOP  | `Simulate`             | Simulates an origami folding                            |🎯|
+|POP *| `Simulate`             | Simulates an origami folding                            |🎯|
+|DAT  | `FoldSelectFrame`      | Parses a fold file, outputs a single frame              |🎯|
+|DAT  | `FoldSelect`           | Parses a fold file/frame, outputs the requested fields  |🎯|
+|DAT  | `FoldAdd`              | Adds vertices to a fold file, possibly linking them     |🎯|
+|DAT  | `SOPToFold`            | Converts a surface (SOP) into a fold file               |🎯|
+|POP *| `POPToFold`            | Converts a surface (POP) into a fold file               |🎯|
 
 (*):`POP` or Particle Operator(s) haven't been released yet. They promise increased performance for surface operations.
+
+
+All the `Simulate` custom operators can be either linked to a fold file,
+or to another one which is linked to a fold file, so as to cheapily add a new output from the same simulation.
+
+All the `..Fold..` custom operators also provide access to python queries, read-only.
 
 ## Platform/Architecture Support
 
