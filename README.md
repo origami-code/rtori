@@ -1,19 +1,58 @@
-# `rtori`: (R)eal-(t)ime (Ori)gami
+# RTOri: Real Time Origami Toolkit
 
-`rtori` is a **toolkit** for interpreting, simulating and visualizing 3D origami.
+Making real-time origami pattern **manipulation** and fold **simulation** easy. Coming to you from the Ori* lab.
 
-## Components
+On a high-level view, this project provides plugins, apps and bindings to manipulate and simulate origamis on a variety of platforms  and with a diversity of use cases. 
 
-### Main
+## Goals
 
-- `rtori-core-ext`: a library that provides a packaged set of functionality for interpreting and simulating 3D origami (shared library: `.dll`, `.so`, `.dylib`)
-- `rtori-touchdesigner`: a set of plugins for [touchdesigner](https://derivative.ca) exposing the functionality through several components
-- `rtori-cli`: a CLI interface exposing the same functionality
+- open source, and involve the community
+- provide software components to manipulate and simulate origamis
+- easy to integrate as plugins for existing apps, as well as in custom apps
+- usable from different languages (C++, .NET, python, ...)
+- crossplatform (Windows, macOS, Linux, ...)
+- cross-architecture (amd64, arm64) while taking advantage of their strengths
 
-### Supporting
+## Simulation Models
 
-- `rtori-core`: the core behind `rtori-core-ext`, presenting a `rust-based` dylib
-- `fold`: a library to parse and execute operations on [`.fold` files](https://edemaine.github.io/fold/doc/spec.html)
+- Origami Simulator by Amanda Ghaessi
+    - CPU (SIMD accelerated) 🚧
+    - GPU 🚧
+- ??
+
+## Apps, plugins, bindings
+
+### RTOri as Plugins
+
+This project has been designed from the ground up to provide origami manipulation and simulation to existing apps as plugins, allowing designers, scientists, students, makers and artists around the world to access origamis in their existing workflows.
+
+We thought about the following targets, please open an issue to express interest:
+
+| App Name          | Manipulation | Simulation | Bindings |
+|:-----------------:|:------------:|:----------:|:--------:|
+| [Touchdesigner](https://derivative.ca/UserGuide/TouchDesigner) | ❌ | 🚧 | C++ |
+| Blender           | ❌ | ❌ | py |
+| Rhino             | ❌ | ❌ | .NET |
+| ↪ Grasshopper     | ❌ | ❌ | .NET |
+| Unity             | ❌ | ❌ | .NET |
+| Unreal            | ❌ | ❌ | C++  |
+| Godot             | ❌ | ❌ | rust/C++ ? |
+
+### RTOri as Apps
+
+- `rtori-cli` provides two operation kind:
+    - `convert` to convert into and from the fold format
+    - `simulate` to run simulations
+
+### RTOri as Bindings
+
+| Ecosystem   | State |
+|:-----------:|:--:|
+| C++         | 🚧 |
+| .NET        | ❌ |
+| py          | ❌ | 
+| Web (wasm)  | ❌ |
+
 
 ## Target Architectures
 
