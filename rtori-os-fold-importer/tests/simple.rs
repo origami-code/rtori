@@ -9,11 +9,13 @@ use store::*;
 const SIMPLE_EXPECTED: &'static str = include_str!("../testdata/simple.json");
 const SIMPLE_FOLD: &'static str = include_str!("../../fold/testdata/simple.fold");
 
-#[test]
-fn test_import() {
-    let parsed_input = serde_json::from_str::<fold::File>(SIMPLE_FOLD)
+fn test_pair(
+    expected: &str,
+    fold: &str
+) {
+    let parsed_input = serde_json::from_str::<fold::File>(fold)
         .expect("source deserialization (json/fold file) failed");
-    let decoded_expectation = serde_json::from_str::<Store>(SIMPLE_EXPECTED)
+    let decoded_expectation = serde_json::from_str::<Store>(expected)
         .expect("expectation deserialization (json) failed");
 
     let imported = {
@@ -41,4 +43,9 @@ fn test_import() {
     }
 
     assert_json_diff::assert_json_eq!(decoded_expectation, imported);
+}
+
+#[test]
+fn test_simple() {
+    test_pair(SIMPLE_EXPECTED, SIMPLE_FOLD);
 }

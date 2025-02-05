@@ -12,6 +12,7 @@ use crate::model::{
 };
 
 /// Should be swapped
+#[derive(Debug)]
 #[repr(transparent)]
 pub struct MemorableInput<'backer, const L: usize>
 where
@@ -20,6 +21,7 @@ where
     pub crease_fold_angle: &'backer mut [SimdF32<L>],
 }
 
+#[derive(Debug)]
 pub struct ScratchInput<'backer, const L: usize>
 where
     LaneCount<L>: SupportedLaneCount,
@@ -33,6 +35,7 @@ where
     pub node_face_error: &'backer mut [SimdF32<L>],
 }
 
+#[derive(Debug)]
 pub struct ReadOnlyInput<'backer, const L: usize>
 where
     LaneCount<L>: SupportedLaneCount,
@@ -87,6 +90,7 @@ where
 }
 
 /// The parameter L should be the native vector size of the platform for highest efficiency
+#[tracing::instrument]
 pub fn process<'a, const L: usize>(
     input: &'a ReadOnlyInput<'a, L>,          // RO
     scratch: &'a mut ScratchInput<'a, L>,     // WO
@@ -268,6 +272,7 @@ where
             node_external_forces: &input.node_external_forces,
             node_mass: &input.node_mass,
             node_fixed: &input.node_fixed,
+            node_geometry: &input.node_geometry,
             node_crease_force: per_node_crease_forces,
             node_beam_force: per_node_beam_forces,
             node_face_force: per_node_face_forces,

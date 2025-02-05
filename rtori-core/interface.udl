@@ -1,0 +1,50 @@
+dictionary FoldLoadError {};
+interface FoldFile {};
+
+enum JSONParseErrorCategory {
+    /// failure to read or write bytes on an I/O stream
+    IO;
+    ///  input that is not syntactically valid JSON
+    Syntax;
+    /// input data that is semantically incorrect
+    Data;
+    /// unexpected end of the input data
+    Eof;
+}
+
+dictionary JSONParseError {
+    u32 line;
+    u32 column;
+    JSONParseErrorCategory category;
+}
+
+namespace rtori {
+    [Throws=FoldLoadError]
+    FoldFile load_fold_bytes(
+        [ByRef] bytes json,
+        CustomAllocator? allocator
+    );
+
+    [Throws=FoldLoadError]
+    FoldFile load_fold_string(
+        [ByRef] string json,
+        CustomAllocator? allocator
+    );
+};
+
+dictionary Layout {
+    u64 alignment;
+    u64 size;
+};
+
+[Trait, WithForeign]
+interface CustomAllocationError {};
+
+/// It can make sense to manually manage the memory
+interface CustomAllocator {
+    [Throws=CustomAllocationError]
+    sequence<u8> allocate(Layout layout);
+
+    void deallocate(sequence<u8> ptr, Layout layout);
+};
+

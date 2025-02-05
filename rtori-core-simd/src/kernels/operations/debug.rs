@@ -41,6 +41,7 @@ pub fn check_nans_simd_vec_msg<const L: usize, const N: usize>(
 ) where
     LaneCount<L>: SupportedLaneCount,
 {
+    #[cfg(debug_assertions)]
     check_nans_simd_vec_msg_masked(data, std::simd::Mask::splat(true), context, variable);
 }
 
@@ -201,6 +202,7 @@ macro_rules! ensure_simd(
 
     ($expr:expr; $shape:tt; @upholds($($property:tt),+)) => {
         {
+            #[cfg(debug_assertions)]
             let mask = core::simd::Mask::splat(true);
             $crate::kernels::operations::debug::ensure_simd!($expr; $shape; @mask(mask); @upholds($($property),+); @depends())
         }
@@ -215,6 +217,7 @@ macro_rules! ensure_simd(
 
     ($expr:expr; $shape:tt; @depends($($dependency:expr),*)) => {
         {
+            #[cfg(debug_assertions)]
             let mask = core::simd::Mask::splat(true);
             $crate::kernels::operations::debug::ensure_simd!($expr; $shape; @mask(mask); @upholds(nonan, noinf); @depends($($dependency),*))
         }

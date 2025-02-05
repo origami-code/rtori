@@ -102,7 +102,8 @@ pub fn extract_creases<'a, FI: ExtractCreasesInput>(
 
     iterator
         // Filter out the irrelevant folds (non-mountain, valley or facet)
-        .filter_map(move |(vertex, faces, assignment, fold_angles)| {
+        .enumerate()
+        .filter_map(move |(edge_index, (vertex, faces, assignment, fold_angles))| {
             match (assignment, fold_angles) {
                 (FoldAssignment::Facet | FoldAssignment::Mountain | FoldAssignment::Valley, Some(a)) => Some(a),
                 (FoldAssignment::Mountain, None) => Some(default_mountain_fold_angle),
@@ -110,13 +111,13 @@ pub fn extract_creases<'a, FI: ExtractCreasesInput>(
                 (FoldAssignment::Facet, None) => Some(0.0),
                 _ => None
             }.map(|fold_angle| (
+                edge_index,
                 vertex,
                 faces,
                 fold_angle,
             ))
         })
-        .enumerate()
-        .map(move |(edge_index, (vertex, faces, fold_angle))| {
+        .map(move |(edge_index, vertex, faces, fold_angle)| {
             if faces.len() < 2 {
                 // When an edge is M, V or F (as it should now be), then it must have at least two faces
                 return Err(ExtractCreasesIteratorError{

@@ -2,11 +2,14 @@ cargo-features = ["profile-rustflags"]
 
 [workspace]
 resolver = "2"
-members = ["fold", "rtori-core-simd","rtori-core-wgpu", "rtori-server", "rtori-cli", "rtori-os-fold-importer", "rtori-core", "rtori-core-ext", "rtori-os-model"]
+members = ["fold", "rtori-core-simd","rtori-core-wgpu", "rtori-server", "rtori-cli", "rtori-os-fold-importer", "rtori-core", "rtori-core-ext", "rtori-os-model", "rtori-core-ffi"]
 
 
-#[patch.crates-io]
-#cbindgen = { git = 'https://github.com/0e4ef622/cbindgen.git', branch = "array-mangle" }
+[patch.crates-io]
+diplomat = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
+diplomat-runtime = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
+diplomat_core = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
+diplomat-tool = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
 
 [profile.bench]
 lto = true

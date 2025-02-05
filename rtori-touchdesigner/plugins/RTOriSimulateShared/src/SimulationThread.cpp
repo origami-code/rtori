@@ -381,5 +381,8 @@ void SimulationThread::runWorker() {
 			std::cout << "ERROR: Solver step failed: "
 					  << format_SolverOperationResult(stepResult) << std::endl;
 		}
+
+		using namespace std::chrono_literals;
+		std::this_thread::sleep_for(20ms);
 	}
 }
