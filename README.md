@@ -1,6 +1,6 @@
 # RTOri: Real Time Origami Toolkit
 
-Making real-time origami pattern **manipulation** and fold **simulation** easy. Coming to you from the Ori* lab.
+Making real-time origami pattern **manipulation** and fold **simulation** easy. Coming to you from the [orilab](https://orilab.art/).
 
 On a high-level view, this project provides plugins, apps and bindings to manipulate and simulate origamis on a variety of platforms  and with a diversity of use cases. 
 
