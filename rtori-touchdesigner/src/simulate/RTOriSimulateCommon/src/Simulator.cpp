@@ -25,11 +25,31 @@ constexpr const char* PARAMETER_KEY_FOLD_FRAME_INDEX = "Foldframeindex";
 constexpr const char* PARAMETER_KEY_FOLD_PERCENTAGE = "Foldpercentage";
 constexpr const char* PARAMETER_KEY_IDLE_THRESHOLD = "Idlethreshold";
 
+/*
+ * The simulation runs like this:
+ * - Fixed: The simulation's runs at a user-specified ratio (`TimeScale`) of the real speed,
+ * meaning that a second in the real world is a second in the simulation. The simulator itself
+ * might be finished earlier, in which case all is good, or later, in which case it accumulates
+ * delay, meaning the speed of the simulation doesn't reach the speed of the real world.
+ *
+ * - Adaptive: The simulation runs like in "Fixed" as long as it can meet the time budget,
+ * otherwise the effective simulation speed is lowered. The `AdaptiveFrameBudget` parameter
+ * allows one to set how long of a frame it should take.
+ */
+
+constexpr const char* PARAMETER_KEY_TIME_SCALE = "Timescale";
+constexpr const char* PARAMETER_KEY_ADAPTIVE = "Adaptive";
+constexpr const char* PARAMETER_KEY_FRAME_BUDGET = "Framebudget";
+
+/// Simulation parameters that should only be applied to simulation primaries
 constexpr const char* PARAMETER_KEYS_SIMULATION[] = {PARAMETER_KEY_FOLD_SOURCE,
 													 PARAMETER_KEY_FOLD_FRAME_INDEX,
 													 PARAMETER_KEY_FOLD_FRAME_INDEX,
 													 PARAMETER_KEY_FOLD_PERCENTAGE,
-													 PARAMETER_KEY_IDLE_THRESHOLD};
+													 PARAMETER_KEY_IDLE_THRESHOLD,
+													 PARAMETER_KEY_TIME_SCALE,
+													 PARAMETER_KEY_ADAPTIVE,
+													 PARAMETER_KEY_FRAME_BUDGET};
 
 Simulator::Simulator(rtori::Context const* ctx)
 	: m_simulation(rtori::rtori_td::SimulationThread(ctx)), rtoriCtx(ctx) {}
@@ -43,11 +63,14 @@ void Simulator::execute(const TD::OP_Inputs* inputs, const Interests& interests)
 	this->m_simulation.notifyCook();
 
 	// If Sourcesimulation is active, we disable the other parameters
-	if (inputs->getParString(PARAMETER_KEY_SOURCE_SIMULATION) != nullptr) {
-		for (size_t i = 0; i < sizeof(PARAMETER_KEYS_SIMULATION) / sizeof(const char*); i++) {
-			inputs->enablePar(PARAMETER_KEYS_SIMULATION[i], false);
-		}
-	} else {
+	const char* simulationSourceStr = inputs->getParString(PARAMETER_KEY_SOURCE_SIMULATION);
+	const bool opIsPrimary =
+	  simulationSourceStr == NULL || std::strlen(simulationSourceStr) == 0;
+	for (size_t i = 0; i < sizeof(PARAMETER_KEYS_SIMULATION) / sizeof(const char*); i++) {
+		inputs->enablePar(PARAMETER_KEYS_SIMULATION[i], opIsPrimary);
+	}
+
+	if (opIsPrimary) {
 		// We convert the parameters into an Input
 		const rtori::rtori_td::Input consolidated = consolidateParameters(inputs, interests);
 		if (consolidated.changed()) {
@@ -60,7 +83,7 @@ rtori::rtori_td::OutputGuard Simulator::query(void) {
 	return this->m_simulation.getOutput();
 }
 
-constexpr char const* PARAMETERS_PAGE_NAME = "Simulation Settings";
+constexpr char const* PARAMETERS_PAGE_NAME = "Simulation";
 
 void Simulator::setupParameters(TD::OP_ParameterManager* manager, const char* page) {
 	if (page == nullptr) {
@@ -75,17 +98,6 @@ void Simulator::setupParameters(TD::OP_ParameterManager* manager, const char* pa
 		parameter.label = "Source Simulation";
 
 		const OP_ParAppendResult res = manager->appendOP(parameter);
-		assert(res == OP_ParAppendResult::Success);
-	}
-
-	{
-		OP_NumericParameter parameter;
-
-		parameter.name = "Simulationmode";
-		parameter.page = page;
-		parameter.label = "Simulation Mode";
-
-		const OP_ParAppendResult res = manager->appendToggle(parameter);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
@@ -106,7 +118,11 @@ void Simulator::setupParameters(TD::OP_ParameterManager* manager, const char* pa
 		parameter.page = page;
 		parameter.label = "Fold Frame Index";
 
-		const OP_ParAppendResult res = manager->appendToggle(parameter);
+		parameter.clampMins[0] = true;
+		parameter.minValues[0] = 0.0f;
+		parameter.defaultValues[0] = 0.0f;
+
+		const OP_ParAppendResult res = manager->appendInt(parameter);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
@@ -124,6 +140,7 @@ void Simulator::setupParameters(TD::OP_ParameterManager* manager, const char* pa
 
 		parameter.minSliders[0] = -1.0f;
 		parameter.maxSliders[0] = 1.0f;
+
 		parameter.defaultValues[0] = 0.0f;
 
 		const OP_ParAppendResult res = manager->appendFloat(parameter, 1);
@@ -140,6 +157,56 @@ void Simulator::setupParameters(TD::OP_ParameterManager* manager, const char* pa
 		parameter.minValues[0] = 0.0;
 		parameter.minSliders[0] = 0.0;
 		parameter.defaultValues[0] = DEFAULT_IDLE_THRESHOLD;
+
+		const OP_ParAppendResult res = manager->appendFloat(parameter, 1);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	{
+		auto parameter = OP_NumericParameter();
+		parameter.name = PARAMETER_KEY_TIME_SCALE;
+		parameter.page = page;
+		parameter.label = "Time Scale";
+
+		parameter.clampMins[0] = true;
+		parameter.minValues[0] = 0.0;
+		parameter.minSliders[0] = 0.0;
+
+		parameter.maxSliders[0] = 10.0f;
+
+		parameter.defaultValues[0] = 1.0f;
+
+		const OP_ParAppendResult res = manager->appendFloat(parameter, 1);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	{
+		auto parameter = OP_NumericParameter();
+		parameter.name = PARAMETER_KEY_ADAPTIVE;
+		parameter.page = page;
+		parameter.label = "Adaptive";
+
+		parameter.defaultValues[0] = 0;
+
+		const OP_ParAppendResult res = manager->appendToggle(parameter);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	{
+		auto parameter = OP_NumericParameter();
+		parameter.name = PARAMETER_KEY_FRAME_BUDGET;
+		parameter.page = page;
+		parameter.label = "Frame Budget";
+
+		parameter.clampMins[0] = true;
+		parameter.minValues[0] = 0.0;
+		parameter.minSliders[0] = 0.0;
+
+		parameter.clampMaxes[0] = true;
+		parameter.maxValues[0] = 1.0;
+		parameter.maxSliders[0] = 1.0f;
+
+		parameter.defaultValues[0] = 1.0f;
 
 		const OP_ParAppendResult res = manager->appendFloat(parameter, 1);
 		assert(res == OP_ParAppendResult::Success);
@@ -196,9 +263,17 @@ rtori::rtori_td::Input Simulator::consolidateParameters(const TD::OP_Inputs* inp
 		cachedInput.frameIndex.update(inputs->getParInt(PARAMETER_KEY_FOLD_FRAME_INDEX)),
 	  .foldPercentage = cachedInput.foldPercentage.update(
 		static_cast<float>(inputs->getParDouble(PARAMETER_KEY_FOLD_PERCENTAGE))),
+
 	  .extractPosition = cachedInput.extractPosition.update(interests.position),
 	  .extractError = cachedInput.extractError.update(interests.error),
-	  .extractVelocity = cachedInput.extractVelocity.update(interests.velocity)};
+	  .extractVelocity = cachedInput.extractVelocity.update(interests.velocity),
+
+	  .timeScale = cachedInput.timeScale.update(
+		static_cast<float>(inputs->getParDouble(PARAMETER_KEY_TIME_SCALE))),
+	  .adaptive = cachedInput.adaptive.update(
+		inputs->getParInt(PARAMETER_KEY_ADAPTIVE) == 0 ? false : true),
+	  .frameBudget = cachedInput.frameBudget.update(
+		static_cast<float>(inputs->getParDouble(PARAMETER_KEY_FRAME_BUDGET)))};
 
 	if (input.changed()) {
 		input.inputNumber += 1;

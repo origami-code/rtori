@@ -39,3 +39,11 @@ target_link_libraries(
 set_target_properties(
     RTOriCommon PROPERTIES ALLOC_USE_WINDOWS_HEAP On
 )
+
+install(
+    TARGETS RTOriCommon
+    RUNTIME # For Windows
+    DESTINATION "." # To the root
+    LIBRARY # On macOS we use rpath
+    DESTINATION "lib"
+)

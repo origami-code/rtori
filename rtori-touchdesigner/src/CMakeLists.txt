@@ -1,4 +1,3 @@
-add_subdirectory(common)
 
 set(MACOS_BUNDLE_PREFIX "art.orilab.rtori.td" CACHE STRING "macOS bundle prefixing")
 set(MACOS_BUNDLE_FULLNAME_SUFFIX " (rtori plugin for TouchDesigner)" CACHE STRING "macOS bundle full name suffix")
@@ -14,7 +13,6 @@ function(configure_info_plist)
     if(NOT TARGET ${arg_TARGET})
         message(FATAL_ERROR "No TARGET given")
     endif()
-
 
     configure_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/Info.plist.in" "${BINARY_DIR}/Info.plist" NEWLINE_STYLE UNIX)
 endfunction()
@@ -58,12 +56,19 @@ function(prepare_plugin)
         ""
     )
 
+    if(MSVC)
+        get_target_property(source_dir ${arg_TARGET} SOURCE_DIR)
+        target_compile_options(${arg_TARGET} PRIVATE "/d1trimfile:${source_dir}")
+        target_link_options(${arg_TARGET} PRIVATE "/PDBALTPATH:%_PDB")
+    endif()
+
     if(NOT TARGET ${arg_TARGET})
         message(FATAL_ERROR "No TARGET given")
     endif()
 
     get_target_property(target_property ${arg_TARGET} TYPE)
-    if (NOT (${target_property} STREQUAL "MODULE_LIBRARY"))
+
+    if(NOT(${target_property} STREQUAL "MODULE_LIBRARY"))
         message(FATAL_ERROR "TouchDesigner Plugins need to be configures as MODULE")
     endif()
 
@@ -74,7 +79,7 @@ function(prepare_plugin)
         RTORI_TD_VERSION_BUILD ${PROJECT_VERSION_TWEAK}
     )
 
-    
+    # Configure file extensions
     if(APPLE)
         # Also see https://github.com/DBraun/TD-Faust/blob/main/faust2touchdesigner/CMakeLists.txt
         set_target_properties(
@@ -93,7 +98,23 @@ function(prepare_plugin)
         # TODO: Resource file hackery
     endif()
 
+    # Configure destination
+    # On windows, everything should go to the root of the install prefix
+    install(
+        TARGETS ${arg_TARGET}
+        RUNTIME # For Windows
+        DESTINATION "." # To the root
+        BUNDLE
+        DESTINATION "."
+        LIBRARY # ???
+        DESTINATION "."
+    )
+
+    if(MSVC)
+        install(FILES "$<TARGET_PDB_FILE:${arg_TARGET}>" DESTINATION ".")
+    endif()
 endfunction()
 
+add_subdirectory(common)
 add_subdirectory(simulate)
-# add_subdirectory(fold)
+add_subdirectory(fold)

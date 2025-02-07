@@ -6,6 +6,8 @@ project(rtori-touchdesigner
     LANGUAGES CXX
 )
 
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+
 if(NOT TARGET rtori_core)
     add_subdirectory("../rtori-core-ext" ${CMAKE_CURRENT_BINARY_DIR}/rtori_core)
 endif()

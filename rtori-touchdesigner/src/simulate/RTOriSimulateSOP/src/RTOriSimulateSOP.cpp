@@ -9,14 +9,22 @@
 #include <cassert>
 #include <iostream>
 
-#ifndef RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MAJOR
-#warning "RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MAJOR undefined, setting to 0"
-#define RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MAJOR 0
+#ifndef RTORI_TD_VERSION_MAJOR
+#ifndef _MSC_VER
+#warning "RTORI_TD_VERSION_MAJOR undefined, setting to 0"
+#else
+#pragma warning("RTORI_TD_VERSION_MAJOR undefined, setting to 0")
+#endif
+#define RTORI_TD_VERSION_MAJOR 0
 #endif
 
-#ifndef RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MINOR
-#warning "RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MINOR undefined, setting to 0"
-#define RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MINOR 0
+#ifndef RTORI_TD_VERSION_MINOR
+#ifndef _MSC_VER
+#warning "RTORI_TD_VERSION_MINOR undefined, setting to 0"
+#else
+#pragma warning("RTORI_TD_VERSION_MINOR undefined, setting to 0")
+#endif
+#define RTORI_TD_VERSION_MINOR 0
 #endif
 
 #include "RTOriSimulateSOP.hpp"
@@ -56,11 +64,11 @@ void FillSOPPluginInfo(SOP_PluginInfo* info) {
 	// lower case letters or numbers
 	customInfo.opType->setString("Rtorisimulate");
 	// English readable name
-	customInfo.opLabel->setString("RTOri Simulate (SOP)");
+	customInfo.opLabel->setString("RTOri Simulate");
 	// Will be turned into a 3 letter icon on the nodes
-	customInfo.opIcon->setString("ROS");
-	customInfo.majorVersion = RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MAJOR;
-	customInfo.minorVersion = RTORI_TOUCHDESIGNER_SIMULATE_SOP_VERSION_MINOR;
+	customInfo.opIcon->setString("Osi");
+	customInfo.majorVersion = RTORI_TD_VERSION_MAJOR;
+	customInfo.minorVersion = RTORI_TD_VERSION_MINOR;
 
 	// Information of the author of the node
 	customInfo.authorName->setString("Ars Electronica Futurelab");
@@ -221,10 +229,13 @@ void SimulateSOP::executeVBO(SOP_VBOOutput* output, const TD::OP_Inputs* inputs,
 void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 	// myParms.setup(manager);
 
+	const char* page = "Operator";
+
 	{
 		OP_NumericParameter parameter;
 
 		parameter.name = "Gpudirect";
+		parameter.page = page;
 		parameter.label = "GPU Direct";
 
 		const OP_ParAppendResult res = manager->appendToggle(parameter);
@@ -234,6 +245,7 @@ void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 	{
 		OP_NumericParameter parameter;
 		parameter.name = PARAMETER_KEY_POSITION;
+		parameter.page = page;
 		parameter.label = "Extract position";
 		parameter.defaultValues[0] = 1;
 
@@ -244,6 +256,7 @@ void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 	{
 		OP_NumericParameter parameter;
 		parameter.name = PARAMETER_KEY_VELOCITY;
+		parameter.page = page;
 		parameter.label = "Extract velocity";
 		parameter.defaultValues[0] = 0;
 
@@ -254,6 +267,7 @@ void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 	{
 		OP_NumericParameter parameter;
 		parameter.name = PARAMETER_KEY_ERROR;
+		parameter.page = page;
 		parameter.label = "Extract Error";
 		parameter.defaultValues[0] = 0;
 

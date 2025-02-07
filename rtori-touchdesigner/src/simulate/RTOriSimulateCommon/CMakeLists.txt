@@ -30,3 +30,10 @@ target_link_libraries(
     TouchDesigner_Common
 )
 
+install(
+    TARGETS RTOriSimulateCommon
+    RUNTIME # For Windows
+    DESTINATION "." # To the root
+    LIBRARY # On macOS we use rpath
+    DESTINATION "lib"
+)

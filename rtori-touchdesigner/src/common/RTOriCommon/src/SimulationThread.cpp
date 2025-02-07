@@ -118,7 +118,7 @@ void SimulationThread::runWorker() {
 
 	Solver solver(this->m_ctx);
 
-	int64_t lastInputNumber = 0;
+	int64_t lastInputNumber = -1;
 
 	// Cook timing
 	std::chrono::time_point<std::chrono::steady_clock> lastCookStart =

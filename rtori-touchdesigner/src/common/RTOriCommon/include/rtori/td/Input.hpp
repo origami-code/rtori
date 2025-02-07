@@ -31,7 +31,7 @@ enum class PackingTiming {
 
 struct Input {
   public:
-	int64_t inputNumber;
+	int64_t inputNumber = 0;
 
 	/// A copy of the input string
 	InputChangeWrapper<std::string> foldFileSource;
@@ -43,9 +43,9 @@ struct Input {
 	InputChangeWrapper<bool> extractError;
 	InputChangeWrapper<bool> extractVelocity;
 
-	/// If the speedTarget is 0, then it will run as fast as possible
-	/// Otherwise, this is the speed of the simulation
-	InputChangeWrapper<float> speedTarget;
+	InputChangeWrapper<float> timeScale = 1.0;
+	InputChangeWrapper<bool> adaptive = false;
+	InputChangeWrapper<float> frameBudget = 1.0;
 
 	InputChangeWrapper<PackingTiming> packingTiming;
 
@@ -56,8 +56,9 @@ struct Input {
 
 	/// An input has changed if any of the data members is marked as such
 	bool changed() const {
-		return foldFileSource.changed || frameIndex.changed || foldPercentage.changed || extractPosition.changed ||
-			   extractError.changed || extractVelocity.changed;
+		return foldFileSource.changed || frameIndex.changed || foldPercentage.changed ||
+			   extractPosition.changed || extractError.changed || extractVelocity.changed ||
+			   timeScale.changed || adaptive.changed || frameBudget.changed;
 	}
 };
 
