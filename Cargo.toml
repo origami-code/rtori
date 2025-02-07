@@ -14,4 +14,4 @@ diplomat-tool = { git = 'https://github.com/aabizri/diplomat.git', branch = "fea
 [profile.bench]
 lto = true
 codegen-units = 1
-rustflags = ["-C", "target-cpu=native"]
+#rustflags = ["-C", "target-cpu=native"]
