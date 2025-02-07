@@ -1,4 +1,4 @@
-use std::simd::{LaneCount, SupportedLaneCount};
+use core::simd::{LaneCount, SupportedLaneCount};
 
 pub fn check_nans_simd_msg<const L: usize>(
     data: core::simd::Simd<f32, L>,
@@ -42,7 +42,7 @@ pub fn check_nans_simd_vec_msg<const L: usize, const N: usize>(
     LaneCount<L>: SupportedLaneCount,
 {
     #[cfg(debug_assertions)]
-    check_nans_simd_vec_msg_masked(data, std::simd::Mask::splat(true), context, variable);
+    check_nans_simd_vec_msg_masked(data, core::simd::Mask::splat(true), context, variable);
 }
 
 pub(crate) fn check_passthrough<T>(value: T) -> bool {
