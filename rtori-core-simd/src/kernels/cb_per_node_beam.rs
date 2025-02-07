@@ -59,7 +59,7 @@ where
     beam_spec: {beam_spec:?}"
         );
         /* 2025-01-13 */
- // println!("per_node_beam: spec: {beam_spec:?}, length: {beam_length:?}, k: {beam_k:?}, d: {beam_d:?}");
+        // println!("per_node_beam: spec: {beam_spec:?}, length: {beam_length:?}, k: {beam_k:?}, d: {beam_d:?}");
 
         let [node_position_unchanging, node_position_offset, node_velocity] = gather_vec3f(
             [
@@ -92,7 +92,7 @@ where
         );
 
         /* 2025-01-13 */
- //println!("per_node_beam: neighbour unchanging: {neighbour_position_unchanging:?}, node unchanging: {node_position_unchanging:?}");
+        //println!("per_node_beam: neighbour unchanging: {neighbour_position_unchanging:?}, node unchanging: {node_position_unchanging:?}");
 
         // Calculate delta p
         let (delta_p, error) = {
@@ -192,7 +192,7 @@ delta_p_length {delta_p_length:?}"
         super::operations::debug::check_nans_simd_msg(error.0, "cb_per_node_beam", "error");
 
         /* 2025-01-13 */
- // println!("per_node_beam delta_p: {delta_p:?}, error: {error:?}");
+        // println!("per_node_beam delta_p: {delta_p:?}, error: {error:?}");
 
         // Calculate delta v
         let delta_v = neighbour_velocity - node_velocity;
@@ -209,8 +209,8 @@ delta_p_length {delta_p_length:?}"
             beam_k: {beam_k:?}"
         );
         /* 2025-01-13 */
- //println!("per_node_beam delta_v: {delta_v:?}");
- // Calculate resulting force
+        //println!("per_node_beam delta_v: {delta_v:?}");
+        // Calculate resulting force
         let force =
             delta_p.scale(simba::simd::Simd(*beam_k)) + delta_v.scale(simba::simd::Simd(*beam_d));
         // println!("per_node_beam force: {force:?}");

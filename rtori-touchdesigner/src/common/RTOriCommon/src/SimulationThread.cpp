@@ -374,6 +374,8 @@ void SimulationThread::runWorker() {
 			}
 		}
 
+		// TODO: ShouldCook logic here
+
 		// Stepping
 		rtori::SolverOperationResult stepResult = rtori::rtori_solver_step(solver.solver, 1);
 		if (stepResult != rtori::SolverOperationResult::Success) {
@@ -382,7 +384,7 @@ void SimulationThread::runWorker() {
 					  << format_SolverOperationResult(stepResult) << std::endl;
 		}
 
-		// using namespace std::chrono_literals;
-		// std::this_thread::sleep_for(1ms);
+		using namespace std::chrono_literals;
+		std::this_thread::sleep_for(10ms);
 	}
 }

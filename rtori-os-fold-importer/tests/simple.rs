@@ -9,14 +9,11 @@ use store::*;
 const SIMPLE_EXPECTED: &'static str = include_str!("../testdata/simple.json");
 const SIMPLE_FOLD: &'static str = include_str!("../../fold/testdata/simple.fold");
 
-fn test_pair(
-    expected: &str,
-    fold: &str
-) {
+fn test_pair(expected: &str, fold: &str) {
     let parsed_input = serde_json::from_str::<fold::File>(fold)
         .expect("source deserialization (json/fold file) failed");
-    let decoded_expectation = serde_json::from_str::<Store>(expected)
-        .expect("expectation deserialization (json) failed");
+    let decoded_expectation =
+        serde_json::from_str::<Store>(expected).expect("expectation deserialization (json) failed");
 
     let imported = {
         let allocator = alloc::alloc::Global;
