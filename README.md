@@ -6,12 +6,11 @@ On a high-level view, this project provides plugins, apps and bindings to manipu
 
 ## Goals
 
-- open source, and involve the community
+- open source, and open to contributions from the community
 - provide software components to manipulate and simulate origamis
+- modular, able to integrate new manipulations and new origami solvers & simulators seemlessly
 - easy to integrate as plugins for existing apps, as well as in custom apps
-- usable from different languages (C++, .NET, python, ...)
-- crossplatform (Windows, macOS, Linux, ...)
-- cross-architecture (amd64, arm64) while taking advantage of their strengths
+- usable from multiple languages (C++, .NET, python, js, ...), crossplatform (Windows, macOS, Linux, Web, ...), and cross-architecture (x86_64, arm64, wasm)
 
 ## Simulation Models
 
@@ -53,6 +52,29 @@ We thought about the following targets, please open an issue to express interest
 | py          | ❌ | 
 | Web (wasm)  | ❌ |
 
+## Software architecture
+(mermaid graph)
+```mermaid
+flowchart TD
+    classDef exposed fill:#f9f,stroke:#333,stroke-width:4px;
+
+
+    RTORI[rtori library]:::exposed --> CORE
+    RTORI --> FOLD
+
+    subgraph "Exposed API"
+        CORE[rtori-core]--> FOLD[rtori-fold]
+    end
+
+    subgraph "Origami Simulator"
+    CORE[rtori-core] --> OSSIMD[rtori-os-simd]
+    CORE --> OSWGPU[rtori-os-wgpu]
+
+    OSSIMD --> OSLOADER[rtori-os-loader]
+    OSWGPU --> OSLOADER
+    OSLOADER --> FOLD
+    end
+```
 
 ## Target Architectures
 
@@ -73,3 +95,4 @@ Potential support: (In LLVM/Rust triplet)
 - `aarch64-unknown-linux-musl`: for Linux on aarch64 (rpi 2 and later) (musl)
 - `riscv32imac-unknown-none-elf`: for rp2350 (riscv cores)
 - `wasm32-unknown-unknown`: for web/wasm
+- `arm64ec-pc-windows-msvc`: for windows on arm in "Emulation-Compatible" contexts
