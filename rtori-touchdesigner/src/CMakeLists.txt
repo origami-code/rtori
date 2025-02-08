@@ -9,6 +9,10 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN on)
 # Hide symbols from shared library exports unless explicitely exposed
 set(CMAKE_SHARED_LIBRARY_ENABLE_EXPORTS On)
 
+if(MSVC)
+    add_compile_options("/W4") # TODO: Add /WX
+endif()
+
 function(configure_info_plist)
     cmake_parse_arguments(PARSE_ARGV 0 args
         ""
@@ -55,6 +59,7 @@ function(prepare_plugin_plist)
     get_target_property_or(ICON_FILE ${arg_TARGET} MACOS_ICON_FILE "icon.icns")
 endfunction()
 
+# Sets up a MODULE target to work as a TouchDesigner plugin
 function(prepare_plugin)
     cmake_parse_arguments(PARSE_ARGV 0 arg
         ""

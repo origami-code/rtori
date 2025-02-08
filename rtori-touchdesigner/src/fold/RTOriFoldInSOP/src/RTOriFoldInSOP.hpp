@@ -1,7 +1,12 @@
 #ifndef __FoldInSOP__
 #define __FoldInSOP__
-
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#endif
 #include "SOP_CPlusPlusBase.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #include "rtori/td/Context.hpp"
 

@@ -1,7 +1,7 @@
 #pragma once
 
+#include <chrono>
 #include <string>
-#include <iostream>
 
 namespace rtori::rtori_td {
 
@@ -24,11 +24,6 @@ template<typename T> struct InputChangeWrapper {
 	}
 };
 
-enum class PackingTiming {
-	OnDemand,
-	Prepack,
-};
-
 struct Input {
   public:
 	int64_t inputNumber = 0;
@@ -47,7 +42,7 @@ struct Input {
 	InputChangeWrapper<bool> adaptive = false;
 	InputChangeWrapper<float> frameBudget = 1.0;
 
-	InputChangeWrapper<PackingTiming> packingTiming;
+	InputChangeWrapper<std::chrono::microseconds> targetPeriod;
 
 	static constexpr bool DEFAULT_EXTRACT_POSITIONS = true;
 	static constexpr bool DEFAULT_EXTRACT_ERROR = false;
@@ -58,7 +53,8 @@ struct Input {
 	inline bool changed() const {
 		return foldFileSource.changed || frameIndex.changed || foldPercentage.changed ||
 			   extractPosition.changed || extractError.changed || extractVelocity.changed ||
-			   timeScale.changed || adaptive.changed || frameBudget.changed;
+			   timeScale.changed || adaptive.changed || frameBudget.changed ||
+			   targetPeriod.changed;
 	}
 };
 

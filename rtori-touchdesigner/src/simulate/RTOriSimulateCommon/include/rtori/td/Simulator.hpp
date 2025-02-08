@@ -1,7 +1,13 @@
 #ifndef RTORI_TD_SIMULATOR_HPP_
 #define RTORI_TD_SIMULATOR_HPP_
 
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#endif
 #include "CPlusPlus_Common.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #include <optional>
 #include <string_view>

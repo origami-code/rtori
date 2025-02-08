@@ -275,14 +275,17 @@ void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 }
 
 int32_t SimulateSOP::getNumInfoCHOPChans(void* reserved1) {
+	(void)reserved1;
 	return m_simulator->getNumInfoCHOPChans();
 }
 
 void SimulateSOP::getInfoCHOPChan(int32_t index, TD::OP_InfoCHOPChan* chan, void* reserved1) {
+	(void)reserved1;
 	m_simulator->getInfoCHOPChan(index, chan);
 }
 
 bool SimulateSOP::getInfoDATSize(TD::OP_InfoDATSize* infoSize, void* reserved1) {
+	(void)reserved1;
 	return m_simulator->getInfoDATSize(infoSize);
 }
 
@@ -290,14 +293,17 @@ void SimulateSOP::getInfoDATEntries(int32_t index,
 									int32_t nEntries,
 									TD::OP_InfoDATEntries* entries,
 									void* reserved1) {
+	(void)reserved1;
 	return m_simulator->getInfoDATEntries(index, nEntries, entries);
 }
 
 void SimulateSOP::getErrorString(TD::OP_String* error, void* reserved1) {
+	(void)reserved1;
 	return m_simulator->getErrorString(error);
 }
 
 void SimulateSOP::getInfoPopupString(TD::OP_String* info, void* reserved1) {
+	(void)reserved1;
 	return m_simulator->getInfoPopupString(info);
 }
 

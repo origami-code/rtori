@@ -10,10 +10,8 @@ Solver::Solver(rtori::Context const* context)
 	constexpr rtori::Parameters solverCreationParams = {.solver =
 														  rtori::SolverKind::OrigamiSimulator,
 														.backend = rtori::BackendFlags_ANY};
-	rtori::Solver const* solver =
-	  rtori::rtori_ctx_create_solver(context, &solverCreationParams);
 
-	this->solver = solver;
+	this->solver = rtori::rtori_ctx_create_solver(context, &solverCreationParams);
 }
 
 Solver::~Solver() {
@@ -39,10 +37,10 @@ SolverImportResult Solver::update(std::optional<std::string_view> fold,
 
 	if (fold.has_value()) {
 		const std::string_view foldInner = fold.value();
-		const rtori::FoldFile* foldFile;
+		const rtori::FoldFile* candidateFoldFile;
 
 		if (foldInner.length() == 0) {
-			foldFile = nullptr;
+			candidateFoldFile = nullptr;
 		} else {
 			// First, parse
 			const rtori::FoldParseResult foldParseResult =
@@ -63,7 +61,7 @@ SolverImportResult Solver::update(std::optional<std::string_view> fold,
 			}
 			std::cout << "Parsed fold file" << std::endl;
 
-			foldFile = foldParseResult.payload.file;
+			candidateFoldFile = foldParseResult.payload.file;
 		}
 
 		if (this->foldFile != nullptr) {
@@ -73,7 +71,7 @@ SolverImportResult Solver::update(std::optional<std::string_view> fold,
 			}
 			rtori::rtori_fold_deinit(this->foldFile);
 		}
-		this->foldFile = foldFile;
+		this->foldFile = candidateFoldFile;
 	}
 
 	if (frameIndex.has_value()) {

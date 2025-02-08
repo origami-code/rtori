@@ -5,12 +5,9 @@
 #include "rtori_core.hpp"
 
 #include <chrono>
-#include <optional>
-#include <thread>
-#include <mutex>
-#include <iostream>
 #include <cassert>
-#include <string_view>
+#include <algorithm>
+#include <iostream>
 
 #ifdef WIN32
 #define NOMINMAX
@@ -104,6 +101,32 @@ std::string_view format_SolverOperationResult(rtori::SolverOperationResult resul
 	}
 }
 
+/// This is the inner state of the simulation thread
+class SimulationThreadImpl {
+  public:
+	SimulationThreadImpl(rtori::Context const* ctx) : ctx(ctx), solver(ctx) {
+		nameThread();
+	}
+
+  private:
+	rtori::Context const* ctx;
+	bool extractPosition = false;
+	bool extractVelocity = false;
+	bool extractError = false;
+	Solver solver;
+
+	/// Tracks the last time a new input to the thread was given
+	/// An input is normally triggered any time any change is made,
+	/// so this doesn't mean it's a new FoldFile.
+	int64_t lastInputNumber = -1;
+
+	// Cook timing
+	std::chrono::time_point<std::chrono::steady_clock> lastCookStart =
+	  std::chrono::steady_clock::now();
+	std::chrono::microseconds lastInterCookDuration = std::chrono::microseconds(0);
+	bool packedThisFrame = false;
+};
+
 void SimulationThread::runWorker() {
 	assert((void("ctx should be non-null"), this->m_ctx != nullptr));
 
@@ -111,7 +134,9 @@ void SimulationThread::runWorker() {
 	if (stopToken.stop_requested()) {
 		return;
 	}
+
 	nameThread();
+	SimulationThreadImpl impl(this->m_ctx);
 
 	bool extractPosition = false;
 	bool extractVelocity = false;
@@ -119,6 +144,9 @@ void SimulationThread::runWorker() {
 
 	Solver solver(this->m_ctx);
 
+	/// Tracks the last time a new input to the thread was given
+	/// An input is normally triggered any time any change is made,
+	/// so this doesn't mean it's a new FoldFile.
 	int64_t lastInputNumber = -1;
 
 	// Cook timing
@@ -127,10 +155,11 @@ void SimulationThread::runWorker() {
 	auto lastInterCookDuration = std::chrono::microseconds(0);
 	bool packedThisFrame = false;
 
-	// Knowledge of the time it takes to step
-	// TODO
+	// We keep the knowledge of how much time we spend stepping
+	std::chrono::microseconds stepDuration = std::chrono::microseconds(std::chrono::seconds(1));
 
 	while (!stopToken.stop_requested()) {
+		// The inner loop
 		bool newCook;
 		{
 			std::chrono::time_point<std::chrono::steady_clock> latestCookStart =
@@ -147,199 +176,209 @@ void SimulationThread::runWorker() {
 			}
 		}
 
-		std::chrono::time_point<std::chrono::steady_clock> now =
-		  std::chrono::steady_clock::now();
-		auto elapsed =
-		  std::chrono::duration_cast<std::chrono::microseconds>(now - lastCookStart);
-		auto left = lastInterCookDuration - elapsed;
+		// lastCookStart is now updated if it has changed
+		{
+			std::chrono::time_point<std::chrono::steady_clock> now =
+			  std::chrono::steady_clock::now();
+			auto elapsed =
+			  std::chrono::duration_cast<std::chrono::microseconds>(now - lastCookStart);
+			auto left = lastInterCookDuration - elapsed;
 
-		if ((solver.transformedData != nullptr) && (!packedThisFrame) &&
-			(extractPosition || extractVelocity || extractError)) {
-			const bool shouldPack =
-			  newCook ||
-			  (left < (lastInterCookDuration /
-					   2)); /* TODO: use calculation derived from the time it takes to step*/
-			;
+			if ((solver.transformedData != nullptr) && (!packedThisFrame) &&
+				(extractPosition || extractVelocity || extractError)) {
+				const bool shouldPack =
+				  newCook ||
+				  (left <
+				   (lastInterCookDuration /
+					2)); /* TODO: use calculation derived from the time it takes to step*/
+				;
 
-			// Output
-			if (shouldPack) {
-				size_t positions_written = 0;
-				size_t error_written = 0;
-				size_t velocity_written = 0;
+				// Output
+				if (shouldPack) {
+					size_t positions_written = 0;
+					size_t error_written = 0;
+					size_t velocity_written = 0;
 
-				rtori::ExtractOutRequest extractRequest = {
-				  .positions = rtori::ArrayOutput<float[3]>{.buffer = nullptr,
-															.buffer_size = 0,
-															.written_size = &positions_written},
-				  .velocity = rtori::ArrayOutput<float[3]>{.buffer = nullptr,
-															.buffer_size = 0,
-															.written_size = &velocity_written },
-				  .error = rtori::ArrayOutput<float>{.buffer = nullptr,
-															.buffer_size = 0,
-															.written_size = &error_written	   }
-				};
+					rtori::ExtractOutRequest extractRequest = {
+					  .positions =
+						rtori::ArrayOutput<float[3]>{.buffer = nullptr,
+													 .buffer_size = 0,
+													 .written_size = &positions_written},
+					  .velocity =
+						rtori::ArrayOutput<float[3]>{.buffer = nullptr,
+													 .buffer_size = 0,
+													 .written_size = &velocity_written },
+					  .error = rtori::ArrayOutput<float>{.buffer = nullptr,
+													 .buffer_size = 0,
+													 .written_size = &error_written	   }
+					};
 
-				uint32_t vertex_count = 0;
-				{
-					QueryOutput queryOutput{.u32_output = &vertex_count};
-					rtori::rtori_fold_query_frame(solver.foldFile,
-												  solver.frameIndex,
-												  rtori::FoldFrameQuery::VerticesCount,
-												  &queryOutput);
-				}
-				std::cout << std::format("Outputting {} vertices", vertex_count) << std::endl;
-
-				size_t sizeNeededTotal = ((extractPosition ? 3 * vertex_count : 0) +
-										  (extractError ? 3 * vertex_count : 0) +
-										  (extractVelocity ? 3 * vertex_count : 0));
-
-				const std::unique_lock<std::mutex> lock(this->m_outputMutex, std::try_to_lock);
-				if (lock.owns_lock()) {
-					if (this->m_output.backingBuffer.size() < sizeNeededTotal) {
-						this->m_output.backingBuffer.resize(sizeNeededTotal);
-					}
-
-					size_t cursor = 0;
-
-					if (extractPosition) {
-						// In floats
-						const size_t sizeNeeded = 3 /* x y z */ * vertex_count;
-
-						this->m_output.positions =
-						  std::make_tuple(static_cast<uint32_t>(cursor),
-										  static_cast<uint32_t>(sizeNeeded));
-
-						using val_t = float[3];
-						val_t* buffer = reinterpret_cast<val_t*>(
-						  this->m_output.backingBuffer.data() + cursor);
-
-						extractRequest.positions.buffer = buffer;
-						extractRequest.positions.buffer_size =
-						  vertex_count; /* as its a buffer of arrays */
-
-						cursor += sizeNeeded;
-					}
-
-					if (extractVelocity) {
-						// In floats
-						const size_t sizeNeeded = 3 /* x y z */ * vertex_count;
-
-						this->m_output.velocity =
-						  std::make_tuple(static_cast<uint32_t>(cursor),
-										  static_cast<uint32_t>(sizeNeeded));
-
-						using val_t = float[3];
-						val_t* buffer = reinterpret_cast<val_t*>(
-						  this->m_output.backingBuffer.data() + cursor);
-
-						extractRequest.velocity.buffer = buffer;
-						extractRequest.velocity.buffer_size =
-						  vertex_count; /* as its a buffer of arrays */
-
-						cursor += sizeNeeded;
-					}
-
-					if (extractError) {
-						// In floats
-						const size_t sizeNeeded = vertex_count;
-
-						this->m_output.velocity =
-						  std::make_tuple(static_cast<uint32_t>(cursor),
-										  static_cast<uint32_t>(sizeNeeded));
-
-						using val_t = float;
-						val_t* buffer = reinterpret_cast<val_t*>(
-						  this->m_output.backingBuffer.data() + cursor);
-
-						extractRequest.error.buffer = buffer;
-						extractRequest.error.buffer_size =
-						  vertex_count; /* as its a buffer of arrays */
-
-						cursor += sizeNeeded;
-					}
-
-					const rtori::SolverOperationResult result =
-					  rtori::rtori_extract(solver.solver, &extractRequest);
-					assert((void("extraction should never fail"),
-							result == rtori::SolverOperationResult::Success));
-
-					if (this->m_output.positions.has_value()) {
-						// Add in the vertices from the fold file as we only got the offset
-						// TODO: cache them
-						std::vector<float> verticesUnchanging(
-						  static_cast<size_t>(vertex_count) * 3);
-
-						size_t writtenSize = 0;
-						using val_t = float[3];
-
-						rtori::QueryOutput queryOutput = QueryOutput{
-						  .vec3f_array_output = {
-												 .buffer = reinterpret_cast<val_t*>(verticesUnchanging.data()),
-												 .buffer_size = vertex_count,
-												 .written_size = &writtenSize,
-												 .offset = 0}
-						};
-
-						rtori::FoldOperationStatus queryStatus =
-						  rtori::rtori_fold_query_frame(solver.foldFile,
-														solver.frameIndex,
-														FoldFrameQuery::VerticesCoords,
-														&queryOutput);
-
-						assert(queryStatus == rtori::FoldOperationStatus::Success);
-
-						auto dest = this->m_output.backingBuffer.data() +
-									std::get<0>(this->m_output.positions.value());
-
-						for (size_t i = 0; i < vertex_count * 3; i++) {
-							dest[i] += verticesUnchanging[i];
-						}
-					}
-
+					uint32_t vertex_count = 0;
 					{
-						// Get the number of faces
-						uint32_t faceCount = 0;
+						QueryOutput queryOutput{.u32_output = &vertex_count};
+						rtori::rtori_fold_query_frame(solver.foldFile,
+													  solver.frameIndex,
+													  rtori::FoldFrameQuery::VerticesCount,
+													  &queryOutput);
+					}
+					std::cout << std::format("Outputting {} vertices", vertex_count)
+							  << std::endl;
+
+					size_t sizeNeededTotal = ((extractPosition ? 3 * vertex_count : 0) +
+											  (extractError ? 3 * vertex_count : 0) +
+											  (extractVelocity ? 3 * vertex_count : 0));
+
+					const std::unique_lock<std::mutex> lock(this->m_outputMutex,
+															std::try_to_lock);
+					if (lock.owns_lock()) {
+						if (this->m_output.backingBuffer.size() < sizeNeededTotal) {
+							this->m_output.backingBuffer.resize(sizeNeededTotal);
+						}
+
+						size_t cursor = 0;
+
+						if (extractPosition) {
+							// In floats
+							const size_t sizeNeeded = 3 /* x y z */ * vertex_count;
+
+							this->m_output.positions =
+							  std::make_tuple(static_cast<uint32_t>(cursor),
+											  static_cast<uint32_t>(sizeNeeded));
+
+							using val_t = float[3];
+							val_t* buffer = reinterpret_cast<val_t*>(
+							  this->m_output.backingBuffer.data() + cursor);
+
+							extractRequest.positions.buffer = buffer;
+							extractRequest.positions.buffer_size =
+							  vertex_count; /* as its a buffer of arrays of 3 elements already
+											 */
+
+							cursor += sizeNeeded;
+						}
+
+						if (extractVelocity) {
+							// In floats
+							const size_t sizeNeeded = 3 /* x y z */ * vertex_count;
+
+							this->m_output.velocity =
+							  std::make_tuple(static_cast<uint32_t>(cursor),
+											  static_cast<uint32_t>(sizeNeeded));
+
+							using val_t = float[3];
+							val_t* buffer = reinterpret_cast<val_t*>(
+							  this->m_output.backingBuffer.data() + cursor);
+
+							extractRequest.velocity.buffer = buffer;
+							extractRequest.velocity.buffer_size =
+							  vertex_count; /* as its a buffer of arrays of 3 elements already
+											 */
+
+							cursor += sizeNeeded;
+						}
+
+						if (extractError) {
+							// In floats
+							const size_t sizeNeeded = vertex_count;
+
+							this->m_output.velocity =
+							  std::make_tuple(static_cast<uint32_t>(cursor),
+											  static_cast<uint32_t>(sizeNeeded));
+
+							using val_t = float;
+							val_t* buffer = reinterpret_cast<val_t*>(
+							  this->m_output.backingBuffer.data() + cursor);
+
+							extractRequest.error.buffer = buffer;
+							extractRequest.error.buffer_size = vertex_count;
+
+							cursor += sizeNeeded;
+						}
+
+						const rtori::SolverOperationResult result =
+						  rtori::rtori_extract(solver.solver, &extractRequest);
+						assert((void("extraction should never fail"),
+								result == rtori::SolverOperationResult::Success));
+
+						if (this->m_output.positions.has_value()) {
+							// Add in the vertices from the fold file as we only got the offset
+							// TODO: cache them
+							std::vector<float> verticesUnchanging(
+							  static_cast<size_t>(vertex_count) * 3);
+
+							size_t writtenSize = 0;
+							using val_t = float[3];
+
+							rtori::QueryOutput queryOutput = QueryOutput{
+							  .vec3f_array_output = {
+													 .buffer = reinterpret_cast<val_t*>(verticesUnchanging.data()),
+													 .buffer_size = vertex_count,
+													 .written_size = &writtenSize,
+													 .offset = 0}
+							};
+
+							rtori::FoldOperationStatus queryStatus =
+							  rtori::rtori_fold_query_frame(solver.foldFile,
+															solver.frameIndex,
+															FoldFrameQuery::VerticesCoords,
+															&queryOutput);
+
+							assert(queryStatus == rtori::FoldOperationStatus::Success);
+
+							auto dest = this->m_output.backingBuffer.data() +
+										std::get<0>(this->m_output.positions.value());
+
+							for (size_t i = 0; i < vertex_count * 3; i++) {
+								dest[i] += verticesUnchanging[i];
+							}
+						}
 
 						{
-							rtori::QueryOutput faceCountQueryOutput = {.u32_output =
-																		 &faceCount};
+							// Get the number of faces
+							uint32_t faceCount = 0;
 
-							rtori::FoldOperationStatus faceCountOperationStatus =
+							{
+								rtori::QueryOutput faceCountQueryOutput = {.u32_output =
+																			 &faceCount};
+
+								rtori::FoldOperationStatus faceCountOperationStatus =
+								  rtori::rtori_fold_transformed_query(
+									solver.transformedData,
+									rtori::TransformedQuery::FacesCount,
+									&faceCountQueryOutput);
+
+								assert(faceCountOperationStatus ==
+									   rtori::FoldOperationStatus::Success);
+							}
+
+							// Ensure we can host that amount of faces
+							size_t indicesCount = static_cast<size_t>(faceCount) * 3;
+							if (this->m_output.indices.size() != indicesCount) {
+								this->m_output.indices.resize(indicesCount);
+							}
+
+							using val_t = uint32_t[3];
+
+							size_t faceOutputCount = 0;
+							rtori::QueryOutput output = {
+							  .vec3u_array_output = {.buffer = reinterpret_cast<val_t*>(
+this->m_output.indices.data()),
+													 .buffer_size = faceCount,
+													 .written_size = &faceOutputCount}
+							  };
+
+							rtori::FoldOperationStatus result =
 							  rtori::rtori_fold_transformed_query(
 								solver.transformedData,
-								rtori::TransformedQuery::FacesCount,
-								&faceCountQueryOutput);
+								rtori::TransformedQuery::FacesVertexIndices,
+								&output);
 
-							assert(faceCountOperationStatus ==
-								   rtori::FoldOperationStatus::Success);
+							assert(result == rtori::FoldOperationStatus::Success);
+							assert(faceOutputCount == faceCount);
 						}
 
-						// Ensure we can host that amount of faces
-						size_t indicesCount = static_cast<size_t>(faceCount) * 3;
-						if (this->m_output.indices.size() != indicesCount) {
-							this->m_output.indices.resize(indicesCount);
-						}
-
-						using val_t = uint32_t[3];
-
-						size_t faceOutputCount = 0;
-						rtori::QueryOutput output = {
-						  .vec3u_array_output = {
-												 .buffer = reinterpret_cast<val_t*>(this->m_output.indices.data()),
-												 .buffer_size = faceCount,
-												 .written_size = &faceOutputCount}
-						 };
-
-						rtori::FoldOperationStatus result = rtori::rtori_fold_transformed_query(
-						  solver.transformedData,
-						  rtori::TransformedQuery::FacesVertexIndices,
-						  &output);
-
-						assert(result == rtori::FoldOperationStatus::Success);
-						assert(faceOutputCount == faceCount);
+						packedThisFrame = true;
 					}
-
-					packedThisFrame = true;
 				}
 			}
 		}
@@ -378,11 +417,49 @@ void SimulationThread::runWorker() {
 		// TODO: ShouldCook logic here
 
 		// Stepping
-		rtori::SolverOperationResult stepResult = rtori::rtori_solver_step(solver.solver, 1);
-		if (stepResult != rtori::SolverOperationResult::Success) {
-			// ERROR
-			std::cout << "ERROR: Solver step failed: "
-					  << format_SolverOperationResult(stepResult) << std::endl;
+		{
+			std::chrono::time_point<std::chrono::steady_clock> const beforeStep =
+			  std::chrono::steady_clock::now();
+			auto const elapsed =
+			  std::chrono::duration_cast<std::chrono::microseconds>(beforeStep - lastCookStart);
+			std::chrono::microseconds left = lastInterCookDuration - elapsed;
+			if (left < std::chrono::microseconds(0)) {
+				left = std::chrono::microseconds(0);
+			}
+
+			float const ratio = 0.66;
+			/*std::cout << "Stepping based on previous calculated step duration of "
+					  << stepDuration << " and time left " << left << std::endl;*/
+			uint32_t stepCount =
+			  (stepDuration > std::chrono::microseconds(0))
+				? std::clamp(
+					static_cast<uint32_t>(
+					  std::chrono::duration_cast<std::chrono::microseconds>(
+						(ratio *
+						 std::chrono::duration_cast<std::chrono::duration<float, std::micro>>(
+						   left))) /
+					  stepDuration),
+					static_cast<uint32_t>(1),
+					static_cast<uint32_t>(100))
+				: static_cast<uint32_t>(100);
+
+			rtori::SolverOperationResult const stepResult =
+			  rtori::rtori_solver_step(solver.solver, stepCount);
+
+			std::chrono::time_point<std::chrono::steady_clock> const afterStep =
+			  std::chrono::steady_clock::now();
+
+			if (stepResult != rtori::SolverOperationResult::Success) {
+				// ERROR
+				std::cout << "ERROR: Solver step failed: "
+						  << format_SolverOperationResult(stepResult) << std::endl;
+			}
+
+			auto const totalStepDuration = afterStep - beforeStep;
+			stepDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+			  totalStepDuration / stepCount);
+			/*std::cout << "Stepped " << stepCount << " times, taking " << totalStepDuration
+					  << "( " << stepDuration << " per step )" << std::endl;*/
 		}
 
 		/*using namespace std::chrono_literals;

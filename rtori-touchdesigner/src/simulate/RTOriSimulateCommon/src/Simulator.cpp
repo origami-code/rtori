@@ -13,6 +13,7 @@
 #include "rtori_core.hpp"
 
 #include <cassert>
+#include <chrono>
 
 using namespace TD;
 using namespace rtori::rtori_td;
@@ -70,12 +71,16 @@ void Simulator::execute(const TD::OP_Inputs* inputs, const Interests& interests)
 		inputs->enablePar(PARAMETER_KEYS_SIMULATION[i], opIsPrimary);
 	}
 
-	if (opIsPrimary) {
-		// We convert the parameters into an Input
-		const rtori::rtori_td::Input consolidated = consolidateParameters(inputs, interests);
-		if (consolidated.changed()) {
-			this->m_simulation.update(consolidated);
-		}
+	if (!opIsPrimary) {
+		// TODO: Recover data from the simulation, return it
+		// For now, not supported
+		assert(false);
+	}
+
+	// We convert the parameters into an Input and update
+	const rtori::rtori_td::Input consolidated = consolidateParameters(inputs, interests);
+	if (consolidated.changed()) {
+		this->m_simulation.update(consolidated);
 	}
 }
 
@@ -255,25 +260,33 @@ rtori::rtori_td::Input Simulator::consolidateParameters(const TD::OP_Inputs* inp
 														const Interests& interests) const {
 	const rtori::rtori_td::Input& cachedInput = this->m_simulation.getInput();
 
+	// Let's take a look at the timings as well
+	OP_TimeInfo const* timeInfo = inputs->getTimeInfo();
+	double const rate = timeInfo->rate; // fps
+
+#define update(name, value) .name = cachedInput.name.update(value)
+
 	rtori::rtori_td::Input input = {
 	  .inputNumber = cachedInput.inputNumber,
-	  .foldFileSource = cachedInput.foldFileSource.update(
-		std::string(inputs->getParString(PARAMETER_KEY_FOLD_SOURCE))),
-	  .frameIndex =
-		cachedInput.frameIndex.update(inputs->getParInt(PARAMETER_KEY_FOLD_FRAME_INDEX)),
-	  .foldPercentage = cachedInput.foldPercentage.update(
-		static_cast<float>(inputs->getParDouble(PARAMETER_KEY_FOLD_PERCENTAGE))),
+	  update(foldFileSource, std::string(inputs->getParString(PARAMETER_KEY_FOLD_SOURCE))),
+	  update(frameIndex, inputs->getParInt(PARAMETER_KEY_FOLD_FRAME_INDEX)),
+	  update(foldPercentage,
+			 static_cast<float>(inputs->getParDouble(PARAMETER_KEY_FOLD_PERCENTAGE))),
 
-	  .extractPosition = cachedInput.extractPosition.update(interests.position),
-	  .extractError = cachedInput.extractError.update(interests.error),
-	  .extractVelocity = cachedInput.extractVelocity.update(interests.velocity),
+	  update(extractPosition, interests.position),
+	  update(extractError, interests.error),
+	  update(extractVelocity, interests.velocity),
 
-	  .timeScale = cachedInput.timeScale.update(
-		static_cast<float>(inputs->getParDouble(PARAMETER_KEY_TIME_SCALE))),
-	  .adaptive = cachedInput.adaptive.update(
-		inputs->getParInt(PARAMETER_KEY_ADAPTIVE) == 0 ? false : true),
-	  .frameBudget = cachedInput.frameBudget.update(
-		static_cast<float>(inputs->getParDouble(PARAMETER_KEY_FRAME_BUDGET)))};
+	  update(timeScale, static_cast<float>(inputs->getParDouble(PARAMETER_KEY_TIME_SCALE))),
+	  update(adaptive, inputs->getParInt(PARAMETER_KEY_ADAPTIVE) == 0 ? false : true),
+	  update(frameBudget, static_cast<float>(inputs->getParDouble(PARAMETER_KEY_FRAME_BUDGET))),
+
+	  update(targetPeriod,
+			 std::chrono::microseconds(static_cast<int64_t>((1000.0 * 1000.0) / rate)))
+
+	};
+
+#undef update
 
 	if (input.changed()) {
 		input.inputNumber += 1;
