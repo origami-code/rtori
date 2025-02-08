@@ -58,7 +58,7 @@ where
                 let norm: simba::simd::Simd<SimdF32<L>> = cross.norm();
                 tracing::event!(tracing::Level::TRACE, "norm: {norm:?}");
 
-                use std::simd::cmp::SimdPartialEq as _;
+                use core::simd::cmp::SimdPartialEq as _;
                 let norm_is_zero = norm.0.simd_eq(SimdF32::splat(0.0));
                 let norm_corrected = norm_is_zero.select(SimdF32::splat(1.0), norm.0);
 

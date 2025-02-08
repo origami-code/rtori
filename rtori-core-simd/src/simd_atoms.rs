@@ -32,6 +32,7 @@ cfg_if::cfg_if! {
                 target_feature="neon"
             ),
             target_arch = "aarch64", // implies neon as it's mandatory
+            target_arch = "arm64ec", // same, for windows 'Emulation Compatible'
             all(
                 any(target_arch = "wasm32", target_arch = "wasm64"),
                 target_feature="simd128"

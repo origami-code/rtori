@@ -53,7 +53,7 @@ fn test_onestep(fold_file: std::path::PathBuf) {
     solver.set_fold_percentage(fold_ratio).unwrap();
 
     solver.step(1).expect(&format!("Step failed"));
- 
+
     let mut positions = Vec::new();
     positions.resize(
         parsed_input.frame(0).unwrap().get().vertices.count(),
@@ -63,7 +63,7 @@ fn test_onestep(fold_file: std::path::PathBuf) {
     let result = solver
         .extract(rtori_os_model::ExtractFlags::all())
         .expect("extract call failed");
-    result.copy_node_position(&mut positions[..], 0); 
+    result.copy_node_position(&mut positions[..], 0);
 
     for (i, pos) in positions.iter().enumerate() {
         assert!(
@@ -76,7 +76,7 @@ fn test_onestep(fold_file: std::path::PathBuf) {
 #[apply(pair_test)]
 fn test_stability(fold_file: std::path::PathBuf) {
     initialize_tracing();
- 
+
     let allocator = alloc::alloc::Global;
 
     let mut solver =
@@ -111,9 +111,9 @@ fn test_stability(fold_file: std::path::PathBuf) {
 
     const MAXIMUM_ITERATIONS: i32 = 32_000;
     for step_index in 0..MAXIMUM_ITERATIONS {
-        solver
-            .step(1)
-            .expect(&format!("{full_name}: Step failed at iteration {step_index}"));
+        solver.step(1).expect(&format!(
+            "{full_name}: Step failed at iteration {step_index}"
+        ));
 
         let result = solver
             .extract(rtori_os_model::ExtractFlags::all())
@@ -146,7 +146,7 @@ fn test_stability(fold_file: std::path::PathBuf) {
 
         // If the distance to the last iteration is even more negligeable, stop here
         if step_index > 0 {
-            const CONVERGED_TOLERANCE: f32 = 0.0;// f32::EPSILON;
+            const CONVERGED_TOLERANCE: f32 = 0.0; // f32::EPSILON;
             let max_diff = positions_front
                 .iter()
                 .zip(&positions_back)
@@ -170,4 +170,6 @@ fn test_stability(fold_file: std::path::PathBuf) {
 
         std::mem::swap(&mut positions_front, &mut positions_back);
     }
+
+    println!("{full_name}: Success after {MAXIMUM_ITERATIONS} steps");
 }

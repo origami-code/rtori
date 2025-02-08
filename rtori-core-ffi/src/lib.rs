@@ -1,7 +1,7 @@
 #![feature(allocator_api)]
 
+use alloc::Allocator;
 use core::ffi::c_void;
-use std::alloc::Allocator;
 
 #[cfg(feature = "allocator_api")]
 mod allocator {
@@ -22,15 +22,15 @@ mod allocator {
     unsafe impl<'alloc> Allocator for &'alloc CustomAllocator {
         fn allocate(
             &self,
-            layout: std::alloc::Layout,
-        ) -> Result<std::ptr::NonNull<[u8]>, std::alloc::AllocError> {
+            layout: alloc::Layout,
+        ) -> Result<std::ptr::NonNull<[u8]>, alloc::AllocError> {
             if layout.size() == 0 {
-                return Err(std::alloc::AllocError);
+                return Err(alloc::AllocError);
             }
 
             let ptr = unsafe { (self.alloc)(self.ctx, layout.size(), layout.align()) }.cast::<u8>();
 
-            let ptr_nonnull = std::ptr::NonNull::new(ptr).ok_or(std::alloc::AllocError)?;
+            let ptr_nonnull = std::ptr::NonNull::new(ptr).ok_or(alloc::AllocError)?;
 
             return Ok(std::ptr::NonNull::slice_from_raw_parts(
                 ptr_nonnull,
@@ -38,7 +38,7 @@ mod allocator {
             ));
         }
 
-        unsafe fn deallocate(&self, ptr: std::ptr::NonNull<u8>, layout: std::alloc::Layout) {
+        unsafe fn deallocate(&self, ptr: std::ptr::NonNull<u8>, layout: alloc::Layout) {
             if layout.size() == 0 {
                 panic!("Should not happen to deallocate a ZST when we should panic on alloc");
             }
@@ -63,20 +63,20 @@ mod allocator {
     unsafe impl<'alloc> Allocator for ContextAllocator<'alloc> {
         fn allocate(
             &self,
-            layout: std::alloc::Layout,
-        ) -> Result<std::ptr::NonNull<[u8]>, std::alloc::AllocError> {
+            layout: alloc::Layout,
+        ) -> Result<std::ptr::NonNull<[u8]>, alloc::AllocError> {
             match &self {
                 ContextAllocator::Custom(given) => given.allocate(layout),
-                ContextAllocator::Global => std::alloc::Global.allocate(layout),
+                ContextAllocator::Global => alloc::Global.allocate(layout),
             }
         }
 
-        unsafe fn deallocate(&self, ptr: std::ptr::NonNull<u8>, layout: std::alloc::Layout) {
+        unsafe fn deallocate(&self, ptr: std::ptr::NonNull<u8>, layout: alloc::Layout) {
             match &self {
                 // SAFETY: as long as the invariants are handled by the C code, this is fine
                 ContextAllocator::Custom(given) => unsafe { given.deallocate(ptr, layout) },
                 // SAFETY: just a passthrough
-                ContextAllocator::Global => unsafe { std::alloc::Global.deallocate(ptr, layout) },
+                ContextAllocator::Global => unsafe { alloc::Global.deallocate(ptr, layout) },
             }
         }
     }

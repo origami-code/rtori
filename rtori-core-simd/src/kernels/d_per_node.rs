@@ -38,7 +38,7 @@ where
     pub external_forces: &'backer SimdVec3F<L>,
     pub mass: &'backer SimdF32<L>,
     pub fixed: &'backer SimdU32<L>,
-    pub geometry: &'backer NodeGeometry<L>
+    pub geometry: &'backer NodeGeometry<L>,
 }
 
 impl<'backer, const L: usize> IntoIterator for PerNodeInput<'backer, L>
@@ -62,14 +62,7 @@ where
         .map(
             move |(
                 chunk_index,
-                (
-                    positions_offset,
-                    velocity,
-                    external_forces,
-                    mass,
-                    fixed,
-                    geometry
-                ),
+                (positions_offset, velocity, external_forces, mass, fixed, geometry),
             )| {
                 PerNodeInputLens {
                     positions_offset,
@@ -77,7 +70,7 @@ where
                     external_forces,
                     mass,
                     fixed,
-                    geometry
+                    geometry,
                 }
             },
         )
@@ -95,9 +88,10 @@ where
 
 fn calculate_force_subset<const L: usize>(
     range: &crate::model::NodeGeometryRange<L>,
-    forces: &[SimdVec3F<L>]
-) -> nalgebra::Vector3<simba::simd::Simd<core::simd::Simd<f32, {L}>>> where
-LaneCount<L>: SupportedLaneCount,
+    forces: &[SimdVec3F<L>],
+) -> nalgebra::Vector3<simba::simd::Simd<core::simd::Simd<f32, { L }>>>
+where
+    LaneCount<L>: SupportedLaneCount,
     simba::simd::Simd<core::simd::Simd<f32, L>>:
         num_traits::Num + num_traits::NumAssign + SimdComplexField + SimdRealField,
 {
@@ -106,36 +100,35 @@ LaneCount<L>: SupportedLaneCount,
 
     use core::simd::num::SimdUint;
     let count_max = count.reduce_max();
-    
-    (0..count_max).into_iter().map(|i| {
-        use std::simd::cmp::SimdPartialOrd;
 
-        let simd_i = core::simd::Simd::splat(i);
+    (0..count_max)
+        .into_iter()
+        .map(|i| {
+            use core::simd::cmp::SimdPartialOrd;
 
-        let valid = range.count.simd_gt(simd_i);
-        let cursor = valid.select(
-            simd_i,
-            core::simd::Simd::splat(0)
-        );
+            let simd_i = core::simd::Simd::splat(i);
 
-        let indices = range.offset + cursor;
+            let valid = range.count.simd_gt(simd_i);
+            let cursor = valid.select(simd_i, core::simd::Simd::splat(0));
 
-        let forces = super::operations::gather::gather_vec3f_1(
-            forces,
-            indices
-        );
+            let indices = range.offset + cursor;
 
-        let forces_filtered = super::operations::select_n(
-            valid,
-            forces,
-            [core::simd::Simd::splat(0.0), core::simd::Simd::splat(0.0), core::simd::Simd::splat(0.0)]
-        );
+            let forces = super::operations::gather::gather_vec3f_1(forces, indices);
 
-        algebrize(forces_filtered)
-    }).sum()
+            let forces_filtered = super::operations::select_n(
+                valid,
+                forces,
+                [
+                    core::simd::Simd::splat(0.0),
+                    core::simd::Simd::splat(0.0),
+                    core::simd::Simd::splat(0.0),
+                ],
+            );
 
+            algebrize(forces_filtered)
+        })
+        .sum()
 }
-
 
 #[tracing::instrument]
 pub fn calculate_node_position<'a, const L: usize>(
@@ -151,28 +144,22 @@ where
 
     let dt = simba::simd::Simd(SimdF32::splat(inputs.dt));
 
- 
-    // AAAAH
-    // THIS IS WHERE THE FUCKING BUG IS
-    // I NEED TO TAKE THE FORCES THAT CORRESPOND TO EACH NODE !!!!
-    // RIGHT NOW I DON'T, I JUST ASSUME THAT 1 NODE-X (crease, beam, face) maps to the index of the node 
-
     let crease_forces = inputs.node_crease_force;
     let beam_forces = inputs.node_beam_force;
     let face_forces = inputs.node_face_force;
 
     inputs.into_iter().map(move |per_node| {
-        
         let crease_force = calculate_force_subset(&per_node.geometry.creases, &crease_forces);
         let beam_force = calculate_force_subset(&per_node.geometry.beams, &beam_forces);
-        let face_force = calculate_force_subset(&per_node.geometry.faces, &face_forces);
-
+        //let face_force = calculate_force_subset(&per_node.geometry.faces, &face_forces);
+        let face_force = algebrize([
+            core::simd::Simd::splat(0.0),
+            core::simd::Simd::splat(0.0),
+            core::simd::Simd::splat(0.0),
+        ]);
         let valid_input = per_node.mass.simd_ne(SimdF32::splat(0.0));
 
-        let force = algebrize(*per_node.external_forces)
-            + crease_force
-            + beam_force
-            + face_force;
+        let force = algebrize(*per_node.external_forces) + crease_force + beam_force + face_force;
         ensure_simd!(force; v3);
 
         let velocity_diff = force.scale(dt) / simba::simd::Simd(*per_node.mass);
@@ -221,7 +208,6 @@ where
                 position_offset.z.0,
             ],
             velocity: [velocity_new.x.0, velocity_new.y.0, velocity_new.z.0],
-            //velocity: [core::simd::Simd::splat(0.0f32), core::simd::Simd::splat(0.0f32), core::simd::Simd::splat(0.0f32)],
             error: zero.0,
         }
     })

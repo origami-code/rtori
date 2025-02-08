@@ -107,7 +107,7 @@ where
 
             // Skip if lower than tolerance
             let mask = {
-                use std::simd::cmp::SimdPartialOrd as _;
+                use core::simd::cmp::SimdPartialOrd as _;
                 let ab_mask = ab_length.0.simd_gt(tol);
                 let ac_mask = ac_length.0.simd_gt(tol);
                 let bc_mask = bc_length.0.simd_gt(tol);

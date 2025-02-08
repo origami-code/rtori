@@ -2,7 +2,18 @@ cargo-features = ["profile-rustflags"]
 
 [workspace]
 resolver = "2"
-members = ["fold", "rtori-core-simd","rtori-core-wgpu", "rtori-server", "rtori-cli", "rtori-os-fold-importer", "rtori-core", "rtori-core-ext", "rtori-os-model", "rtori-core-ffi"]
+members = [
+    "fold",
+    # "rtori-core-wgpu", 
+    "rtori-core-simd",
+    "rtori-server",
+    # "rtori-cli",
+    "rtori-os-fold-importer",
+    "rtori-core",
+    "rtori-core-ext",
+    "rtori-os-model",
+    "rtori-core-ffi"
+]
 
 
 [patch.crates-io]
@@ -11,7 +22,16 @@ diplomat-runtime = { git = 'https://github.com/aabizri/diplomat.git', branch = "
 diplomat_core = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
 diplomat-tool = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
 
-[profile.bench]
-lto = true
+[profile.release]
 codegen-units = 1
-rustflags = ["-C", "target-cpu=native"]
+lto = "thin"
+
+[profile.bench]
+inherits = "release"
+
+# Optimize for size in the wasm-release profile to reduce load times and bandwidth usage on web.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+# Strip all debugging information from the binary to slightly reduce file size.
+strip = "debuginfo"

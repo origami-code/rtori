@@ -82,7 +82,7 @@ where
 
         let x = normals_dot;
         let y = (normals_a.cross(&crease_vector)).dot(&normals_b);
-        
+
         let fold_angle = simba::simd::Simd::simd_atan2(y, x);
         tracing::event!(tracing::Level::TRACE, "uncorrected fold angle {fold_angle:?} (y: {y:?}, x: {x:?}, crease_vector: {crease_vector:?})");
 

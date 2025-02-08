@@ -1,0 +1,1 @@
+Notes: it seems like we get an angle of 90deg when we want an angle of 180deg, why ? That might be an underlying cause
