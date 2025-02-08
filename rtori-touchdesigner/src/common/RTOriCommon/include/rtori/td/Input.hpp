@@ -12,7 +12,7 @@ template<typename T> struct InputChangeWrapper {
 
 	InputChangeWrapper(T value = T(), bool changed = true) : value(value), changed(changed) {}
 
-	template<typename U> InputChangeWrapper<T> update(U newValue) const {
+	template<typename U> inline InputChangeWrapper<T> update(U newValue) const {
 		std::equal_to<> equal_to{};
 		bool changed = !equal_to(this->value, newValue);
 
@@ -55,7 +55,7 @@ struct Input {
 	static constexpr bool DEFAULT_EXTRACT_VELOCITY = false;
 
 	/// An input has changed if any of the data members is marked as such
-	bool changed() const {
+	inline bool changed() const {
 		return foldFileSource.changed || frameIndex.changed || foldPercentage.changed ||
 			   extractPosition.changed || extractError.changed || extractVelocity.changed ||
 			   timeScale.changed || adaptive.changed || frameBudget.changed;

@@ -13,6 +13,7 @@
 #include <string_view>
 
 #ifdef WIN32
+#define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winerror.h>
@@ -384,7 +385,7 @@ void SimulationThread::runWorker() {
 					  << format_SolverOperationResult(stepResult) << std::endl;
 		}
 
-		using namespace std::chrono_literals;
-		std::this_thread::sleep_for(10ms);
+		/*using namespace std::chrono_literals;
+		std::this_thread::sleep_for(10ms);*/
 	}
 }

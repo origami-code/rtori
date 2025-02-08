@@ -1,13 +1,9 @@
 /* rtori touchdesigner */
 
 #include "rtori/td/SimulationThread.hpp"
-#include <chrono>
+#include <memory>
 #include <cstddef>
-#include <iterator>
-#include <mutex>
-#include <thread>
 #include <cassert>
-#include <iostream>
 
 #ifndef RTORI_TD_VERSION_MAJOR
 #ifndef _MSC_VER

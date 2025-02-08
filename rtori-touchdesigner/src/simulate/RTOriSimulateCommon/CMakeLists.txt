@@ -30,6 +30,13 @@ target_link_libraries(
     TouchDesigner_Common
 )
 
+set_target_properties(
+    RTOriSimulateCommon PROPERTIES
+
+    # Visibility Control
+    CXX_VISIBILITY_PRESET hidden
+)
+
 install(
     TARGETS RTOriSimulateCommon
     RUNTIME # For Windows

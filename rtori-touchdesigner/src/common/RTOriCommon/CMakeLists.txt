@@ -37,7 +37,13 @@ target_link_libraries(
 )
 
 set_target_properties(
-    RTOriCommon PROPERTIES ALLOC_USE_WINDOWS_HEAP On
+    RTOriCommon PROPERTIES
+
+    # Visibility Control
+    CXX_VISIBILITY_PRESET hidden
+
+    # Custom property
+    ALLOC_USE_WINDOWS_HEAP On
 )
 
 install(

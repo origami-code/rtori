@@ -29,7 +29,8 @@ stays the same, otherwise changes won't be backwards compatible
 
 #define DLLEXPORT __declspec(dllexport)
 #else
-#define DLLEXPORT
+// Also exports a restricted view of the symbols on macOS
+#define DLLEXPORT __attribute__((visibility("default")))
 #endif
 
 #include <assert.h>

@@ -3,6 +3,12 @@ set(MACOS_BUNDLE_PREFIX "art.orilab.rtori.td" CACHE STRING "macOS bundle prefixi
 set(MACOS_BUNDLE_FULLNAME_SUFFIX " (rtori plugin for TouchDesigner)" CACHE STRING "macOS bundle full name suffix")
 set(COPYRIGHT_HUMAN "Ars Electronica Futurelab 2024-2025" CACHE STRING "Copyright notice")
 
+# Hide inline functions
+set(CMAKE_VISIBILITY_INLINES_HIDDEN on)
+
+# Hide symbols from shared library exports unless explicitely exposed
+set(CMAKE_SHARED_LIBRARY_ENABLE_EXPORTS On)
+
 function(configure_info_plist)
     cmake_parse_arguments(PARSE_ARGV 0 args
         ""
@@ -79,6 +85,13 @@ function(prepare_plugin)
         RTORI_TD_VERSION_BUILD ${PROJECT_VERSION_TWEAK}
     )
 
+    set_target_properties(
+        ${arg_TARGET} PROPERTIES
+
+        # Visibility Control
+        CXX_VISIBILITY_PRESET hidden
+    )
+
     # Configure file extensions
     if(APPLE)
         # Also see https://github.com/DBraun/TD-Faust/blob/main/faust2touchdesigner/CMakeLists.txt
@@ -110,8 +123,10 @@ function(prepare_plugin)
         DESTINATION "."
     )
 
+    
+
     if(MSVC)
-        install(FILES "$<TARGET_PDB_FILE:${arg_TARGET}>" DESTINATION ".")
+        install(FILES "$<TARGET_PDB_FILE:${arg_TARGET}>" DESTINATION "." COMPONENT Symbols)
     endif()
 endfunction()
 

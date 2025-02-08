@@ -9,6 +9,7 @@
 #endif
 
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include "Windows.h"
 
 using namespace rtori::rtori_td::alloc;
