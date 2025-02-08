@@ -79,16 +79,14 @@ where
             let crease_face_indices =
                 CreaseFaceIndices::gather(&inputs.crease_face_indices, *crease_indices);
 
-            let crease_reaction_mask = node_number.simd_ge(SimdU32::splat(2));
+            // Node indices 3 & 4 mean the node is on the crease
+            // Node indices 1 & 2 mean the node is complementary
+            let crease_reaction_mask = node_number.simd_gt(SimdU32::splat(2));
 
-            // For those who are on a crease
+            // For those who are on a crease (node index 3 or 4)
             let force_crease_reaction = {
-                let face_indices_a = crease_face_indices.0[0];
-                let normal_a = gather_vec3f_1(inputs.face_normals, face_indices_a);
-
-                let face_indices_b = crease_face_indices.0[1];
-                let normal_b = gather_vec3f_1(inputs.face_normals, face_indices_b);
-
+                let normal_a = gather_vec3f_1(inputs.face_normals, crease_face_indices.0[0]);
+                let normal_b = gather_vec3f_1(inputs.face_normals, crease_face_indices.0[1]);
 
                 let [coef_a, coef_b] = {
                     let node_number_is_3 = node_number.simd_eq(SimdU32::splat(3));
@@ -117,16 +115,16 @@ where
                 .scale(simba::simd::Simd(SimdF32::splat(-1.0) * angular_force))
             };
 
-            // For those who are off the crease (the complementary nodes)
+            // For those who are off the crease (the complementary nodes, node indice 1 or 2)
             let force_complementary = {
-                let face_is_1 = node_number.simd_eq(SimdU32::splat(1));
+                let face_is_b = node_number.simd_eq(SimdU32::splat(2));
 
                 let face_indices =
-                    face_is_1.select(crease_face_indices.0[1], crease_face_indices.0[0]);
+                    face_is_b.select(crease_face_indices.0[1], crease_face_indices.0[0]);
                 let normals = gather_vec3f_1(&inputs.face_normals, face_indices);
 
-                let moment_arm = face_is_1.select(crease_physics.b_height, crease_physics.a_height);
-                // /* 2025-01-15 */ println!("ca_per_node_crease: moment_arm: {moment_arm:?}, face_is_1: {face_is_1:?}, b_height: {:?}, a_height: {:?}", crease_physics.b_height, crease_physics.a_height);
+                let moment_arm = face_is_b.select(crease_physics.b_height, crease_physics.a_height);
+                // /* 2025-01-15 */ println!("ca_per_node_crease: moment_arm: {moment_arm:?}, face_is_b: {face_is_b:?}, b_height: {:?}, a_height: {:?}", crease_physics.b_height, crease_physics.a_height);
 
                 algebrize(normals).scale(simba::simd::Simd(angular_force / moment_arm))
             };
@@ -149,6 +147,7 @@ where
 
             /* 2025-01-15 */
             tracing::event!(tracing::Level::TRACE, "Finished
+            node_number: {node_number:?}
             force selected: {force_selected:?}
             invalid_physics: {invalid_physics:?}
             crease_reaction_mask: {crease_reaction_mask:?}

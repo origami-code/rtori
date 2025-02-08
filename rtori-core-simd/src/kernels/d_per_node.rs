@@ -144,11 +144,6 @@ where
 
     let dt = simba::simd::Simd(SimdF32::splat(inputs.dt));
 
-    // AAAAH
-    // THIS IS WHERE THE FUCKING BUG IS
-    // I NEED TO TAKE THE FORCES THAT CORRESPOND TO EACH NODE !!!!
-    // RIGHT NOW I DON'T, I JUST ASSUME THAT 1 NODE-X (crease, beam, face) maps to the index of the node
-
     let crease_forces = inputs.node_crease_force;
     let beam_forces = inputs.node_beam_force;
     let face_forces = inputs.node_face_force;
@@ -156,8 +151,12 @@ where
     inputs.into_iter().map(move |per_node| {
         let crease_force = calculate_force_subset(&per_node.geometry.creases, &crease_forces);
         let beam_force = calculate_force_subset(&per_node.geometry.beams, &beam_forces);
-        let face_force = calculate_force_subset(&per_node.geometry.faces, &face_forces);
-
+        //let face_force = calculate_force_subset(&per_node.geometry.faces, &face_forces);
+        let face_force = algebrize([
+            core::simd::Simd::splat(0.0),
+            core::simd::Simd::splat(0.0),
+            core::simd::Simd::splat(0.0),
+        ]);
         let valid_input = per_node.mass.simd_ne(SimdF32::splat(0.0));
 
         let force = algebrize(*per_node.external_forces) + crease_force + beam_force + face_force;
@@ -209,7 +208,6 @@ where
                 position_offset.z.0,
             ],
             velocity: [velocity_new.x.0, velocity_new.y.0, velocity_new.z.0],
-            //velocity: [core::simd::Simd::splat(0.0f32), core::simd::Simd::splat(0.0f32), core::simd::Simd::splat(0.0f32)],
             error: zero.0,
         }
     })
