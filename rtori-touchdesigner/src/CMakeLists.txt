@@ -13,19 +13,6 @@ if(MSVC)
     add_compile_options("/W4") # TODO: Add /WX
 endif()
 
-function(configure_info_plist)
-    cmake_parse_arguments(PARSE_ARGV 0 args
-        ""
-        "TARGET"
-        ""
-    )
-
-    if(NOT TARGET ${arg_TARGET})
-        message(FATAL_ERROR "No TARGET given")
-    endif()
-
-    configure_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/Info.plist.in" "${BINARY_DIR}/Info.plist" NEWLINE_STYLE UNIX)
-endfunction()
 
 function(get_target_property_or VARIABLE TARGET PROPERTY DEFAULT)
     get_target_property(found ${arg_TARGET} MACOS_IDENTIFIER)
@@ -46,6 +33,7 @@ function(prepare_plugin_plist)
 
     get_target_property(BINARY_DIR ${arg_TARGET} BINARY_DIR)
 
+
     get_target_property_or(identifier_suffix ${arg_TARGET} MACOS_IDENTIFIER_SUFFIX "${arg_TARGET}")
 
     get_target_property_or(IDENTIFIER ${arg_TARGET} MACOS_IDENTIFIER "${MACOS_BUNDLE_PREFIX}.${identifier_suffix}")
@@ -55,8 +43,13 @@ function(prepare_plugin_plist)
     get_target_property_or(VERSION_TRIPLET_WITH_BUILD ${arg_TARGET} MACOS_VERSION_TRIPLET_WITH_BUILD "0.0.0.0")
     get_target_property_or(VERSION_HUMAN ${arg_TARGET} MACOS_VERSION_HUMAN "25-02-08")
     get_target_property_or(COPYRIGHT_HUMAN ${arg_TARGET} MACOS_COPYRIGHT_HUMAN "${COPYRIGHT_HUMAN}")
-    get_target_property_or(EXECUTABLE_NAME ${arg_TARGET} MACOS_EXECUTABLE_NAME "plugin.so")
+    get_target_property_or(EXECUTABLE_NAME ${arg_TARGET} MACOS_EXECUTABLE_NAME "${arg_TARGET}.so")
     get_target_property_or(ICON_FILE ${arg_TARGET} MACOS_ICON_FILE "icon.icns")
+
+    set(plist_intermediate_path "${BINARY_DIR}/Info.plist.intermediate")
+    configure_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/Info.plist.in" "${plist_intermediate_path}" NEWLINE_STYLE UNIX)
+
+    set_target_properties(${arg_TARGET} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${plist_intermediate_path}")
 endfunction()
 
 # Sets up a MODULE target to work as a TouchDesigner plugin
@@ -102,9 +95,12 @@ function(prepare_plugin)
         # Also see https://github.com/DBraun/TD-Faust/blob/main/faust2touchdesigner/CMakeLists.txt
         set_target_properties(
             ${arg_TARGET}
-            BUNDLE On # Built as a CFBundle (as a plugin)
-            BUNDLE_EXTENSION "plugin" # As requested by Derivative
+            PROPERTIES
+            #BUNDLE On # Built as a CFBundle (as a plugin)
+            #BUNDLE_EXTENSION "plugin" # As requested by Derivative
             SUFFIX ".so"
+            PREFIX ""
+            #LIBRARY_OUTPUT_NAME "${arg_TARGET}.so" # Why doesn't CMake respect SUFFIX ? Forcing me to do these crimes
         )
 
         if(arg_NAME)
@@ -138,3 +134,5 @@ endfunction()
 add_subdirectory(common)
 add_subdirectory(simulate)
 add_subdirectory(fold)
+
+include(CPack)

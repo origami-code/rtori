@@ -21,7 +21,7 @@
 #ifdef _MSC_VER
 #define RTORI_TD_EXPORT __declspec(dllexport)
 #else
-#define RTORI_TD_EXPORT attribute((visibility("default")))
+#define RTORI_TD_EXPORT __attribute__((visibility("default")))
 #endif
 #else
 #ifdef _MSC_VER

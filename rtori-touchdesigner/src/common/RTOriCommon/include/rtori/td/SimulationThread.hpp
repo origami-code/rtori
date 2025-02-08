@@ -4,6 +4,10 @@
 #include <thread>
 #include <mutex>
 
+#ifndef __cpp_lib_jthread
+#include <atomic>
+#endif
+
 #include "Input.hpp"
 #include "Output.hpp"
 
@@ -13,7 +17,7 @@
 #ifdef _MSC_VER
 #define RTORI_TD_EXPORT __declspec(dllexport)
 #else
-#define RTORI_TD_EXPORT attribute((visibility("default")))
+#define RTORI_TD_EXPORT __attribute__((visibility("default")))
 #endif
 #else
 #ifdef _MSC_VER
@@ -34,7 +38,7 @@ struct OutputGuard {
 	std::unique_lock<std::mutex> m_guard;
 };
 
-class RTORI_TD_EXPORT SimulationThread {
+class RTORI_TD_EXPORT SimulationThread final {
   public:
 	SimulationThread(rtori::Context const* ctx);
 	~SimulationThread();
@@ -49,12 +53,17 @@ class RTORI_TD_EXPORT SimulationThread {
 	OutputGuard getOutput();
 
 	void notifyCook();
-
+	bool isStopRequested();
   private:
 	/// This should be called from the newly created thread
 	void runWorker();
 
+#ifdef __cpp_lib_jthread
 	std::jthread m_threadHandler;
+#else
+	std::thread m_threadHandler;
+	std::atomic<bool> m_stopRequestFlag;
+#endif
 
 	std::condition_variable m_inputCondVar;
 	std::mutex m_inputMutex;

@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Solver.hpp"
 
 #include "rtori_core.hpp"
@@ -33,7 +31,13 @@ OutputGuard::OutputGuard(Output const& output, std::unique_lock<std::mutex>&& gu
 
 SimulationThread::SimulationThread(rtori::Context const* ctx) : m_ctx(ctx) {
 	assert((void("ctx should be non-null"), ctx != nullptr));
+
+#ifdef __cpp_lib_jthread
 	this->m_threadHandler = std::jthread(&SimulationThread::runWorker, this);
+#else
+	this->m_threadHandler = std::thread(&SimulationThread::runWorker, this);
+	this->m_stopRequestFlag = false;
+#endif
 }
 
 SimulationThread::~SimulationThread() {
@@ -63,7 +67,11 @@ void SimulationThread::notifyCook() {
 }
 
 void SimulationThread::requestStopWorker() {
+#ifdef __cpp_lib_jthread
 	this->m_threadHandler.request_stop();
+#else
+	this->m_stopRequestFlag.store(true);
+#endif
 }
 
 static void nameThread() {
@@ -102,7 +110,7 @@ std::string_view format_SolverOperationResult(rtori::SolverOperationResult resul
 }
 
 /// This is the inner state of the simulation thread
-class SimulationThreadImpl {
+class SimulationThreadImpl final {
   public:
 	SimulationThreadImpl(rtori::Context const* ctx) : ctx(ctx), solver(ctx) {
 		nameThread();
@@ -127,11 +135,19 @@ class SimulationThreadImpl {
 	bool packedThisFrame = false;
 };
 
+bool SimulationThread::isStopRequested() {
+#ifdef __cpp_lib_jthread
+	std::stop_token stopToken = this->m_threadHandler.get_stop_token();
+	return stopToken.stop_requested();
+#else
+	return this->m_stopRequestFlag.load();
+#endif 
+}
+
 void SimulationThread::runWorker() {
 	assert((void("ctx should be non-null"), this->m_ctx != nullptr));
 
-	std::stop_token stopToken = this->m_threadHandler.get_stop_token();
-	if (stopToken.stop_requested()) {
+	if (isStopRequested()) {
 		return;
 	}
 
@@ -158,7 +174,7 @@ void SimulationThread::runWorker() {
 	// We keep the knowledge of how much time we spend stepping
 	std::chrono::microseconds stepDuration = std::chrono::microseconds(std::chrono::seconds(1));
 
-	while (!stopToken.stop_requested()) {
+	while (!isStopRequested()) {
 		// The inner loop
 		bool newCook;
 		{
@@ -221,8 +237,8 @@ void SimulationThread::runWorker() {
 													  rtori::FoldFrameQuery::VerticesCount,
 													  &queryOutput);
 					}
-					std::cout << std::format("Outputting {} vertices", vertex_count)
-							  << std::endl;
+					/*std::cout << std::format("Outputting {} vertices", vertex_count)
+							  << std::endl;*/
 
 					size_t sizeNeededTotal = ((extractPosition ? 3 * vertex_count : 0) +
 											  (extractError ? 3 * vertex_count : 0) +
@@ -407,8 +423,8 @@ this->m_output.indices.data()),
 						// hasLoaded = true;
 					} else {
 						// TODO: report error
-						std::cout << std::format("Error importing: {}", result.format())
-								  << std::endl;
+						/*std::cout << std::format("Error importing: {}", result.format())
+								  << std::endl;*/
 					}
 				}
 			}

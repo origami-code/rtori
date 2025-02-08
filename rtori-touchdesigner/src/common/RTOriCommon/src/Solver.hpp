@@ -14,7 +14,7 @@ enum class SolverImportResultKind {
 	FoldLoadError,
 };
 
-struct SolverImportResult {
+struct SolverImportResult final {
   public:
 	SolverImportResultKind kind;
 	union {
@@ -25,10 +25,11 @@ struct SolverImportResult {
 		switch (kind) {
 		case SolverImportResultKind::FoldParseError: {
 			rtori::JsonParseError const& details = this->payload.parseError;
-			return std::format("[ERROR] Fold parse error \"{}\" on line {}, column {}",
+			// std::format requires Xcode 15.3 or later
+			return /*std::format("[ERROR] Fold parse error \"{}\" on line {}, column {}",
 							   (int32_t)details.category,
 							   details.line,
-							   details.column);
+							   details.column);*/ std::string("[ERROR] Fold parse error");
 		}
 		case SolverImportResultKind::FoldLoadError:
 			return std::string("[ERROR] Fold load error");
@@ -42,7 +43,7 @@ struct SolverImportResult {
 	}
 };
 
-class Solver {
+class Solver final {
   public:
 	rtori::Solver const* solver;
 

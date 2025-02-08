@@ -20,8 +20,20 @@
             "name": "win-arm64ec",
             "generator": "Visual Studio 17",
             "architecture": "arm64ec",
-            "binaryDir": "win-arm64ec-build",
-            "installDir": "win-arm64ec-output"
+            "binaryDir": "macOS-arm64-build",
+            "installDir": "macOS-arm64-output"
+        },
+        {
+            "name": "macOS-x86_64",
+            "generator": "Xcode",
+            "binaryDir": "macOS-x86_64-build",
+            "installDir": "macOS-x86_64-output"
+        },
+        {
+            "name": "macOS-arm64",
+            "generator": "Xcode",
+            "binaryDir": "macOS-arm64-build",
+            "installDir": "macOS-arm64-output"
         }
     ],
     "buildPresets": [
@@ -32,6 +44,14 @@
         {
             "name": "win-arm64ec",
             "configurePreset": "win-arm64ec"
+        },
+        {
+            "name": "macOS-x86_64",
+            "configurePreset": "macOS-x86_64"
+        },
+        {
+            "name": "macOS-arm64",
+            "configurePreset": "macOS-arm64"
         }
     ]
 }

@@ -5,7 +5,7 @@
 
 namespace rtori::rtori_td {
 
-template<typename T> struct InputChangeWrapper {
+template<typename T> struct InputChangeWrapper final {
   public:
 	T value;
 	bool changed;
@@ -24,7 +24,7 @@ template<typename T> struct InputChangeWrapper {
 	}
 };
 
-struct Input {
+struct Input final {
   public:
 	int64_t inputNumber = 0;
 

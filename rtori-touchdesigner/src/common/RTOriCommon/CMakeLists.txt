@@ -1,6 +1,6 @@
 
 set(RTOriCommon_AllocatorImpl
-    "$<IF:$<BOOL:$<TARGET_PROPERTY:ALLOC_USE_WINDOWS_HEAP>>,src/allocator/AllocatorWinHeap.cpp,src/allocator/AllocatorDefault.cpp>>"
+    "$<IF:$<BOOL:$<TARGET_PROPERTY:ALLOC_USE_WINDOWS_HEAP>>,src/allocator/AllocatorWinHeap.cpp,src/allocator/AllocatorDefault.cpp>"
 )
 
 list(APPEND RTOriCommon_Impl
@@ -41,10 +41,16 @@ set_target_properties(
 
     # Visibility Control
     CXX_VISIBILITY_PRESET hidden
-
-    # Custom property
-    ALLOC_USE_WINDOWS_HEAP On
 )
+
+if (MSVC)
+    set_target_properties(
+        RTOriCommon PROPERTIES
+
+        # Custom property
+        ALLOC_USE_WINDOWS_HEAP On
+    )
+endif()
 
 install(
     TARGETS RTOriCommon

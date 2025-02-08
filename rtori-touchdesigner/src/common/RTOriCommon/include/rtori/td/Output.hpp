@@ -5,7 +5,7 @@
 
 namespace rtori::rtori_td {
 
-struct Output {
+struct Output final {
   public:
 	int64_t outputNumber;
 
