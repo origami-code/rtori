@@ -147,13 +147,15 @@ where
 
             /* 2025-01-15 */
             tracing::event!(tracing::Level::TRACE, "Finished
+            crease count: {}
+            crease_indices: {crease_indices:?}
             node_number: {node_number:?}
             force selected: {force_selected:?}
             invalid_physics: {invalid_physics:?}
             crease_reaction_mask: {crease_reaction_mask:?}
             force_crease_reaction: {force_crease_reaction:?}
             force_complementary: {force_complementary:?}
-            crease_physics: {crease_physics:?}");
+            crease_physics: {crease_physics:?}", inputs.node_crease_indices.len() * 4);
 
             super::operations::debug::check_nans_simd_vec_msg(
                 force_selected,
