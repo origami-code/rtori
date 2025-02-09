@@ -26,6 +26,8 @@ class SimulateSOP : public TD::SOP_CPlusPlusBase, public rtori::rtori_td::Simula
 
 	virtual void setupParameters(TD::OP_ParameterManager*, void*) override;
 
+	virtual void pulsePressed(const char* name, void* reserved1) override;
+
 	virtual int32_t getNumInfoCHOPChans(void* reserved1) override;
 
 	virtual void getInfoCHOPChan(int32_t index,

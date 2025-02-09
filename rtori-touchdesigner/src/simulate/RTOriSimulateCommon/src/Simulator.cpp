@@ -6,6 +6,7 @@
 #include "rtori/td/InfoCHOP.hpp"
 
 #include <cassert>
+#include <iostream>
 
 #include "CPlusPlus_Common.h"
 
@@ -22,6 +23,9 @@ constexpr float DEFAULT_IDLE_THRESHOLD = 0.0001f;
 
 constexpr const char* PARAMETER_KEY_SOURCE_SIMULATION = "Sourcesimulation";
 constexpr const char* PARAMETER_KEY_FOLD_SOURCE = "Foldsource";
+constexpr const char* PARAMETER_KEY_RESET = "Reset";
+constexpr const char* PARAMETER_KEY_RUNNING = "Running";
+
 constexpr const char* PARAMETER_KEY_FOLD_FRAME_INDEX = "Foldframeindex";
 constexpr const char* PARAMETER_KEY_FOLD_PERCENTAGE = "Foldpercentage";
 constexpr const char* PARAMETER_KEY_IDLE_THRESHOLD = "Idlethreshold";
@@ -44,6 +48,8 @@ constexpr const char* PARAMETER_KEY_FRAME_BUDGET = "Framebudget";
 
 /// Simulation parameters that should only be applied to simulation primaries
 constexpr const char* PARAMETER_KEYS_SIMULATION[] = {PARAMETER_KEY_FOLD_SOURCE,
+													 PARAMETER_KEY_RESET,
+													 PARAMETER_KEY_RUNNING,
 													 PARAMETER_KEY_FOLD_FRAME_INDEX,
 													 PARAMETER_KEY_FOLD_FRAME_INDEX,
 													 PARAMETER_KEY_FOLD_PERCENTAGE,
@@ -84,6 +90,22 @@ void Simulator::execute(const TD::OP_Inputs* inputs, const Interests& interests)
 	}
 }
 
+bool Simulator::pulsePressed(const char* name) {
+	if (std::strcmp(name, PARAMETER_KEY_RESET) != 0) {
+		std::cout << "Not RESET !" << std::endl;
+		return false;
+	}
+
+	const rtori::rtori_td::Input& cachedInput = this->m_simulation.getInput();
+	auto newInput = rtori::rtori_td::Input(cachedInput);
+	newInput.resetFlag = true;
+	newInput.inputNumber += 1;
+	this->m_simulation.update(newInput);
+	std::cout << "Reset sent for update !" << std::endl;
+
+	return true;
+}
+
 rtori::rtori_td::OutputGuard Simulator::query(void) {
 	return this->m_simulation.getOutput();
 }
@@ -113,6 +135,29 @@ void Simulator::setupParameters(TD::OP_ParameterManager* manager, const char* pa
 		parameter.label = "Fold Source";
 
 		const OP_ParAppendResult res = manager->appendString(parameter);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	{
+		auto parameter = OP_NumericParameter();
+		parameter.name = PARAMETER_KEY_RESET;
+		parameter.page = page;
+		parameter.label = "Reset";
+
+		const OP_ParAppendResult res = manager->appendPulse(parameter);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	{
+		auto parameter = OP_NumericParameter();
+		parameter.name = PARAMETER_KEY_RUNNING;
+		parameter.page = page;
+		parameter.label = "Running";
+
+		/// We run by default
+		parameter.defaultValues[0] = 1;
+
+		const OP_ParAppendResult res = manager->appendToggle(parameter);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
@@ -238,12 +283,16 @@ void Simulator::getInfoCHOPChan(int32_t index, TD::OP_InfoCHOPChan* chan) {
 
 bool Simulator::getInfoDATSize(TD::OP_InfoDATSize* infoSize) {
 	// TODO: Return info
+	(void)infoSize;
 	return false;
 }
 
 void Simulator::getInfoDATEntries(int32_t index,
 								  int32_t nEntries,
 								  TD::OP_InfoDATEntries* entries) {
+	(void)index;
+	(void)nEntries;
+	(void)entries;
 	// Fill in info (in particular, if point-per-node is selected, output the UVs
 	// per prims)
 }

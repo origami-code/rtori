@@ -42,6 +42,8 @@ struct Input final {
 	InputChangeWrapper<bool> adaptive = false;
 	InputChangeWrapper<float> frameBudget = 1.0;
 
+	bool resetFlag;
+
 	InputChangeWrapper<std::chrono::microseconds> targetPeriod;
 
 	static constexpr bool DEFAULT_EXTRACT_POSITIONS = true;
@@ -54,7 +56,7 @@ struct Input final {
 		return foldFileSource.changed || frameIndex.changed || foldPercentage.changed ||
 			   extractPosition.changed || extractError.changed || extractVelocity.changed ||
 			   timeScale.changed || adaptive.changed || frameBudget.changed ||
-			   targetPeriod.changed;
+			   targetPeriod.changed || resetFlag;
 	}
 };
 

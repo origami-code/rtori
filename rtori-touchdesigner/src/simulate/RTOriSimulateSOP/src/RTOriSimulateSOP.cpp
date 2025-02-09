@@ -274,6 +274,12 @@ void SimulateSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 	m_simulator->setupParameters(manager);
 }
 
+void SimulateSOP::pulsePressed(const char* name, void* reserved1) {
+	(void)reserved1;
+	const bool valid = m_simulator->pulsePressed(name);
+	assert(valid);
+}
+
 int32_t SimulateSOP::getNumInfoCHOPChans(void* reserved1) {
 	(void)reserved1;
 	return m_simulator->getNumInfoCHOPChans();

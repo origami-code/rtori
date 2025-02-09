@@ -41,6 +41,15 @@ class RTORI_TD_EXPORT Simulator {
 	/// Polls the simulator for the cook results
 	void execute(const TD::OP_Inputs* inputs, const Interests& interests);
 
+	/**
+	 * @brief Notify that a pulse parameter has been triggered
+	 *
+	 * @param name of the parameter, as given to `pulsePressed` of the operator
+	 * @return true if the parameter was for the simulator
+	 * @return false otherwise
+	 */
+	bool pulsePressed(const char* name);
+
 	/// Retrieves the output of the simulation
 	rtori::rtori_td::OutputGuard query(void);
 

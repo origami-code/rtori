@@ -171,6 +171,8 @@ void SimulationThread::runWorker() {
 	auto lastInterCookDuration = std::chrono::microseconds(0);
 	bool packedThisFrame = false;
 
+	bool loaded = false;
+
 	// We keep the knowledge of how much time we spend stepping
 	std::chrono::microseconds stepDuration = std::chrono::microseconds(std::chrono::seconds(1));
 
@@ -411,17 +413,26 @@ this->m_output.indices.data()),
 					extractVelocity = input.extractVelocity.value;
 					extractError = input.extractError.value;
 
-					SolverImportResult result = solver.update(
-					  input.foldFileSource.changed ? std::optional(input.foldFileSource.value)
-												   : std::nullopt,
-					  input.frameIndex.changed ? std::optional(input.frameIndex.value)
-											   : std::nullopt,
-					  input.foldPercentage.changed ? std::optional(input.foldPercentage.value)
-												   : std::nullopt);
+					if (input.resetFlag) {
+						std::cout << "Resetting..." << std::endl;
+					}
 
+					SolverImportResult result =
+					  solver.update((input.resetFlag || input.foldFileSource.changed)
+									  ? std::optional(input.foldFileSource.value)
+									  : std::nullopt,
+									(input.resetFlag || input.frameIndex.changed)
+									  ? std::optional(input.frameIndex.value)
+									  : std::nullopt,
+									(input.resetFlag || input.foldPercentage.changed)
+									  ? std::optional(input.foldPercentage.value)
+									  : std::nullopt);
+
+					lastInputNumber = input.inputNumber;
 					if (result.kind == SolverImportResultKind::Success) {
-						// hasLoaded = true;
+						loaded = true;
 					} else {
+						loaded = false;
 						// TODO: report error
 						/*std::cout << std::format("Error importing: {}", result.format())
 								  << std::endl;*/
@@ -433,7 +444,7 @@ this->m_output.indices.data()),
 		// TODO: ShouldCook logic here
 
 		// Stepping
-		{
+		if (loaded) {
 			std::chrono::time_point<std::chrono::steady_clock> const beforeStep =
 			  std::chrono::steady_clock::now();
 			auto const elapsed =
