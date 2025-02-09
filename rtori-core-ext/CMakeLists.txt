@@ -25,6 +25,33 @@ if(XCODE)
 
         set(Rust_CARGO_TARGET "${rust_arch}-apple-darwin")
     endif()
+
+elseif(MSVC)
+    if(CMAKE_VS_PLATFORM_NAME)
+        if(CMAKE_VS_PLATFORM_NAME STREQUAL "x64")
+            set(rust_arch "x86_64")
+        elseif(CMAKE_VS_PLATFORM_NAME STREQUAL "win32")
+            set(rust_arch "i686")
+        elseif(CMAKE_VS_PLATFORM_NAME STREQUAL "arm64")
+            set(rust_arch "aarch64")
+        elseif(CMAKE_VS_PLATFORM_NAME STREQUAL "arm64ec")
+            set(rust_arch "arm64ec")
+        else()
+            message(FATAL_ERROR "CMAKE_VS_PLATFORM_NAME detected but unknown platform: ${CMAKE_VS_PLATFORM_NAME}")
+        endif()
+    else()
+        if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
+            set(rust_arch "x86_64")
+        elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64")
+            set(rust_arch "aarch64")
+        endif()
+    endif()
+
+    if(NOT rust_arch)
+        message(FATAL_ERROR "Unknown platform")
+    endif()
+
+    set(Rust_CARGO_TARGET "${rust_arch}-pc-windows-msvc")
 endif()
 
 FetchContent_Declare(

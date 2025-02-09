@@ -20,8 +20,8 @@
             "name": "win-arm64ec",
             "generator": "Visual Studio 17",
             "architecture": "arm64ec",
-            "binaryDir": "macOS-arm64-build",
-            "installDir": "macOS-arm64-output"
+            "binaryDir": "win-arm64ec-build",
+            "installDir": "win-arm64ec-output"
         },
         {
             "name": "macOS-x86_64",
