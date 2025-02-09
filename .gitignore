@@ -8,3 +8,5 @@ build
 **/log
 **/.log
 *.log
+
+**/.DS_Store

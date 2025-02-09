@@ -99,8 +99,10 @@ function(prepare_plugin)
             PROPERTIES
             SUFFIX ".so"
             PREFIX ""
+            MACOSX_RPATH On
+            INSTALL_RPATH "@executable_path/../../../Frameworks;@executable_path/../../../lib;@loader_path/../Frameworks;@loader_path/../lib"
+            BUILD_WITH_INSTALL_RPATH On
         )
-
 
         get_target_property(target_name ${arg_TARGET} NAME)
         set(bundle_target "${target_name}_bundle")

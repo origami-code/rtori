@@ -8,6 +8,25 @@ project(rtori-core
 set(Rust_TOOLCHAIN "nightly" CACHE STRING "Requires nightly rust")
 include(FetchContent)
 
+if(XCODE)
+    list(LENGTH CMAKE_OSX_ARCHITECTURES arch_count)
+    if(${arch_count} GREATER 1)
+        message(FATAL_ERROR "Cannot generate more than one architecture")
+    elseif(${arch_count} EQUAL 0)
+        message(WARNING "Generating for curren processor")
+    else()
+        if (CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+            set(rust_arch "aarch64")
+        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
+            set(rust_arch "x86_64")
+        else()
+            message(FATAL_ERROR "Unknown architecture ${CMAKE_OSX_ARCHITECTURES}")
+        endif()
+
+        set(Rust_CARGO_TARGET "${rust_arch}-apple-darwin")
+    endif()
+endif()
+
 FetchContent_Declare(
     Corrosion
     GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git

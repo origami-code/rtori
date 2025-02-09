@@ -27,13 +27,21 @@
             "name": "macOS-x86_64",
             "generator": "Xcode",
             "binaryDir": "macOS-x86_64-build",
-            "installDir": "macOS-x86_64-output"
+            "installDir": "macOS-x86_64-output",
+            "cacheVariables": {
+                "CMAKE_OSX_ARCHITECTURES": "x86_64",
+                "CMAKE_OSX_DEPLOYMENT_TARGET": "10.15"
+            }
         },
         {
             "name": "macOS-arm64",
             "generator": "Xcode",
             "binaryDir": "macOS-arm64-build",
-            "installDir": "macOS-arm64-output"
+            "installDir": "macOS-arm64-output",
+            "cacheVariables": {
+                "CMAKE_OSX_ARCHITECTURES": "arm64",
+                "CMAKE_OSX_DEPLOYMENT_TARGET": "10.15"
+            }
         }
     ],
     "buildPresets": [

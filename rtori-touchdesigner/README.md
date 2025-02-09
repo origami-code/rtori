@@ -24,15 +24,16 @@ All the `..Fold..` custom operators also provide access to python queries, read-
 
 ## Platform/Architecture Support
 
-|OS       |Architecture|State|
-|:-------:|:----------:|:---:|
-|Windows  |x86_64      |✅   |
-|Windows  |arm64       |🎯   |
-|macOS    |X86_64      |🎯   |
-|macOS    |arm64       |🎯   |
+|OS       |Architecture|State|Note |
+|:-------:|:----------:|:---:|:----|
+|Windows  |x86_64      |✅   ||
+|Windows  |arm64ec(1)  |🎯   ||
+|macOS    |X86_64      |🎯   |10.15+(2)|
+|macOS    |arm64       |🎯   |10.15+(2)|
 
 🎯: a target, not currently running
-
+(1): 
+(2): minimum version supported by TouchDesigner 2023
 ## Implementation Notes
 
 ### Architecture
