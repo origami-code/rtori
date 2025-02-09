@@ -1,0 +1,3 @@
+[submodule "rtori-touchdesigner/ext/cmake-macos"]
+	path = rtori-touchdesigner/ext/cmake-macos
+	url = https://github.com/aabizri/cmake-macos.git

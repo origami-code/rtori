@@ -92,39 +92,75 @@ function(prepare_plugin)
 
     # Configure file extensions
     if(APPLE)
-        # Also see https://github.com/DBraun/TD-Faust/blob/main/faust2touchdesigner/CMakeLists.txt
+        # First, we want a .so without prefix
+        # Like this RTOriMyOP.so
         set_target_properties(
             ${arg_TARGET}
             PROPERTIES
-            #BUNDLE On # Built as a CFBundle (as a plugin)
-            #BUNDLE_EXTENSION "plugin" # As requested by Derivative
             SUFFIX ".so"
             PREFIX ""
-            #LIBRARY_OUTPUT_NAME "${arg_TARGET}.so" # Why doesn't CMake respect SUFFIX ? Forcing me to do these crimes
         )
 
-        if(arg_NAME)
-            set_target_properties(${arg_TARGET} MACOS_NAME_SHORT ${arg_NAME})
-        endif()
 
-        prepare_plugin_plist(TARGET ${arg_TARGET})
+        get_target_property(target_name ${arg_TARGET} NAME)
+        set(bundle_target "${target_name}_bundle")
+
+        # Generate the plist
+        set(plist_intermediate_path "${CMAKE_CURRENT_BINARY_DIR}/${target_name}_Info.plist")
+        add_macos_bundle_info(
+            DESTINATION "${plist_intermediate_path}"
+            TARGET ${arg_TARGET}
+            PROPERTIES
+                CFBundleDisplayName "${target_name} (rtori plugin for TouchDesigner)"
+                CFBundleIdentifier "art.orilab.rtori.td.${target_name}"
+                CFBundleShortVersionString "0.0.0"
+                CFBundleVersion "0.0.0.0"
+                CFBundleLongVersionString "25-02-08"
+                NSHumanReadableCopyright "All rights reserved © Ars Electronica Futurelab 2024-2025"
+        )
+
+        # Generate the bundle
+        add_custom_target(${bundle_target} ALL 
+            DEPENDS ${arg_TARGET}
+        )
+
+        # Install rules for it
+        set(bundle_filename "${target_name}.plugin")
+        install(
+            FILES
+                "$<TARGET_FILE:${arg_TARGET}>"
+            DESTINATION
+                "${bundle_filename}/Contents/MacOS/"
+            COMPONENT
+                ${target_name}
+        )
+        install(
+            FILES
+                ${plist_intermediate_path}
+            DESTINATION
+                "${bundle_filename}/"
+            RENAME "Info.plist"
+            COMPONENT
+                ${target_name}
+        )
+
+        # Then, we create a new target, which will be a bundle around this target
+        set(target_to_install ${bundle_target})
     elseif(WIN32)
         # TODO: Resource file hackery
+
+        # Configure destination
+        # On windows, everything should go to the root of the install prefix
+        install(
+            TARGETS ${arg_TARGET}
+            RUNTIME # For Windows
+            DESTINATION "." # To the root
+            LIBRARY # ???
+            DESTINATION "."
+        )
+    else()
+        message(FATAL_ERROR "Unsupported platform")
     endif()
-
-    # Configure destination
-    # On windows, everything should go to the root of the install prefix
-    install(
-        TARGETS ${arg_TARGET}
-        RUNTIME # For Windows
-        DESTINATION "." # To the root
-        BUNDLE
-        DESTINATION "."
-        LIBRARY # ???
-        DESTINATION "."
-    )
-
-    
 
     if(MSVC)
         install(FILES "$<TARGET_PDB_FILE:${arg_TARGET}>" DESTINATION "." COMPONENT Symbols)

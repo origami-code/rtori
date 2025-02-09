@@ -8,6 +8,10 @@ project(rtori-touchdesigner
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
+if(APPLE)
+    include(ext/cmake-macos/cmake-macos.cmake)
+endif()
+
 if(NOT TARGET rtori_core)
     add_subdirectory("../rtori-core-ext" ${CMAKE_CURRENT_BINARY_DIR}/rtori_core)
 endif()
