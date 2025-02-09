@@ -1,7 +1,14 @@
 #ifndef __SimulateSOP__
 #define __SimulateSOP__
 
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#endif
 #include "SOP_CPlusPlusBase.h"
+#include "CPlusPlus_Common.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #include "rtori/td/Simulator.hpp"
 #include "rtori/td/SimulateOP.hpp"
@@ -13,7 +20,7 @@
 namespace rtori::rtori_td {
 
 /// This SOP is a generator and it takes no input, though it does take a lot of parameters
-class SimulateSOP : public TD::SOP_CPlusPlusBase, public rtori::rtori_td::SimulateOP {
+class SimulateSOP final : public TD::SOP_CPlusPlusBase, public rtori::rtori_td::SimulateOP {
   public:
 	SimulateSOP(const TD::OP_NodeInfo* info, rtori::Context const* rtoriCtx);
 	virtual ~SimulateSOP();

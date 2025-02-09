@@ -24,7 +24,15 @@
 #endif
 
 #include "RTOriSimulateSOP.hpp"
+
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#endif
+#include "SOP_CPlusPlusBase.h"
 #include "CPlusPlus_Common.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #include "rtori/td/Context.hpp"
 #include "rtori_core.hpp"
@@ -104,9 +112,8 @@ constexpr const char* PARAMETER_KEY_VELOCITY = "Extractvelocity";
 // TODO: Do the simulator retrieval magic
 SimulateSOP::SimulateSOP(const OP_NodeInfo* _info, rtori::Context const* rtoriCtx)
 	: m_simulator(std::make_shared<rtori::rtori_td::Simulator>(rtoriCtx)), rtoriCtx(rtoriCtx){
-
-																		   };
-
+	(void)_info;
+};
 SimulateSOP::~SimulateSOP(){
 
 };

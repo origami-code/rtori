@@ -33,7 +33,7 @@
 
 namespace rtori::rtori_td {
 
-class RTORI_TD_EXPORT Simulator {
+class RTORI_TD_EXPORT Simulator final {
   public:
 	Simulator(rtori::Context const* context);
 	~Simulator();

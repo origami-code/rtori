@@ -22,7 +22,15 @@
 #endif
 
 #include "RTOriFoldInSOP.hpp"
+
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#endif
+#include "SOP_CPlusPlusBase.h"
 #include "CPlusPlus_Common.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #include "rtori/td/Context.hpp"
 #include "rtori_core.hpp"
@@ -169,29 +177,43 @@ void FoldInSOP::setupParameters(TD::OP_ParameterManager* manager, void*) {
 }
 
 int32_t FoldInSOP::getNumInfoCHOPChans(void* reserved1) {
+	(void)reserved1;
 	return 0;
 	// TODO
 }
 
 void FoldInSOP::getInfoCHOPChan(int32_t index, TD::OP_InfoCHOPChan* chan, void* reserved1) {
+	(void)index;
+	(void)chan;
+	(void)reserved1;
 	// TODO
 }
 
 bool FoldInSOP::getInfoDATSize(TD::OP_InfoDATSize* infoSize, void* reserved1) {
+	(void)infoSize;
+	(void)reserved1;
 	return false;
 }
 
 void FoldInSOP::getInfoDATEntries(int32_t index,
-									int32_t nEntries,
-									TD::OP_InfoDATEntries* entries,
-									void* reserved1) {
+								  int32_t nEntries,
+								  TD::OP_InfoDATEntries* entries,
+								  void* reserved1) {
+	(void)index;
+	(void)nEntries;
+	(void)entries;
+	(void)reserved1;
 	// TODO
 }
 
 void FoldInSOP::getErrorString(TD::OP_String* error, void* reserved1) {
+	(void)error;
+	(void)reserved1;
 	// TODO
 }
 
 void FoldInSOP::getInfoPopupString(TD::OP_String* info, void* reserved1) {
+	(void)info;
+	(void)reserved1;
 	// TODO
 }

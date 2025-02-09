@@ -1,9 +1,11 @@
 #ifndef __FoldInSOP__
 #define __FoldInSOP__
+
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #endif
 #include "SOP_CPlusPlusBase.h"
+#include "CPlusPlus_Common.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -17,7 +19,7 @@
 namespace rtori::rtori_td {
 
 /// This SOP is a generator and it takes no input, though it does take a lot of parameters
-class FoldInSOP : public TD::SOP_CPlusPlusBase {
+class FoldInSOP final : public TD::SOP_CPlusPlusBase {
   public:
 	FoldInSOP(const TD::OP_NodeInfo* info, rtori::Context const* rtoriCtx);
 	virtual ~FoldInSOP();
