@@ -153,7 +153,7 @@ pub struct SupplementedInput<'frame, A>
 where
     A: Allocator,
 {
-    pub source: &'frame fold::FrameCore,
+    pub source: &'frame fold::FrameCore<'frame>,
     pub transformed: &'frame FoldSupplement<A>,
 }
 

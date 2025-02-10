@@ -123,8 +123,7 @@ pub mod ffi {
     #[diplomat::rust_link(fold::File, Struct)]
     #[derive(Debug, Clone)]
     pub struct FoldFile<'ctx> {
-        pub(crate) inner: fold::File, //<'ctx>
-        _marker: std::marker::PhantomData<&'ctx fold::File>,
+        pub(crate) inner: fold::File<'ctx>
     }
 
     #[derive(Debug)]
@@ -177,8 +176,7 @@ pub mod ffi {
 
             Ok(Box::new_in(
                 FoldFile {
-                    inner: parsed,
-                    _marker: std::marker::PhantomData,
+                    inner: parsed
                 },
                 ctx.allocator,
             ))
@@ -203,8 +201,7 @@ pub mod ffi {
 
             Ok(Box::new_in(
                 FoldFile {
-                    inner: parsed,
-                    _marker: std::marker::PhantomData,
+                    inner: parsed
                 },
                 ctx.allocator,
             ))

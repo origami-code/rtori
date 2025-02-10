@@ -4,45 +4,45 @@ use crate::Lockstep;
 
 use super::*;
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct FrameMetadata {
-    #[serde(rename = "frame_title")]
-    pub title: Option<String>,
+#[derive(Debug, Clone /*, serde::Deserialize, serde::Serialize*/)]
+pub struct FrameMetadata<'alloc> {
+    //#[serde(rename = "frame_title")]
+    pub title: Option<String<'alloc>>,
 
-    #[serde(rename = "frame_description")]
-    pub description: Option<String>,
+    //#[serde(rename = "frame_description")]
+    pub description: Option<String<'alloc>>,
 
-    #[serde(rename = "frame_classes")]
-    pub classes: Option<Vec<String>>,
+    //#[serde(rename = "frame_classes")]
+    pub classes: Option<Vec<'alloc, String<'alloc>>>,
 
-    #[serde(rename = "frame_attributes")]
-    pub attributes: Option<Vec<String>>,
+    //#[serde(rename = "frame_attributes")]
+    pub attributes: Option<Vec<'alloc, String<'alloc>>>,
 
-    #[serde(rename = "frame_unit")]
-    pub unit: Option<String>,
+    //#[serde(rename = "frame_unit")]
+    pub unit: Option<String<'alloc>>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct FrameCore {
-    #[serde(flatten)]
-    pub metadata: FrameMetadata,
+#[derive(Debug, Clone /*, serde::Deserialize, serde::Serialize*/)]
+pub struct FrameCore<'alloc> {
+    //#[serde(flatten)]
+    pub metadata: FrameMetadata<'alloc>,
 
-    #[serde(flatten)]
-    pub vertices: VertexInformation,
+    //#[serde(flatten)]
+    pub vertices: VertexInformation<'alloc>,
 
-    #[serde(flatten)]
-    pub edges: EdgeInformation,
+    //#[serde(flatten)]
+    pub edges: EdgeInformation<'alloc>,
 
-    #[serde(flatten)]
-    pub faces: FaceInformation,
+    //#[serde(flatten)]
+    pub faces: FaceInformation<'alloc>,
 
-    #[serde(flatten)]
-    pub layering: LayerInformation,
+    //#[serde(flatten)]
+    pub layering: LayerInformation<'alloc>,
 
-    pub uvs: Lockstep<[f32; 2]>,
+    pub uvs: Lockstep<'alloc, [f32; 2]>,
 }
 
-impl FrameCore {
+impl<'a> FrameCore<'a> {
     pub fn vertices_count(&self) -> usize {
         self.vertices.count()
     }
@@ -56,21 +56,21 @@ impl FrameCore {
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct NonKeyFrame {
-    #[serde(flatten)]
-    pub frame: FrameCore,
-    #[serde(rename = "frame_parent")]
+#[derive(Debug, Clone /*, serde::Deserialize, serde::Serialize*/)]
+pub struct NonKeyFrame<'alloc> {
+    //#[serde(flatten)]
+    pub frame: FrameCore<'alloc>,
+    //#[serde(rename = "frame_parent")]
     pub parent: Option<FrameIndex>,
-    #[serde(rename = "frame_inherit")]
+    //#[serde(rename = "frame_inherit")]
     pub inherit: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct InheritingFrame<'a> {
-    frames: &'a [NonKeyFrame],
-    key_frame: &'a FrameCore,
-    frame_index: u16
+    frames: &'a [NonKeyFrame<'a>],
+    key_frame: &'a FrameCore<'a>,
+    frame_index: FrameIndex
 }
 
 impl<'a> InheritingFrame<'a> {
@@ -110,13 +110,13 @@ impl<'a> InheritingFrame<'a> {
 
 #[derive(Debug, Clone, Copy)]
 pub enum FrameRef<'a> {
-    Key(&'a FrameCore),
-    NonInheriting{core: &'a FrameCore, parent: Option<u16>},
+    Key(&'a FrameCore<'a>),
+    NonInheriting{core: &'a FrameCore<'a>, parent: Option<u16>},
     Inheriting(InheritingFrame<'a>)
 }
 
 impl<'a> FrameRef<'a> {
-    pub fn create(frames: &'a [NonKeyFrame], key_frame: &'a FrameCore, frame_index: u16) -> Option<Self> {
+    pub fn create(frames: &'a [NonKeyFrame<'a>], key_frame: &'a FrameCore<'a>, frame_index: FrameIndex) -> Option<Self> {
         if frame_index == 0 {
             return Some(FrameRef::Key(key_frame));
         } 

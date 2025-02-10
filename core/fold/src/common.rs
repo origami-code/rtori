@@ -1,6 +1,6 @@
 use crate::Handful;
 
-pub use alloc::{string::String, vec::Vec};
+pub use bumpalo::collections::{String, Vec};
 
 #[derive(Debug, Clone)]
 pub struct PropertyNotMatchingError {

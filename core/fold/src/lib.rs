@@ -1,8 +1,8 @@
 #![cfg_attr(not(test), no_std)]
-#![feature(impl_trait_in_assoc_type)]
-#![feature(coroutines)]
-#![feature(coroutine_trait)]
-#![feature(stmt_expr_attributes)]
+//#![feature(impl_trait_in_assoc_type)]
+//#![feature(coroutines)]
+//#![feature(coroutine_trait)]
+//#![feature(stmt_expr_attributes)]
 
 extern crate alloc;
 
@@ -44,29 +44,29 @@ pub enum Field {
     VerticesCoords,
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct FileMetadata {
-    #[serde(rename = "file_spec")]
+#[derive(Debug, Clone /*, serde::Deserialize, serde::Serialize*/)]
+pub struct FileMetadata<'alloc> {
+    //#[serde(rename = "file_spec")]
     pub spec: Option<u32>,
-    #[serde(rename = "file_creator")]
-    pub creator: Option<String>,
-    #[serde(rename = "file_author")]
-    pub author: Option<String>,
+    //#[serde(rename = "file_creator")]
+    pub creator: Option<String<'alloc>>,
+    //#[serde(rename = "file_author")]
+    pub author: Option<String<'alloc>>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct File {
-    #[serde(flatten)]
-    pub file_metadata: Option<FileMetadata>,
+#[derive(Debug, Clone /*, serde::Deserialize, serde::Serialize*/)]
+pub struct File<'alloc> {
+    //#[serde(flatten)]
+    pub file_metadata: Option<FileMetadata<'alloc>>,
 
-    #[serde(rename = "file_frames")]
-    pub frames: Vec<NonKeyFrame>,
+    //#[serde(rename = "file_frames")]
+    pub frames: Vec<'alloc, NonKeyFrame<'alloc>>,
 
-    #[serde(flatten)]
-    pub key_frame: FrameCore,
+    //#[serde(flatten)]
+    pub key_frame: FrameCore<'alloc>,
 }
 
-impl File {
+impl File<'_> {
     pub fn frame<'a>(&'a self, index: FrameIndex) -> Option<FrameRef<'a>> {
         FrameRef::create(&self.frames, &self.key_frame, index)
     }
