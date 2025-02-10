@@ -41,6 +41,7 @@ set_target_properties(
 
     # Visibility Control
     CXX_VISIBILITY_PRESET hidden
+    BUILD_WITH_INSTALL_RPATH On
 )
 
 if (MSVC)
@@ -49,6 +50,14 @@ if (MSVC)
 
         # Custom property
         ALLOC_USE_WINDOWS_HEAP On
+    )
+endif()
+
+if (APPLE)
+    code_sign_macos(
+        RTOriCommon_sign
+        PATH "$<TARGET_FILE:RTOriCommon>"
+        IDENTITY ${MACOS_CODE_SIGNING_IDENTITY}
     )
 endif()
 

@@ -35,7 +35,16 @@ set_target_properties(
 
     # Visibility Control
     CXX_VISIBILITY_PRESET hidden
+    BUILD_WITH_INSTALL_RPATH On
 )
+
+if (APPLE)
+    code_sign_macos(
+        RTOriSimulateCommon_sign
+        PATH "$<TARGET_FILE:RTOriSimulateCommon>"
+        IDENTITY ${MACOS_CODE_SIGNING_IDENTITY}
+    )
+endif()
 
 install(
     TARGETS RTOriSimulateCommon
