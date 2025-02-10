@@ -52,11 +52,14 @@ Install via brew: `brew install cmake rustup`
 
 Run `git submodule update --init --recursive` after cloning this repository.
 
-1. Setup a nightly toolchain:
-    - `rustup default nightly`
-2. Add the target(s) you want
-    - `x86_64`: run `rustup target add x86_64-apple-darwin`
-    - `arm64`: run `rustup target add aarch64-apple-darwin`
+```sh
+# Setup a nightly toolchain
+rustup default nightly
+
+# Add the target(s) you want, EITHER
+rustup target add x86_64-apple-darwin # x86_64 
+rustup target add aarch64-apple-darwin # arm64/apple silicon
+```
 
 And [create a code signing certificate](https://www.simplified.guide/macos/keychain-cert-code-signing-create) if you don't already have one.
 
