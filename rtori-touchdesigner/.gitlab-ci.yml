@@ -4,6 +4,7 @@ stages:
 
 build-macos-x86_64:
   stage: build
+  needs: []
   tags:
     - macos
     - nix
@@ -11,6 +12,7 @@ build-macos-x86_64:
     - echo MACOS_X86_64_JOB_ID=$CI_JOB_ID >> build-macos-x86_64.env
   script:
     - . /etc/bashrc
+    - cd rtori-touchdesigner/
     - NIXPKGS_ALLOW_UNFREE=1 nix-shell --run
       'rustup target add x86_64-apple-darwin
       && cmake --preset macOS-x86_64
@@ -25,6 +27,7 @@ build-macos-x86_64:
 
 build-macos-arm64:
   stage: build
+  needs: []
   tags:
     - macos
     - nix
@@ -32,6 +35,7 @@ build-macos-arm64:
     - echo MACOS_ARM64_JOB_ID=$CI_JOB_ID >> build-macos-arm64.env
   script:
     - . /etc/bashrc
+    - cd rtori-touchdesigner/
     - NIXPKGS_ALLOW_UNFREE=1 nix-shell --run
       'rustup target add aarch64-apple-darwin
       && cmake --preset macOS-arm64
