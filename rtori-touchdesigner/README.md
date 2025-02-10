@@ -34,6 +34,43 @@ All the `..Fold..` custom operators also provide access to python queries, read-
 🎯: a target, not currently running
 (1): 
 (2): minimum version supported by TouchDesigner 2023
+
+## Building
+
+### `macOS`
+
+#### Requirements
+
+- XCode 15.2 or later
+- cmake 3.30 or later
+- rustup 
+- git
+
+Install via brew: `brew install cmake rustup`
+
+#### Setup
+
+Run `git submodule update --init --recursive` after cloning this repository.
+
+1. Setup a nightly toolchain:
+    - `rustup default nightly`
+2. Add the target(s) you want
+    - `x86_64`: run `rustup target add x86_64-apple-darwin`
+    - `arm64`: run `rustup target add aarch64-apple-darwin`
+
+And [create a code signing certificate](https://www.simplified.guide/macos/keychain-cert-code-signing-create) if you don't already have one.
+
+#### Build
+
+Replace `arm64` by `x86_64` if building for an intel mac.
+
+```sh
+cmake --preset macOS-arm64 -DMACOS_CODE_SIGNING_IDENTITY="YOUR_IDENTITY" # Configure
+cmake --build --preset macOS-arm64 --config RelWithDebInfo # Build
+cmake --install macOS-arm64-build --config RelWithDebInfo # Install to `macOS-arm64-output`
+# The folder `macOS-arm64-output` now contains the plugins, and can be copied and renamed to `Plugins/` inside the target projects
+```
+
 ## Implementation Notes
 
 ### Architecture

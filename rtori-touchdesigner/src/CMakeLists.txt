@@ -3,6 +3,8 @@ set(MACOS_BUNDLE_PREFIX "art.orilab.rtori.td" CACHE STRING "macOS bundle prefixi
 set(MACOS_BUNDLE_FULLNAME_SUFFIX " (rtori plugin for TouchDesigner)" CACHE STRING "macOS bundle full name suffix")
 set(COPYRIGHT_HUMAN "Ars Electronica Futurelab 2024-2025" CACHE STRING "Copyright notice")
 set(MACOS_MINIMUM_SYSTEM_VERSION "10.15" CACHE INTERNAL "minimum macOS version supported, should be in sync with TouchDesigner")
+set(MACOS_CODE_SIGNING_IDENTITY "alexandre-fl-macos" CACHE STRING "code signing identity to use for signing the artefacts on macOS")
+
 if (CMAKE_OSX_DEPLOYMENT_TARGET GREATER MACOS_MINIMUM_SYSTEM_VERSION)
     message(FATAL_ERROR "We should be targeting versipn ${MACOS_MINIMUM_SYSTEM_VERSION} (synced with TouchDesigner), but set deployment target is over : ${CMAKE_OSX_DEPLOYMENT_TARGET}")
 endif()
@@ -133,7 +135,7 @@ function(prepare_plugin)
         set(bundle_signature_target "${target_name}_sign")
         code_sign_macos(${bundle_signature_target}
             PATH "${bundle_path}"
-            IDENTITY "alexandre-fl-macos"
+            IDENTITY ${MACOS_CODE_SIGNING_IDENTITY}
         )
 
         add_custom_target(
