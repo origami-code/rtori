@@ -136,6 +136,7 @@ function(prepare_plugin)
         code_sign_macos(${bundle_signature_target}
             PATH "${bundle_path}"
             IDENTITY ${MACOS_CODE_SIGNING_IDENTITY}
+            DEPENDS "${dso_path}" 
         )
 
         add_custom_target(
