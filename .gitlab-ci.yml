@@ -1,0 +1,6 @@
+stages:
+  - build
+  - release
+
+include:
+  - local: '/rtori-touchdesigner/.gitlab-ci.yml'

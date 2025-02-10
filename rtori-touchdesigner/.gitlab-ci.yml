@@ -1,0 +1,56 @@
+stages:
+  - build
+  - release
+
+build-macos-x86_64:
+  stage: build
+  tags:
+    - macos
+    - nix
+  before_script:
+    - echo MACOS_X86_64_JOB_ID=$CI_JOB_ID >> build-macos-x86_64.env
+  script:
+    - . /etc/bashrc
+    - NIXPKGS_ALLOW_UNFREE=1 nix-shell --run
+      'rustup target add x86_64-apple-darwin
+      && cmake --preset macOS-x86_64
+      && cmake --build --preset macOS-x86_64 --config RelWithDebInfo
+      && cmake --install macOS-x86_64-build --config RelWithDebInfo'
+  artifacts:
+    paths:
+      - "macOS-x86_64-output/"
+    reports:
+      dotenv: build-macos-x86_64.env
+    expire_in: never
+
+build-macos-arm64:
+  stage: build
+  tags:
+    - macos
+    - nix
+  before_script:
+    - echo MACOS_ARM64_JOB_ID=$CI_JOB_ID >> build-macos-arm64.env
+  script:
+    - . /etc/bashrc
+    - NIXPKGS_ALLOW_UNFREE=1 nix-shell --run
+      'rustup target add aarch64-apple-darwin
+      && cmake --preset macOS-arm64
+      && cmake --build --preset macOS-arm64 --config RelWithDebInfo
+      && cmake --install macOS-arm64-build --config RelWithDebInfo'
+  artifacts:
+    paths:
+      - "macOS-arm64-output/"
+    reports:
+      dotenv: build-macos-arm64.env
+    expire_in: never
+
+#release:
+#  stage: release
+#  rules:
+#    - if: $CI_COMMIT_TAG 
+#  needs:
+#    - job: build-macos-arm64
+#      artifacts: true
+#    - job: build-macos-x86_64
+#      artifacts: true
+#  script:
