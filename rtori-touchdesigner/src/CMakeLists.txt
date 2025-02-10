@@ -139,8 +139,11 @@ function(prepare_plugin)
             DEPENDS "${dso_path}" 
         )
 
+        find_codesign(codesign)
+
         add_custom_target(
             ${bundle_target} ALL
+            COMMAND ${codesign} --verify "${bundle_path}" # Verify that the signature is valid
             COMMENT
                 "Crafting bundle for ${arg_TARGET}"
             DEPENDS
