@@ -17,7 +17,6 @@ if(MSVC)
     add_compile_options("/W4") # TODO: Add /WX
 endif()
 
-
 function(get_target_property_or VARIABLE TARGET PROPERTY DEFAULT)
     get_target_property(found ${arg_TARGET} MACOS_IDENTIFIER)
 
@@ -26,34 +25,6 @@ function(get_target_property_or VARIABLE TARGET PROPERTY DEFAULT)
     endif()
 
     set(${VARIABLE} ${found} PARENT_SCOPE)
-endfunction()
-
-function(prepare_plugin_plist)
-    cmake_parse_arguments(PARSE_ARGV 0 arg
-        ""
-        "TARGET"
-        ""
-    )
-
-    get_target_property(BINARY_DIR ${arg_TARGET} BINARY_DIR)
-
-
-    get_target_property_or(identifier_suffix ${arg_TARGET} MACOS_IDENTIFIER_SUFFIX "${arg_TARGET}")
-
-    get_target_property_or(IDENTIFIER ${arg_TARGET} MACOS_IDENTIFIER "${MACOS_BUNDLE_PREFIX}.${identifier_suffix}")
-    get_target_property_or(NAME_SHORT ${arg_TARGET} MACOS_NAME_SHORT "${arg_TARGET}")
-    get_target_property_or(NAME_FULL ${arg_TARGET} MACOS_NAME_FULL "${NAME_SHORT} ${MACOS_BUNDLE_FULLNAME_SUFFIX}")
-    get_target_property_or(VERSION_TRIPLET ${arg_TARGET} MACOS_VERSION_TRIPLET "0.0.0")
-    get_target_property_or(VERSION_TRIPLET_WITH_BUILD ${arg_TARGET} MACOS_VERSION_TRIPLET_WITH_BUILD "0.0.0.0")
-    get_target_property_or(VERSION_HUMAN ${arg_TARGET} MACOS_VERSION_HUMAN "25-02-08")
-    get_target_property_or(COPYRIGHT_HUMAN ${arg_TARGET} MACOS_COPYRIGHT_HUMAN "${COPYRIGHT_HUMAN}")
-    get_target_property_or(EXECUTABLE_NAME ${arg_TARGET} MACOS_EXECUTABLE_NAME "${arg_TARGET}.so")
-    get_target_property_or(ICON_FILE ${arg_TARGET} MACOS_ICON_FILE "icon.icns")
-
-    set(plist_intermediate_path "${BINARY_DIR}/Info.plist.intermediate")
-    configure_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/Info.plist.in" "${plist_intermediate_path}" NEWLINE_STYLE UNIX)
-
-    set_target_properties(${arg_TARGET} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${plist_intermediate_path}")
 endfunction()
 
 # Sets up a MODULE target to work as a TouchDesigner plugin
@@ -96,15 +67,33 @@ function(prepare_plugin)
 
     # Configure file extensions
     if(APPLE)
-        # First, we want a .so without prefix
-        # Like this RTOriMyOP.so
+        list(APPEND rpath
+            # Right next to the plugin so
+            "@loader_path/"
+
+            # In the plugin bundle's Contents/Frameworks
+            "@loader_path/../Frameworks"
+
+            # Right outside the plugin bundle, side to side
+            # To get out of the bundle we need  <../../../> as we're in <MyPlugin.plugin/Contents/MacOS/MyPlugin.so>
+            "@loader_path/../../../lib"
+
+            # In the frameworks from TouchDesigner
+            "@executable_path/../Frameworks"
+
+            # Globally installed
+            # TODO
+        )
+
+        # First, we want a .so without prefix, but still with a suffix (that's personal preference)
+        # Like this: RTOriMyOP.so
         set_target_properties(
             ${arg_TARGET}
             PROPERTIES
             SUFFIX ".so"
             PREFIX ""
             MACOSX_RPATH On
-            INSTALL_RPATH "@executable_path/../../../Frameworks;@executable_path/../../../lib;@loader_path/../Frameworks;@loader_path/../lib"
+            INSTALL_RPATH "${rpath}"
             BUILD_WITH_INSTALL_RPATH On
         )
 
