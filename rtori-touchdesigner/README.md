@@ -1,5 +1,7 @@
 # `rtori` touchdesigner plugins & components
 
+Supported Touchdesigner version `099` builds `2023` or later.
+
 ## Components (`.tox`)
 
 These are the `.tox` most people should use instead of the custom operators directly.
