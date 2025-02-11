@@ -1,4 +1,13 @@
-# `rtori` touchdesigner plugins
+# `rtori` touchdesigner plugins & components
+
+## Components (`.tox`)
+
+These are the `.tox` most people should use instead of the custom operators directly.
+They use some of the plugins while adding functionality using native TouchDesigner OPs.
+
+|Name (prefixed `RTOri`) | Description                                                      |State|
+|------------------------|------------------------------------------------------------------|:---:|
+| `SimulateCOMP`         | Simulates an origami folding, taking care of translating the UVs |🚧|
 
 ## Plugins
 
@@ -6,7 +15,7 @@
 |-----|------------------------|---------------------------------------------------------|:---:|
 |SOP  | `Simulate`             | Simulates an origami folding                            |🚧|
 |CHOP | `Simulate`             | Simulates an origami folding                            |🎯|
-|TOP  | `Simulate`             | Simulates an origami folding                            |🎯|
+|TOP  | `Simulate`             | Simulates an origami folding (ouputs positions/velocities/errors) |🎯|
 |POP *| `Simulate`             | Simulates an origami folding                            |🎯|
 |DAT  | `FoldSelectFrame`      | Parses a fold file, outputs a single frame              |🎯|
 |DAT  | `FoldSelect`           | Parses a fold file/frame, outputs the requested fields  |🎯|
