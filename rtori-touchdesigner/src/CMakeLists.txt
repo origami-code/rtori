@@ -43,7 +43,8 @@ function(prepare_shared_library)
     if(MSVC)
         get_target_property(source_dir ${arg_TARGET} SOURCE_DIR)
         target_compile_options(${arg_TARGET} PRIVATE "/d1trimfile:${source_dir}")
-        target_link_options(${arg_TARGET} PRIVATE "/PDBALTPATH:%_PDB")
+        target_link_options(${arg_TARGET} PRIVATE "/PDBALTPATH:$<TARGET_PDB_FILE_NAME:${arg_TARGET}>")
+        # See https://stackoverflow.com/questions/30662342/specifying-path-to-pdb-symbol-file-in-cmake
     endif()
 
     target_compile_definitions(${arg_TARGET} PRIVATE
