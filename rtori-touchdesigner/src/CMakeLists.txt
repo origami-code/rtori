@@ -29,28 +29,21 @@ function(get_target_property_or VARIABLE TARGET PROPERTY DEFAULT)
     set(${VARIABLE} ${found} PARENT_SCOPE)
 endfunction()
 
-# Sets up a MODULE target to work as a TouchDesigner plugin
-function(prepare_plugin)
+function(prepare_shared_library)
     cmake_parse_arguments(PARSE_ARGV 0 arg
         ""
-        "TARGET;NAME"
+        "TARGET"
         ""
     )
-
-    if(MSVC)
-        get_target_property(source_dir ${arg_TARGET} SOURCE_DIR)
-        target_compile_options(${arg_TARGET} PRIVATE "/d1trimfile:${source_dir}")
-        target_link_options(${arg_TARGET} PRIVATE "/PDBALTPATH:%_PDB")
-    endif()
 
     if(NOT TARGET ${arg_TARGET})
         message(FATAL_ERROR "No TARGET given")
     endif()
 
-    get_target_property(target_property ${arg_TARGET} TYPE)
-
-    if(NOT(${target_property} STREQUAL "MODULE_LIBRARY"))
-        message(FATAL_ERROR "TouchDesigner Plugins need to be configured as MODULE")
+    if(MSVC)
+        get_target_property(source_dir ${arg_TARGET} SOURCE_DIR)
+        target_compile_options(${arg_TARGET} PRIVATE "/d1trimfile:${source_dir}")
+        target_link_options(${arg_TARGET} PRIVATE "/PDBALTPATH:%_PDB")
     endif()
 
     target_compile_definitions(${arg_TARGET} PRIVATE
@@ -60,12 +53,39 @@ function(prepare_plugin)
         RTORI_TD_VERSION_BUILD ${PROJECT_VERSION_TWEAK}
     )
 
+
     set_target_properties(
         ${arg_TARGET} PROPERTIES
 
         # Visibility Control
         CXX_VISIBILITY_PRESET hidden
+        BUILD_WITH_INSTALL_RPATH On
     )
+
+    if(MSVC)
+        install(FILES "$<TARGET_PDB_FILE:${arg_TARGET}>" DESTINATION "." COMPONENT Symbols)
+    endif()
+endfunction()
+
+# Sets up a MODULE target to work as a TouchDesigner plugin
+function(prepare_plugin)
+    cmake_parse_arguments(PARSE_ARGV 0 arg
+        ""
+        "TARGET;NAME"
+        ""
+    )
+
+    if(NOT TARGET ${arg_TARGET})
+        message(FATAL_ERROR "No TARGET given")
+    endif()
+
+    prepare_shared_library(TARGET ${arg_TARGET})
+
+    get_target_property(target_property ${arg_TARGET} TYPE)
+
+    if(NOT(${target_property} STREQUAL "MODULE_LIBRARY"))
+        message(FATAL_ERROR "TouchDesigner Plugins need to be configured as MODULE")
+    endif()
 
     # Configure file extensions
     if(APPLE)
@@ -168,10 +188,6 @@ function(prepare_plugin)
         )
     else()
         message(FATAL_ERROR "Unsupported platform")
-    endif()
-
-    if(MSVC)
-        install(FILES "$<TARGET_PDB_FILE:${arg_TARGET}>" DESTINATION "." COMPONENT Symbols)
     endif()
 endfunction()
 

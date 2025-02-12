@@ -10,6 +10,7 @@ list(APPEND RTOriSimulateCommon_Headers
 )
 
 add_library(RTOriSimulateCommon SHARED ${RTOriSimulateCommon_Impl})
+prepare_shared_library(TARGET RTOriSimulateCommon)
 
 # To export the interface
 target_compile_definitions(RTOriSimulateCommon PRIVATE RTORI_TD_BUILD_SHARED=1)
@@ -18,7 +19,7 @@ target_sources(RTOriSimulateCommon PUBLIC
     FILE_SET HEADERS
     TYPE HEADERS
     BASE_DIRS include
-    FILES ${RTOriSimulateCommon_Headers}    
+    FILES ${RTOriSimulateCommon_Headers}
 )
 
 target_compile_features(RTOriSimulateCommon PUBLIC cxx_std_20)
@@ -30,15 +31,7 @@ target_link_libraries(
     TouchDesigner_Common
 )
 
-set_target_properties(
-    RTOriSimulateCommon PROPERTIES
-
-    # Visibility Control
-    CXX_VISIBILITY_PRESET hidden
-    BUILD_WITH_INSTALL_RPATH On
-)
-
-if (APPLE)
+if(APPLE)
     code_sign_macos(
         RTOriSimulateCommon_sign
         PATH "$<TARGET_FILE:RTOriSimulateCommon>"
