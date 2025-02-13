@@ -164,6 +164,8 @@ void SimulationThread::runWorker() {
 	/// An input is normally triggered any time any change is made,
 	/// so this doesn't mean it's a new FoldFile.
 	int64_t lastInputNumber = -1;
+	std::vector<float> verticesUnchanging;
+	bool verticesCachedUnchanging = false;
 
 	// Cook timing
 	std::chrono::time_point<std::chrono::steady_clock> lastCookStart =
@@ -319,29 +321,32 @@ void SimulationThread::runWorker() {
 								result == rtori::SolverOperationResult::Success));
 
 						if (this->m_output.positions.has_value()) {
-							// Add in the vertices from the fold file as we only got the offset
-							// TODO: cache them
-							std::vector<float> verticesUnchanging(
-							  static_cast<size_t>(vertex_count) * 3);
+							// Add in the verticesUnchanging from the fold file as we only got
+							// the offset
+							if (!verticesCachedUnchanging) {
+								verticesUnchanging.resize(static_cast<size_t>(vertex_count) *
+														  3);
 
-							size_t writtenSize = 0;
-							using val_t = float[3];
+								size_t writtenSize = 0;
+								using val_t = float[3];
 
-							rtori::QueryOutput queryOutput = QueryOutput{
-							  .vec3f_array_output = {
-													 .buffer = reinterpret_cast<val_t*>(verticesUnchanging.data()),
-													 .buffer_size = vertex_count,
-													 .written_size = &writtenSize,
-													 .offset = 0}
-							};
+								rtori::QueryOutput queryOutput = QueryOutput{
+								  .vec3f_array_output = {.buffer = reinterpret_cast<val_t*>(
+verticesUnchanging.data()),
+														 .buffer_size = vertex_count,
+														 .written_size = &writtenSize,
+														 .offset = 0}
+								 };
 
-							rtori::FoldOperationStatus queryStatus =
-							  rtori::rtori_fold_query_frame(solver.foldFile,
-															solver.frameIndex,
-															FoldFrameQuery::VerticesCoords,
-															&queryOutput);
+								rtori::FoldOperationStatus queryStatus =
+								  rtori::rtori_fold_query_frame(solver.foldFile,
+																solver.frameIndex,
+																FoldFrameQuery::VerticesCoords,
+																&queryOutput);
 
-							assert(queryStatus == rtori::FoldOperationStatus::Success);
+								assert(queryStatus == rtori::FoldOperationStatus::Success);
+								verticesCachedUnchanging = true;
+							}
 
 							auto dest = this->m_output.backingBuffer.data() +
 										std::get<0>(this->m_output.positions.value());
@@ -407,6 +412,12 @@ this->m_output.indices.data()),
 			if (lock.owns_lock()) {
 				const Input& input = this->m_input;
 				if (input.inputNumber != lastInputNumber) {
+					// TODO: Create a "geometryChanged" method
+					if (input.foldFileSource.changed || input.frameIndex.changed) {
+						// Invalidate the verticesUnchanging cache
+						verticesCachedUnchanging = false;
+					}
+
 					// We update our knowledge of what to extract
 					// We don't care about the dirty flag as they don't impact anything else
 					extractPosition = input.extractPosition.value;
