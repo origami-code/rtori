@@ -82,6 +82,7 @@ pub unsafe extern "C" fn rtori_ctx_create_solver<'alloc>(
     let ctx = {
         let ctx = unsafe { crate::Arc::from_raw_in(ctx, (&*ctx).allocator) };
         let cloned = (&ctx).clone();
+        core::mem::forget(ctx);
         cloned
     };
     let allocator = ctx.allocator;

@@ -152,7 +152,7 @@ void SimulationThread::runWorker() {
 	}
 
 	nameThread();
-	SimulationThreadImpl impl(this->m_ctx);
+	// SimulationThreadImpl impl(this->m_ctx);
 
 	bool extractPosition = false;
 	bool extractVelocity = false;
