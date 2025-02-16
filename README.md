@@ -76,6 +76,19 @@ flowchart TD
     end
 ```
 
+## TODO
+
+1. Reorganize rtori-core into its own directory with supporting rust code
+2. Rename rtori-core-simd (&-wgpu) to -os-simd
+3. Compare performance with different x86_64 build configs (SSE2, SSE4.1, AVX, AVX2, AVX512, etc.) see https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels as inspiration (start with x86-64-v2 as a baseline)
+    - See what makes sense to incorporate
+4. Run the subset of targets with VTune & tune the performance (on all three)
+5. Profile to see perf bottlenecks (on all three)
+6. Redo step 3
+7. If still there are differences, use stabby or stable_abi to create rust shared libraries that are loaded at runtime, depending on which interface is available, as well as a rtori-os-simd-loader crate that loads them on demand
+
+Note: see https://github.com/HenrikBengtsson/x86-64-level / https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels for levels we can use as guidelines
+
 ## Target Architectures
 
 Potential support: (In LLVM/Rust triplet)

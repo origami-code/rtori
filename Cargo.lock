@@ -327,6 +327,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "doubled"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f60f472d90e6b0aa29ba7e63aef46fa5441a4a852d36d950648b5468adfe3a3"
+
+[[package]]
 name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1048,6 +1054,7 @@ dependencies = [
  "num-traits",
  "rtori-os-model",
  "simba",
+ "sleef",
  "static_assertions",
  "tracing",
 ]
@@ -1222,6 +1229,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f92a496fb766b417c996b9c5e57daf2f7ad3b0bebe1ccfca4856390e3d3bb67"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "sleef"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fe16088049a19013d5736660a666dae8e1dbb78dd1ced530a396a7bab4ef47d"
+dependencies = [
+ "doubled",
 ]
 
 [[package]]

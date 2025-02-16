@@ -25,7 +25,7 @@ pub enum ExtractCreasesError {
 pub enum ExtractCreasesIteratorErrorKind {
     EdgeHasInvalidNumberOfFaces { face_count: usize },
     NonTriangularFace { vertices_count: usize },
-    // edge[x] says it is connected to face[y] but the vertices of edge[x] aren't both in face[y]
+    /// edge[x] says it is connected to face[y] but the vertices of edge[x] aren't both in face[y]
     InvalidFaceVertices { face_index: usize },
     FaceHasTwiceTheSameVertex { face_index: usize },
 }

@@ -25,6 +25,7 @@ diplomat-tool = { git = 'https://github.com/aabizri/diplomat.git', branch = "fea
 [profile.release]
 codegen-units = 1
 lto = "thin"
+debug = true
 
 [profile.bench]
 inherits = "release"

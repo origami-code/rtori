@@ -157,7 +157,19 @@ where
                 ));
 
                 // Finally, we can call acos
-                let acos = clamped.map(|v| v.simd_acos());
+                // OPTIMIZATION(aab 2025-02-16):
+                //
+                // We bring in SLEEF here (or its reimplementation in rust), as it allows us to 
+                // improve by 14% (!) the throughput of the whole program for AVX2 256bit/8 lane vectors
+                // when compared to the native & naïve implementation of `simd_acos` which delegates to scalar calls of
+                // `acosf`.
+                //
+                // This brings the performance of the thirteen horns 1 step bench from 14.759Kelem/s to 17.029Kelem/s,
+                // and the simple fold 100 step bench from 553.74 Kelem/s to 638.54 Kelem/s.
+                //
+                // This was found out via intel V-Tune tests with thirteen horns bench on AVX2 256bit/8, showing as
+                // ~11% of the performance before the switch to SLEEF, disappearing from the callgraph afterwards.
+                let acos = clamped.map(|v| simba::simd::Simd(sleef::f32x::acos_u10(v.0)));
 
                 acos
             };

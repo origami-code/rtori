@@ -1,6 +1,7 @@
 #![feature(allocator_api)]
 
-use alloc::Allocator;
+extern crate alloc;
+use alloc::alloc::Allocator;
 use core::ffi::c_void;
 
 #[cfg(feature = "allocator_api")]

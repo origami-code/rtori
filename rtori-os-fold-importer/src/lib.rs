@@ -77,6 +77,7 @@ where
     import_in(output_factory, input, config, alloc::alloc::Global)
 }
 
+/// Load the preprocessed input into a given loader
 pub fn import_preprocessed_in<'output, 'input, O, FI, PA, A>(
     output: &mut O,
     preprocessed: &'input PreprocessedInput<'input, FI, PA>,
