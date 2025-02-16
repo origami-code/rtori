@@ -93,14 +93,14 @@ where
         // This is AFTER the implementation of the similar optimization in [cc_per_node_face.rs]'s line 172,
         // where this optimization happened on acos
         //
-        // This affects the perforamnce of (original -> per_node_face optim -> per_crease_fold_angle optim)
+        // This affects the perforamnce of (original -> per_node_face optim -> per_crease_fold_angle ULP 1.0)
         // - stepping/step_thirteen_horns_1_step: 14.759Kelem/s -> 17.029Kelem/s -> 17.595 Kelem/s
         // - stepping/step_simple_100_step: 553.74 Kelem/s -> 638.54 Kelem/s -> 652.38 Kelem/s
         //
         // Just as the previous optimization, this was found out via intel V-Tune tests with stepping\step_thirteen_horns_1_step
         // on AVX2 256bit/8, showing as ~3.2% of the performance before the switch to SLEEF, and as before, disappearing from the
         // call graph afterwards.
-        let fold_angle = simba::simd::Simd(sleef::f32x::atan2_u10(y.0, x.0));
+        let fold_angle = simba::simd::Simd(sleef::f32x::atan2_u35(y.0, x.0));
         tracing::event!(tracing::Level::TRACE, "uncorrected fold angle {fold_angle:?} (y: {y:?}, x: {x:?}, crease_vector: {crease_vector:?})");
 
         let zero = simba::simd::Simd(SimdF32::splat(0.0));

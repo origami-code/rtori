@@ -169,7 +169,7 @@ where
                 //
                 // This was found out via intel V-Tune tests with thirteen horns bench on AVX2 256bit/8, showing as
                 // ~11% of the performance before the switch to SLEEF, disappearing from the callgraph afterwards.
-                let acos = clamped.map(|v| simba::simd::Simd(sleef::f32x::acos_u10(v.0)));
+                let acos = clamped.map(|v| simba::simd::Simd(sleef::f32x::acos_u35(v.0)));
 
                 acos
             };
