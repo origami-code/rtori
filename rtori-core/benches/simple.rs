@@ -23,7 +23,6 @@ fn bench_source(c: &mut Criterion, name: &str, fold_str: &str, step_count: u32) 
 
     solver.load_fold_in(&parsed_input.key_frame, allocator);
 
-
     let mut group = c.benchmark_group("stepping");
     group.sample_size(500);
     group.measurement_time(std::time::Duration::from_secs(30));
@@ -32,16 +31,24 @@ fn bench_source(c: &mut Criterion, name: &str, fold_str: &str, step_count: u32) 
 }
 
 fn simple_benchmark(c: &mut Criterion) {
-
     {
         const STEP_COUNT: u32 = 100;
-        bench_source(c, &format!("step_simple_{STEP_COUNT}_step"), SIMPLE_FOLD, STEP_COUNT);
+        bench_source(
+            c,
+            &format!("step_simple_{STEP_COUNT}_step"),
+            SIMPLE_FOLD,
+            STEP_COUNT,
+        );
     }
     {
         const STEP_COUNT: u32 = 1;
-        bench_source(c, &format!("step_thirteen_horns_{STEP_COUNT}_step"), THIRTEEN_HORNS_FOLD, STEP_COUNT);
+        bench_source(
+            c,
+            &format!("step_thirteen_horns_{STEP_COUNT}_step"),
+            THIRTEEN_HORNS_FOLD,
+            STEP_COUNT,
+        );
     }
-    
 }
 
 criterion_group!(benches, simple_benchmark);
