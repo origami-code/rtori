@@ -1,7 +1,7 @@
-use super::PreprocessedInput;
+use super::InputWithCreaseGeometry;
 use alloc::alloc::Allocator;
 
-impl<'input, I, A> PreprocessedInput<'input, I, A>
+impl<'input, I, A> InputWithCreaseGeometry<'input, I, A>
 where
     A: Allocator,
 {

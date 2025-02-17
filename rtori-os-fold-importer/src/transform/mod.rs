@@ -9,6 +9,7 @@ use crate::{
     triangulation::TriangulatedDiff,
 };
 
+/// In FOLD terms, compute `vertices_edges` given `edges_vertices`
 fn create_vertices_edges<EdgeVerticesSource, A>(
     edge_vertices: EdgeVerticesSource,
     vertices_count: usize,
@@ -30,6 +31,7 @@ where
     vertices_edges
 }
 
+/// In FOLD terms, compute `vertices_faces` given `faces_vertices`
 fn create_vertices_faces<'a, FaceVerticesSource, FaceVertices, A>(
     face_vertices: FaceVerticesSource,
     vertices_count: usize,
@@ -52,6 +54,7 @@ where
     vertices_faces
 }
 
+/// In FOLD terms, compute `edges_faces` given `faces_vertices` and `edges_vertices`
 fn create_edges_faces<'a, A: Allocator + Clone>(
     input: &'a fold::FrameCore,
     allocator: A,
@@ -120,6 +123,10 @@ pub enum TransformError {
     IncorrectInput,
 }
 
+/// The transformed data is the additional information to the Fold Input,
+/// needed to load an Origami Simulator solver, has been computed.
+///
+/// This might go through triangulating the input.
 pub struct TransformedData<A>
 where
     A: Allocator,
@@ -142,6 +149,8 @@ where
     }
 }
 
+/// The `TransformedInput` combines the fold source and the `TransformedData` to provide
+/// the required information for the processing and eventual loading of the Fold into an Origami Simulator solver.
 pub struct TransformedInput<'frame, A>
 where
     A: Allocator,

@@ -59,9 +59,25 @@ crate::input::subclass! {
     }
 }
 
-pub fn iter_edges<'a, FI: ExtractCreasesInput>(
+struct RelevantEdgeInfo<'a> {
+    /// Which vertices, by index, compose this edge
+    vertex_indices: Vector2U,
+
+    /// The faces, by index, neighbouring this edge
+    face_indices: &'a [u32],
+
+    /// The assignment of the given crease
+    /// Mountain, Valley, Facet ?
+    assignment: FoldAssignment,
+
+    /// Fold angle if specified, otherwise `Option::None`
+    fold_angle: Option<f32>,
+}
+
+/// Iterate through the edges and returns a subset of its elements
+fn iter_edges<'a, FI: ExtractCreasesInput>(
     fi: &'a FI,
-) -> impl Iterator<Item = (Vector2U, &'a [u32], FoldAssignment, Option<f32>)> + use<'a, FI> {
+) -> impl Iterator<Item = RelevantEdgeInfo<'a>> + use<'a, FI> {
     let edges_vertices = fi.edges_vertices();
     let edges_faces = fi.edges_faces();
     let edges_assignment = fi.edges_assignment();
@@ -80,7 +96,14 @@ pub fn iter_edges<'a, FI: ExtractCreasesInput>(
         )
         .into_iter();
 
-    itertools::izip!(vit, faces_it, ait, fit)
+    itertools::izip!(vit, faces_it, ait, fit).map(
+        |(vertex_indices, face_indices, assignment, fold_angle)| RelevantEdgeInfo {
+            vertex_indices,
+            face_indices,
+            assignment,
+            fold_angle,
+        },
+    )
 }
 
 pub fn count_creases<'a, FI: ExtractCreasesInput>(input: &'a FI) -> usize {
@@ -96,8 +119,7 @@ pub fn count_creases<'a, FI: ExtractCreasesInput>(input: &'a FI) -> usize {
         .count()
 }
 
-/// TODO: Add a test suite
-/// foldAngles is not provided,
+/// Extract creases from the input
 pub fn extract_creases<'a, FI: ExtractCreasesInput>(
     input: &'a FI,
 ) -> impl Iterator<Item = Result<Crease, ExtractCreasesIteratorError>> + use<'a, FI> {
@@ -111,8 +133,10 @@ pub fn extract_creases<'a, FI: ExtractCreasesInput>(
     iterator
         // Filter out the irrelevant folds (non-mountain, valley or facet)
         .enumerate()
-        .filter_map(move |(edge_index, (vertex, faces, assignment, fold_angles))| {
-            match (assignment, fold_angles) {
+        .filter_map(move |(edge_index, edge_info)| {
+
+
+            match (edge_info.assignment, edge_info.fold_angle) {
                 (FoldAssignment::Facet | FoldAssignment::Mountain | FoldAssignment::Valley, Some(a)) => Some(a),
                 (FoldAssignment::Mountain, None) => Some(default_mountain_fold_angle),
                 (FoldAssignment::Valley, None) => Some(default_valley_fold_angle),
@@ -120,8 +144,8 @@ pub fn extract_creases<'a, FI: ExtractCreasesInput>(
                 _ => None
             }.map(|fold_angle| (
                 edge_index,
-                vertex,
-                faces,
+                edge_info.vertex_indices,
+                edge_info.face_indices,
                 fold_angle,
             ))
         })

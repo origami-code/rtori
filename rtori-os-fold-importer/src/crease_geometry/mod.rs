@@ -1,6 +1,9 @@
 mod dt;
 pub use dt::*;
 
+mod load;
+pub use load::*;
+
 use crate::creases::Crease;
 use core::alloc::Allocator;
 use rtori_os_model::ModelSize;
@@ -17,8 +20,11 @@ pub(crate) struct CreaseNodePair {
     pub node_index: u32,
 }
 
+/// The `CreaseGeometry` is essentially an extract of the creases and their relations to nodes.
+/// When combined with [`crate::ImportInput`] it contains all the information to load an Origami Simulator
+/// solver.
 #[derive(Debug, Clone)]
-pub(crate) struct PreprocessedData<A>
+pub(crate) struct CreaseGeometry<A>
 where
     A: Allocator,
 {
@@ -31,7 +37,7 @@ where
     pub node_creases_complement: alloc::vec::Vec<CreaseNodePair, A>,
 }
 
-impl<A> PreprocessedData<A>
+impl<A> CreaseGeometry<A>
 where
     A: Allocator,
 {
@@ -39,8 +45,8 @@ where
         self,
         input: &'input I,
         size: ModelSize,
-    ) -> PreprocessedInput<'input, I, A> {
-        PreprocessedInput {
+    ) -> InputWithCreaseGeometry<'input, I, A> {
+        InputWithCreaseGeometry {
             input,
             size,
             preprocessed: self,
@@ -48,46 +54,26 @@ where
     }
 }
 
+/// The [`InputWithCreaseGeometry`] combines a [`CreaseGeometry`] with a [`crate::ImportInput`],
+/// containing all the information needed to load an Origami Simulator.
 #[derive(Debug, Clone)]
-pub struct PreprocessedInput<'input, I, A>
+pub struct InputWithCreaseGeometry<'input, I, A>
 where
     A: Allocator,
 {
     pub(crate) input: &'input I,
     pub(crate) size: rtori_os_model::ModelSize,
-    pub(crate) preprocessed: PreprocessedData<A>,
+    pub(crate) preprocessed: CreaseGeometry<A>,
 }
 
-impl<'input, I, A> PreprocessedInput<'input, I, A>
+impl<'input, I, A> InputWithCreaseGeometry<'input, I, A>
 where
     A: Allocator,
 {
     pub fn size(&self) -> &rtori_os_model::ModelSize {
         &self.size
     }
-
 }
-
-impl<'input, I, A> PreprocessedInput<'input, I, A>
-where
-    I: crate::ImportInput,
-    A: core::alloc::Allocator
-{
-
-    pub fn load<'output, O, SA>(
-        &self,
-        output: &mut O,
-        config: crate::ImportConfig,
-        allocator: SA,
-    ) -> Result<(), crate::ImportError>
-    where
-        O: rtori_os_model::LoaderDyn<'output> + 'output,
-        SA: core::alloc::Allocator + Clone,
-    {
-        todo!()
-    }
-}
-
 
 #[derive(Debug, Clone, Copy)]
 pub enum PreprocessingError {
@@ -98,7 +84,7 @@ pub enum PreprocessingError {
 pub fn preprocess_data<'input, I, A>(
     input: &'input I,
     allocator: A,
-) -> Result<PreprocessedData<A>, PreprocessingError>
+) -> Result<CreaseGeometry<A>, PreprocessingError>
 where
     I: crate::creases::ExtractCreasesInput,
     A: Allocator + Clone,
@@ -111,7 +97,7 @@ where
             input.edges_vertices().count(),
             allocator.clone(),
         );
-        for (i, crease_extraction_result) in creases_iter.enumerate() {
+        for (_i, crease_extraction_result) in creases_iter.enumerate() {
             let crease =
                 crease_extraction_result.map_err(|e| PreprocessingError::ExtractCreasesError(e))?;
             creases.push(crease);
@@ -122,8 +108,6 @@ where
     let mut node_inv_creases = alloc::vec::Vec::<CreaseNodePair, _>::new_in(allocator.clone());
     let mut node_creases = alloc::vec::Vec::<CreaseNodePair, _>::new_in(allocator.clone());
     for (crease_index, crease) in creases.iter().enumerate() {
-        let edge_index = crease.edge_index;
-
         // We'll need this at several points
         let vertex_indices = input
             .edges_vertices()
@@ -145,7 +129,7 @@ where
         }));
     }
 
-    Ok(PreprocessedData {
+    Ok(CreaseGeometry {
         creases,
         node_creases_adjacent: node_inv_creases,
         node_creases_complement: node_creases,
@@ -180,7 +164,7 @@ where
 pub fn preprocess<'input, I, A>(
     input: &'input I,
     allocator: A,
-) -> Result<PreprocessedInput<'input, I, A>, PreprocessingError>
+) -> Result<InputWithCreaseGeometry<'input, I, A>, PreprocessingError>
 where
     I: crate::input::ImportInput,
     A: Allocator + Clone,
@@ -193,7 +177,7 @@ where
             as u32,
     );
 
-    Ok(PreprocessedInput {
+    Ok(InputWithCreaseGeometry {
         input,
         size,
         preprocessed,
