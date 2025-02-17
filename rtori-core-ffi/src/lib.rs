@@ -281,4 +281,8 @@ mod ffi {
         /// Implies the use of [`u16_output`] as data parameter
         FrameCount,
     }
+
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct SolverInstance {}
 }

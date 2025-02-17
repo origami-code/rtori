@@ -89,6 +89,14 @@ flowchart TD
 
 Note: see https://github.com/HenrikBengtsson/x86-64-level / https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels for levels we can use as guidelines
 
+## Build Variants
+
+Apple aarch64:
+    M4: arm9.2-A without SVE
+        target-cpu: "apple-m4" SHA2, FPARMv8, NEON, SME, SME2, SMEF64F64, SMEI16I64, ... https://github.com/llvm/llvm-project/blob/e5e38ddf1b8043324175868831da21e941c00aff/llvm/lib/Target/AArch64/AArch64Processors.td#L903
+    M3 == M2: arm8.6-A target-cpu: "apple-m2"
+    M1: armv8.4-A target-cpu: "apple-m1"
+
 ## Target Architectures
 
 Potential support: (In LLVM/Rust triplet)
