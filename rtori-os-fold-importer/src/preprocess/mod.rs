@@ -65,7 +65,29 @@ where
     pub fn size(&self) -> &rtori_os_model::ModelSize {
         &self.size
     }
+
 }
+
+impl<'input, I, A> PreprocessedInput<'input, I, A>
+where
+    I: crate::ImportInput,
+    A: core::alloc::Allocator
+{
+
+    pub fn load<'output, O, SA>(
+        &self,
+        output: &mut O,
+        config: crate::ImportConfig,
+        allocator: SA,
+    ) -> Result<(), crate::ImportError>
+    where
+        O: rtori_os_model::LoaderDyn<'output> + 'output,
+        SA: core::alloc::Allocator + Clone,
+    {
+        todo!()
+    }
+}
+
 
 #[derive(Debug, Clone, Copy)]
 pub enum PreprocessingError {
