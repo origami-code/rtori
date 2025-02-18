@@ -123,11 +123,9 @@ pub enum TransformError {
     IncorrectInput,
 }
 
-/// The transformed data is the additional information to the Fold Input,
-/// needed to load an Origami Simulator solver, has been computed.
-///
-/// This might go through triangulating the input.
-pub struct TransformedData<A>
+/// The `FoldSupplement` is the additional information to the Fold Input,
+/// needed to load an Origami Simulator solver.
+pub struct FoldSupplement<A>
 where
     A: Allocator,
 {
@@ -137,35 +135,35 @@ where
     pub edges_faces: Vec<Vec<FaceIndex, A>, A>,
 }
 
-impl<A> TransformedData<A>
+impl<A> FoldSupplement<A>
 where
     A: Allocator,
 {
     pub const fn with_fold<'frame>(
         &'frame self,
         frame: &'frame fold::FrameCore,
-    ) -> TransformedInput<'frame, A> {
-        TransformedInput::new(frame, self)
+    ) -> SupplementedInput<'frame, A> {
+        SupplementedInput::new(frame, self)
     }
 }
 
-/// The `TransformedInput` combines the fold source and the `TransformedData` to provide
+/// The `SupplementedInput` combines the fold source and the `FoldSupplement` to provide
 /// the required information for the processing and eventual loading of the Fold into an Origami Simulator solver.
-pub struct TransformedInput<'frame, A>
+pub struct SupplementedInput<'frame, A>
 where
     A: Allocator,
 {
     pub source: &'frame fold::FrameCore,
-    pub transformed: &'frame TransformedData<A>,
+    pub transformed: &'frame FoldSupplement<A>,
 }
 
-impl<'frame, A> TransformedInput<'frame, A>
+impl<'frame, A> SupplementedInput<'frame, A>
 where
     A: Allocator,
 {
     pub const fn new(
         fold: &'frame fold::FrameCore,
-        transformed: &'frame TransformedData<A>,
+        transformed: &'frame FoldSupplement<A>,
     ) -> Self {
         {
             Self {
@@ -175,7 +173,7 @@ where
         }
     }
 }
-pub struct VerticesCoords<'input, A>(&'input TransformedInput<'input, A>)
+pub struct VerticesCoords<'input, A>(&'input SupplementedInput<'input, A>)
 where
     A: Allocator;
 
@@ -310,7 +308,7 @@ impl<'a> Proxy<'a> for DegreesToRadiansProxy<'a> {
     }
 }
 
-impl<'input, A> crate::input::ImportInput for TransformedInput<'input, A>
+impl<'input, A> crate::input::ImportInput for SupplementedInput<'input, A>
 where
     A: core::alloc::Allocator,
 {
@@ -513,7 +511,7 @@ where
 pub fn transform_in<A: Allocator + Clone>(
     input: &fold::FrameCore,
     allocator: A,
-) -> Result<TransformedData<A>, TransformError> {
+) -> Result<FoldSupplement<A>, TransformError> {
     // First, triangulate
     let triangulated = crate::triangulation::triangulate3d_collect(
         input
@@ -541,7 +539,7 @@ pub fn transform_triangulated_in<A: Allocator + Clone>(
     input: &fold::FrameCore,
     triangulated: crate::triangulation::TriangulatedDiff<A>,
     allocator: A,
-) -> Result<TransformedData<A>, TransformError> {
+) -> Result<FoldSupplement<A>, TransformError> {
     // Then, we compute the required mappings
     let vertices_count = input.vertices.count();
     let vertices_edges = create_vertices_edges(
@@ -566,7 +564,7 @@ pub fn transform_triangulated_in<A: Allocator + Clone>(
     let edges_faces =
         create_edges_faces(input, allocator.clone()).map_err(|_| TransformError::IncorrectInput)?;
 
-    Ok(TransformedData {
+    Ok(FoldSupplement {
         triangulated,
         vertices_edges,
         vertices_faces,

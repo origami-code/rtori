@@ -3,7 +3,7 @@
 extern crate alloc;
 
 mod store;
-use rtori_os_fold_importer::{import_in, transform::transform_in};
+use rtori_os_fold_importer::{import_in, supplement::transform_in};
 use store::*;
 
 const SIMPLE_EXPECTED: &'static str = include_str!("../testdata/simple.json");

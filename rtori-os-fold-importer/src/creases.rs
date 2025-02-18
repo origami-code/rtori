@@ -23,17 +23,22 @@ pub enum ExtractCreasesError {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExtractCreasesIteratorErrorKind {
-    EdgeHasInvalidNumberOfFaces {
-        face_count: usize,
-    },
+    /// edge #{edge_index} has {face_count} faces, which is invalid
+    EdgeHasInvalidNumberOfFaces { face_count: usize },
+    /// edge's face #{face_number} (index {face_index}) is not triangular (it has {vertices_count} vertices)
     NonTriangularFace {
+        face_number: usize,
+        face_index: usize,
         vertices_count: usize,
     },
-    /// edge[x] says it is connected to face[y] but the vertices of edge[x] aren't both in face[y]
+    /// edge #{edge_index}'s face #{face_number} (index {face_index}) does not contain both vertices of the edge
     InvalidFaceVertices {
+        face_number: usize,
         face_index: usize,
     },
+    /// edge #{edge_index}'s face #{face_number} (index {face_index}) contains at least twice same vertex index
     FaceHasTwiceTheSameVertex {
+        face_number: usize,
         face_index: usize,
     },
 }
@@ -43,6 +48,24 @@ pub struct ExtractCreasesIteratorError {
     pub edge_index: usize,
     pub kind: ExtractCreasesIteratorErrorKind,
 }
+
+impl core::fmt::Display for ExtractCreasesIteratorError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let edge_index = self.edge_index;
+        match self.kind {
+            ExtractCreasesIteratorErrorKind::EdgeHasInvalidNumberOfFaces { face_count }
+                => write!(f, "edge #{edge_index} has {face_count} faces, which is invalid"),
+            ExtractCreasesIteratorErrorKind::NonTriangularFace { face_number, face_index, vertices_count }
+                => write!(f, "edge #{edge_index}'s face #{face_number} (index {face_index}) is not triangular (it has {vertices_count} vertices)"),
+            ExtractCreasesIteratorErrorKind::InvalidFaceVertices { face_number, face_index }
+                => write!(f, "edge #{edge_index}'s face #{face_number} (index {face_index}) does not contain both vertices of the edge"),
+            ExtractCreasesIteratorErrorKind::FaceHasTwiceTheSameVertex { face_number, face_index }
+                => write!(f, "edge #{edge_index}'s face #{face_number} (index {face_index}) contains at least twice same vertex index")
+        }
+    }
+}
+
+impl core::error::Error for ExtractCreasesIteratorError {}
 
 use crate::{
     input::{FoldAssignment, Proxy, Vector2U, Vector3U},
@@ -166,7 +189,7 @@ pub fn extract_creases<'a, FI: ExtractCreasesInput>(
                 if indices.len() != 3 {
                     return Err(ExtractCreasesIteratorError{
                         edge_index,
-                        kind: ExtractCreasesIteratorErrorKind::NonTriangularFace { vertices_count: indices.len() }
+                        kind: ExtractCreasesIteratorErrorKind::NonTriangularFace { face_number, face_index, vertices_count: indices.len() }
                     })
                 }
 
@@ -178,14 +201,14 @@ pub fn extract_creases<'a, FI: ExtractCreasesInput>(
                     (Some(a), Some(b)) => (a,b),
                     _ => return Err(ExtractCreasesIteratorError{
                         edge_index,
-                        kind: ExtractCreasesIteratorErrorKind::InvalidFaceVertices { face_index }
+                        kind: ExtractCreasesIteratorErrorKind::InvalidFaceVertices { face_number, face_index }
                     }),
                 };
 
                 if v0_idx == v1_idx {
                     return Err(ExtractCreasesIteratorError{
                         edge_index,
-                        kind: ExtractCreasesIteratorErrorKind::FaceHasTwiceTheSameVertex { face_index }
+                        kind: ExtractCreasesIteratorErrorKind::FaceHasTwiceTheSameVertex { face_number, face_index }
                     });
                 }
 
