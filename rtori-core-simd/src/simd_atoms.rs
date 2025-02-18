@@ -86,7 +86,7 @@ cfg_if::cfg_if! {
         all(
             target_arch = "sparc",
             target_feature = "vis"
-        )    
+        )
     )]{
         pub const NATIVE_VECTOR_LENGTH: usize = 64;
     } else {

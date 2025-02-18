@@ -2,7 +2,7 @@
 
 extern crate alloc;
 use pollster::FutureExt as _;
-use rtori_os_fold_importer::{import_in, transform::transform_in};
+use rtori_os_fold_importer::{import_in, supplement::transform_in};
 use rtori_os_model::ExtractorDyn;
 
 use rstest::rstest;

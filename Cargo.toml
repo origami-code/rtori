@@ -13,7 +13,7 @@ members = [
     "rtori-core-ext",
     "rtori-os-model",
     "rtori-core-ffi"
-]
+, "rtori-os/interface"]
 
 
 [patch.crates-io]

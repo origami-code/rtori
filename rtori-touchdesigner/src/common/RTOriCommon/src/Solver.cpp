@@ -80,7 +80,7 @@ SolverImportResult Solver::update(std::optional<std::string_view> fold,
 
 	if (this->foldFile != nullptr && (fold.has_value() || frameIndex.has_value())) {
 		// Transform
-		rtori::TransformedData* transformed =
+		rtori::SupplementedInput* transformed =
 		  rtori::rtori_fold_transform(this->foldFile, this->frameIndex);
 		if (this->transformedData != nullptr) {
 			rtori::rtori_fold_transformed_drop(this->transformedData);

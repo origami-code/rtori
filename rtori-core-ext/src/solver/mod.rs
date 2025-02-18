@@ -43,7 +43,7 @@ pub enum SolverOperationResult {
 #[no_mangle]
 pub unsafe extern "C" fn rtori_solver_load_from_transformed<'alloc>(
     solver: *const Solver<'alloc>,
-    transformed: *mut crate::TransformedData<'_>,
+    transformed: *mut crate::SupplementedInput<'_>,
 ) -> SolverOperationResult {
     let allocator = unsafe { (&*solver).ctx.allocator };
     let solver = unsafe { crate::Arc::from_raw_in(solver, (&*solver).ctx.allocator) };

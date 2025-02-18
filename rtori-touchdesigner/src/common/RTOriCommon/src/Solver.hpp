@@ -50,7 +50,7 @@ class Solver final {
 	rtori::FoldFile const* foldFile;
 	uint16_t frameIndex;
 
-	rtori::TransformedData* transformedData;
+	rtori::SupplementedInput* transformedData;
 
 	Solver(rtori::Context const* ctx);
 	~Solver();

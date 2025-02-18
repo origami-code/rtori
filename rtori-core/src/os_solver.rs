@@ -85,7 +85,7 @@ impl Solver {
 
     pub fn load_preprocessed_in<I, PA, A>(
         &mut self,
-        preprocessed: &fold_importer::PreprocessedInput<'_, I, PA>,
+        preprocessed: &fold_importer::InputWithCreaseGeometry<'_, I, PA>,
         allocator: A,
     ) where
         I: fold_importer::input::ImportInput,
@@ -94,18 +94,14 @@ impl Solver {
     {
         match self {
             Self::CPU(runner) => {
-                let size = preprocessed.size();
+                let size = preprocessed.compute_size();
                 let mut owned_runner = os_cpu::owned::OwnedRunner::with_size(&size);
                 {
                     let runner = owned_runner.runner_mut();
                     let mut loader = os_cpu::Loader::new(runner);
-                    rtori_os_fold_importer::import_preprocessed_in(
-                        &mut loader,
-                        &preprocessed,
-                        Default::default(),
-                        allocator,
-                    )
-                    .unwrap();
+                    preprocessed
+                        .load(&mut loader, Default::default(), allocator)
+                        .unwrap();
                 }
                 *runner = Some(owned_runner);
             }
@@ -115,14 +111,15 @@ impl Solver {
 
     pub fn load_transformed_in<IA, A>(
         &mut self,
-        transformed: &fold_importer::transform::TransformedInput<'_, IA>,
+        transformed: &fold_importer::supplement::SupplementedInput<'_, IA>,
         allocator: A,
     ) where
         IA: Allocator,
         A: Allocator + Clone,
     {
         let preprocessed =
-            rtori_os_fold_importer::preprocess(transformed, allocator.clone()).unwrap();
+            fold_importer::InputWithCreaseGeometry::process(transformed, allocator.clone())
+                .unwrap();
 
         self.load_preprocessed_in(&preprocessed, allocator)
     }
@@ -131,7 +128,7 @@ impl Solver {
     where
         A: Allocator + Clone,
     {
-        let transformed = rtori_os_fold_importer::transform::transform_in(fold, allocator.clone())
+        let transformed = rtori_os_fold_importer::supplement::transform_in(fold, allocator.clone())
             .expect("Transformation into importation input failed");
 
         let transformed_input = transformed.with_fold(fold);

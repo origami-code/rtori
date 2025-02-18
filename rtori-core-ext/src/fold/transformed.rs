@@ -1,17 +1,17 @@
-use rtori_core::fold_importer::transform;
+use rtori_core::fold_importer::supplement;
 
 /// A transformed fold (opaque)
-pub struct TransformedData<'alloc> {
+pub struct SupplementedInput<'alloc> {
     pub(crate) input: crate::Arc<'alloc, super::FoldFile<'alloc>>,
     pub(crate) frame: u16,
-    pub(crate) transform: transform::TransformedData<crate::ContextAllocator<'alloc>>,
+    pub(crate) transform: supplement::FoldSupplement<crate::ContextAllocator<'alloc>>,
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn rtori_fold_transform<'alloc>(
     fold: *const super::FoldFile<'alloc>,
     frame_index: u16,
-) -> *mut TransformedData<'alloc> {
+) -> *mut SupplementedInput<'alloc> {
     let alloc = unsafe { &*fold }.ctx.allocator;
     let fold = {
         let fold = unsafe { crate::Arc::from_raw_in(fold, alloc) };
@@ -24,12 +24,12 @@ pub unsafe extern "C" fn rtori_fold_transform<'alloc>(
         let frame = fold.parsed.frame(frame_index).unwrap();
         let frame = frame.get();
 
-        let transform = transform::transform_in(&frame, alloc).unwrap();
+        let transform = supplement::transform_in(&frame, alloc).unwrap();
 
         transform
     };
 
-    let result = TransformedData {
+    let result = SupplementedInput {
         input: fold,
         frame: frame_index,
         transform,
@@ -41,7 +41,7 @@ pub unsafe extern "C" fn rtori_fold_transform<'alloc>(
 
 #[no_mangle]
 pub unsafe extern "C" fn rtori_fold_transformed_drop<'alloc>(
-    transform: *mut TransformedData<'alloc>,
+    transform: *mut SupplementedInput<'alloc>,
 ) {
     let alloc = unsafe { &*transform }.input.ctx.allocator;
     let boxed = unsafe { Box::from_raw_in(transform, alloc) };
@@ -51,7 +51,7 @@ pub unsafe extern "C" fn rtori_fold_transformed_drop<'alloc>(
 /// The returned value must be dropped with `rtori_fold_drop`
 #[no_mangle]
 pub unsafe extern "C" fn rtori_fold_transformed_get_fold<'alloc>(
-    transformed: *mut TransformedData<'alloc>,
+    transformed: *mut SupplementedInput<'alloc>,
 ) -> *const crate::FoldFile<'alloc> {
     let transformed = unsafe { &*transformed };
     crate::Arc::into_raw(transformed.input.clone())
@@ -80,7 +80,7 @@ pub enum TransformedQuery {
 /// SAFETY: calling this is threadsafe over other `fold_transformed_*` operations, except `fold_transformed_drop`
 #[no_mangle]
 pub unsafe extern "C" fn rtori_fold_transformed_query<'alloc>(
-    transformed: *const TransformedData<'alloc>,
+    transformed: *const SupplementedInput<'alloc>,
     query: TransformedQuery,
     mut output: core::ptr::NonNull<crate::QueryOutput>,
 ) -> super::FoldOperationStatus {

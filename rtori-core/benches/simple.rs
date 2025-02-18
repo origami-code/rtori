@@ -5,7 +5,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 extern crate alloc;
 use pollster::FutureExt as _;
-use rtori_os_fold_importer::{import_in, transform::transform_in};
+use rtori_os_fold_importer::{import_in, supplement::transform_in};
 
 const SIMPLE_FOLD: &'static str = include_str!("../../fold/testdata/simple.fold");
 const THIRTEEN_HORNS_FOLD: &'static str =
