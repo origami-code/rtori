@@ -50,7 +50,7 @@ pub mod ffi {
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct FoldFile<'ctx> {
-        inner: fold::File, //<'ctx>
+        pub(crate) inner: fold::File, //<'ctx>
         _marker: std::marker::PhantomData<&'ctx fold::File>,
     }
 
@@ -61,12 +61,15 @@ pub mod ffi {
     }
 
     #[derive(Debug)]
+    #[repr(C)]
     pub struct FoldFileParseError {
         pub status: FoldFileParseErrorKind,
         pub error: DiplomatOption<JSONParseError>,
     }
 
     impl<'ctx> FoldFile<'ctx> {
+        // Disabled on dart, not sure why but I get a "custom handling" unreachable! invoke
+        #[diplomat::attr(dart, disable)]
         pub fn parse_bytes(
             ctx: &context::Context<'ctx>,
             bytes: &[DiplomatByte],

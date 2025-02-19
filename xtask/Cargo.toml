@@ -1,0 +1,9 @@
+[package]
+name = "xtask"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cargo_metadata = "0.19.1"
+cps-deps = "0.3.2"
+serde_json = "1.0.138"

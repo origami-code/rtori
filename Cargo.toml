@@ -12,15 +12,19 @@ members = [
     "rtori-core",
     "rtori-core-ext",
     "rtori-os-model",
-    "rtori-core-ffi"
-, "rtori-os/interface"]
+    "rtori-core-ffi",
+    "rtori-os/interface",
+    "xtask"
+]
 
+#[patch.crates-io]
+#diplomat = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
+#diplomat-runtime = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
+#diplomat_core = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
+#diplomat-tool = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
 
-[patch.crates-io]
-diplomat = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
-diplomat-runtime = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
-diplomat_core = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
-diplomat-tool = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
+[profile.dev]
+debug = true
 
 [profile.release]
 codegen-units = 1
