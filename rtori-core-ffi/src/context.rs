@@ -123,7 +123,7 @@ pub mod ffi {
     }
 
     impl<'alloc> Context<'alloc> {
-        pub fn create_solver_sync<'a>(&'a self, _params: &Parameters) -> Result<Box<crate::solver::ffi::Solver<'a>>, SolverCreationError> {
+        pub fn create_solver_sync<'a>(&'a self, _params: Parameters) -> Result<Box<crate::solver::ffi::Solver<'a>>, SolverCreationError> {
             use pollster::FutureExt as _;
             let solver =
                 rtori_core::os_solver::Solver::create(rtori_core::os_solver::BackendFlags::CPU)
