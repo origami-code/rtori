@@ -12,12 +12,12 @@ default = ["fold"]
 bytemuck = "1.18.0"
 glam = "0.29.0"
 itertools = "0.13.0"
-rtori-os-model = {path = "../rtori-os-model"}
-fold = {path = "../fold", features=["bytemuck"], optional = true}
+rtori-os-model = {path = "../model"}
+fold = {path = "../../fold", features=["bytemuck"], optional = true}
 #bumpalo = {version = "3.17.0", features = ["allocator_api"] }
 
 [dev-dependencies]
 serde_json = {version = "1.0.128", default-features = false, features = ["alloc"]}
 serde = {version = "1.0.210", default-features = false, features = ["alloc"]}
-rtori-os-model = {path = "../rtori-os-model", features = ["serde"]}
+rtori-os-model = {path = "../model", features = ["serde"]}
 assert-json-diff = {version = "2.0.2"}

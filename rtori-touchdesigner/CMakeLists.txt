@@ -12,8 +12,8 @@ if(APPLE)
     include(ext/cmake-macos/cmake-macos.cmake)
 endif()
 
-if(NOT TARGET rtori_core)
-    add_subdirectory("../rtori-core-ext" ${CMAKE_CURRENT_BINARY_DIR}/rtori_core)
+if(NOT TARGET rtori_core::Headers)
+    message(FATAL_ERROR "rtori_core not defined")
 endif()
 
 add_subdirectory(src)

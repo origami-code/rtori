@@ -510,38 +510,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diplomat"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef0c3a613b09df83bdd42393cd532830a795053102f87461fca1726999829c60"
-dependencies = [
- "diplomat_core",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "diplomat-runtime"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc1708f176e12755d6d6571ad9b0ebbd3b428223b5cdf63a38eecf1479c13e70"
-
-[[package]]
-name = "diplomat_core"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58e5ba87fee6b8b9dcc575cfbc84ae97b8b9f891fa27f670996a4684e20bd178"
-dependencies = [
- "proc-macro2",
- "quote",
- "serde",
- "smallvec",
- "strck",
- "syn",
-]
-
-[[package]]
 name = "doubled"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1307,9 +1275,9 @@ dependencies = [
  "pollster",
  "rstest",
  "rstest_reuse",
- "rtori-core-simd",
  "rtori-os-fold-importer",
  "rtori-os-model",
+ "rtori-os-simd",
  "serde_json",
  "tracing-subscriber",
 ]
@@ -1326,35 +1294,6 @@ dependencies = [
  "rtori-core",
  "serde_json",
  "static_assertions",
-]
-
-[[package]]
-name = "rtori-core-ffi"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "diplomat",
- "diplomat-runtime",
- "fold",
- "pollster",
- "rtori-core",
- "serde_json",
-]
-
-[[package]]
-name = "rtori-core-simd"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "cfg-if",
- "itertools 0.13.0",
- "nalgebra",
- "num-traits",
- "rtori-os-model",
- "simba",
- "sleef",
- "static_assertions",
- "tracing",
 ]
 
 [[package]]
@@ -1379,6 +1318,22 @@ dependencies = [
  "bytemuck",
  "serde",
  "static_assertions",
+]
+
+[[package]]
+name = "rtori-os-simd"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cfg-if",
+ "itertools 0.13.0",
+ "nalgebra",
+ "num-traits",
+ "rtori-os-model",
+ "simba",
+ "sleef",
+ "static_assertions",
+ "tracing",
 ]
 
 [[package]]
@@ -1560,6 +1515,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "simd-common"
+version = "0.1.0"
+dependencies = [
+ "cfg-if",
+ "static_assertions",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1598,15 +1561,6 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
-name = "strck"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42316e70da376f3d113a68d138a60d8a9883c604fe97942721ec2068dab13a9f"
-dependencies = [
- "unicode-ident",
-]
 
 [[package]]
 name = "strsim"

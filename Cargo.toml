@@ -4,18 +4,17 @@ cargo-features = ["profile-rustflags"]
 resolver = "2"
 members = [
     "fold",
-    # "rtori-core-wgpu", 
-    "rtori-core-simd",
     "rtori-server",
     # "rtori-cli",
-    "rtori-os-fold-importer",
     "rtori-core",
     "rtori-core-ext",
-    "rtori-os-model",
-    "rtori-core-ffi",
+    "rtori-os/model",
     "rtori-os/interface",
+    "rtori-os/simd",
+    "rtori-os/fold-importer",
+    #"rtori-os/wgpu"
     "xtask"
-]
+, "simd-common"]
 
 #[patch.crates-io]
 #diplomat = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }

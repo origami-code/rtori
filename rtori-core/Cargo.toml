@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-cpu = ["dep:rtori-core-simd"]
+cpu = ["dep:rtori-os-simd"]
 
 # GPU-specific
 #vulkan = ["gpu", "rtori-core-wgpu/vulkan"]
@@ -19,10 +19,10 @@ default = ["cpu"] #, "cpu"]
 
 [dependencies]
 fold = {path = "../fold"}
-rtori-core-simd = {path = "../rtori-core-simd", optional = true, feature = ["alloc"]}
+rtori-os-simd = {path = "../rtori-os/simd", optional = true, feature = ["alloc"]}
 #rtori-core-wgpu = {path = "../rtori-core-wgpu", optional = true}
-rtori-os-fold-importer = {path = "../rtori-os-fold-importer"}
-rtori-os-model = {path = "../rtori-os-model"}
+rtori-os-fold-importer = {path = "../rtori-os/fold-importer"}
+rtori-os-model = {path = "../rtori-os/model"}
 bitflags = "2.6.0"
 serde_json = {version = "1.0.128", default-features = false, features = ["alloc"]}
 

@@ -34,7 +34,7 @@ target_link_libraries(
     RTOriCommon
 
     PUBLIC
-    rtori_core
+    rtori_core::Shared
 )
 
 if(MSVC)

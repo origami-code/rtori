@@ -1,9 +1,9 @@
 use core::alloc::Allocator;
 
-#[cfg(feature = "cpu")]
-use rtori_core_simd as os_cpu;
 #[cfg(feature = "gpu")]
 use rtori_core_wgpu as os_wgpu;
+#[cfg(feature = "cpu")]
+use rtori_os_simd as os_cpu;
 
 use bitflags::bitflags;
 pub use rtori_os_fold_importer as fold_importer;
@@ -178,7 +178,7 @@ impl Solver {
 }
 
 pub enum Extractor<'borrow> {
-    CPU(rtori_core_simd::Extractor<'borrow, { rtori_core_simd::PREFERRED_WIDTH }>),
+    CPU(rtori_os_simd::Extractor<'borrow, { rtori_os_simd::PREFERRED_WIDTH }>),
 }
 
 impl rtori_os_model::ExtractorDyn<'_> for Extractor<'_> {
