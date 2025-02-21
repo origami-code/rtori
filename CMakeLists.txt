@@ -6,5 +6,4 @@ project(rtori)
 
 
 add_subdirectory("output")
-# add_subdirectory("rtori-core-ext")
 add_subdirectory("rtori-touchdesigner")

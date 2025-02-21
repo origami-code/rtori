@@ -12,8 +12,8 @@ if(APPLE)
     include(ext/cmake-macos/cmake-macos.cmake)
 endif()
 
-if(NOT TARGET rtori_core::Headers)
-    message(FATAL_ERROR "rtori_core not defined")
+if(NOT TARGET rtori_core::CXXHeaders)
+    message(FATAL_ERROR "rtori_core::CXXHeaders not defined")
 endif()
 
 add_subdirectory(src)

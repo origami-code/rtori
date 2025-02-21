@@ -1,4 +1,7 @@
-use std::collections::{HashMap, hash_map::Entry};
+use std::{
+    collections::{HashMap, hash_map::Entry},
+    io::Write,
+};
 
 use cargo_metadata::Message;
 
@@ -111,7 +114,7 @@ fn build(b: BuildConfiguration) -> Result<BuildOutput, BuildError> {
     let stream = cargo_metadata::Message::parse_stream(reader);
     let artifacts = stream
         .filter_map(|message| match message.unwrap() {
-            // It actually looks like path+file:///C:/Users/alexandre/Projects/oribotics/festival/rtori/rtori-core-ffi#0.1.0
+            // It actually looks like path+file:///C:/Users/alexandre/Projects/oribotics/festival/rtori/core-ffi#0.1.0
             // TODO: Make it resolve & check rather than do this hack
             Message::CompilerArtifact(artifact)
                 if artifact.package_id.repr.contains("rtori-core-ffi") =>
@@ -143,35 +146,14 @@ fn build(b: BuildConfiguration) -> Result<BuildOutput, BuildError> {
 }
 
 fn generate_cmake() {
-    let header = r#"
-cmake_minimum_required(VERSION 3.21...3.31)
-set(prefix {{prefix}})
+    let template = include_str!("../resources/CMakeLists.txt.in");
 
-add_library(rtori_core::Headers INTERFACE IMPORTED)
-set_target_properties(rtori_core::Headers PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${prefix}/headers/c"
-)
-
-add_library(rtori_core::Shared SHARED IMPORTED)
-set_target_properties(rtori_core::Shared PROPERTIES
-    IMPORTED_LOCATION "${prefix}/shared/rtori_core.dll"
-    INTERFACE_LINK_LIBRARIES rtori_core::Headers
-)
-if(WIN32)
-    set_target_properties(rtori_core::Shared PROPERTIES
-        IMPORTED_IMPLIB "${prefix}/shared/rtori_core.dll.lib"
-    )
-endif()
-
-add_library(rtori_core::Static STATIC IMPORTED)
-set_target_properties(rtori_core::Shared PROPERTIES
-    IMPORTED_LOCATION "${prefix}/static/rtori_core.lib"
-    INTERFACE_LINK_LIBRARIES rtori_core::Headers 
-    INTERFACE_COMPILE_DEFINITIONS "-DRTORI_STATIC"
-)
-"#;
-
-    println!("{}", header);
+    let mut dest = std::fs::OpenOptions::new()
+        .truncate(true)
+        .write(true)
+        .open("output/CMakeLists.txt")
+        .unwrap();
+    dest.write_all(template.as_bytes()).unwrap();
 }
 
 fn main() {
@@ -186,7 +168,7 @@ fn main() {
     println!("outputs: {outputs:?}");
 
     /* Copying the files */
-    std::fs::create_dir_all("output/headers/c/rtori/").unwrap();
+    std::fs::create_dir_all("output/headers").unwrap();
     std::fs::create_dir_all("output/shared").unwrap();
     std::fs::create_dir_all("output/static").unwrap();
 
@@ -208,26 +190,27 @@ fn main() {
     });
 
     /* Header generation */
-    let mut command = std::process::Command::new("diplomat-tool")
+    let mut c_bindings = std::process::Command::new("diplomat-tool")
         .args(&[
             "cpp",
-            "output/headers/cpp/rtori",
+            "output/headers/cpp/",
             "--entry",
-            "rtori-core-ffi/src/lib.rs",
+            "core/core-ffi/src/lib.rs",
         ])
         .spawn()
         .unwrap();
 
-    let mut command = std::process::Command::new("diplomat-tool")
+    let mut cpp_bindings = std::process::Command::new("diplomat-tool")
         .args(&[
             "c",
             "output/headers/c/rtori",
             "--entry",
-            "rtori-core-ffi/src/lib.rs",
+            "core/core-ffi/src/lib.rs",
         ])
         .spawn()
         .unwrap();
 
+    generate_cmake();
     /* CPS output */
 
     let cps = cps_deps::cps::Package {

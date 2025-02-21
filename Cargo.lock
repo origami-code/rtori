@@ -510,6 +510,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "diplomat"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef0c3a613b09df83bdd42393cd532830a795053102f87461fca1726999829c60"
+dependencies = [
+ "diplomat_core",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "diplomat-runtime"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc1708f176e12755d6d6571ad9b0ebbd3b428223b5cdf63a38eecf1479c13e70"
+
+[[package]]
+name = "diplomat_core"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58e5ba87fee6b8b9dcc575cfbc84ae97b8b9f891fa27f670996a4684e20bd178"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "smallvec",
+ "strck",
+ "syn",
+]
+
+[[package]]
 name = "doubled"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1033,25 +1065,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
-name = "pkg-version"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e848f61ee4b2010345e65757e427a077213af1cee5d3e6a02e4a151dabca377"
-dependencies = [
- "pkg-version-impl",
- "proc-macro-hack",
-]
-
-[[package]]
-name = "pkg-version-impl"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1564bf5d476bf4a5eac420b88c500454c000dca79cef0a2e4304a1fe34361a3b"
-dependencies = [
- "proc-macro-hack",
-]
-
-[[package]]
 name = "plotters"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1108,12 +1121,6 @@ checksum = "8ecf48c7ca261d60b74ab1a7b20da18bede46776b2e55535cb958eb595c5fa7b"
 dependencies = [
  "toml_edit",
 ]
-
-[[package]]
-name = "proc-macro-hack"
-version = "0.5.20+deprecated"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc375e1527247fe1a97d8b7156678dfe7c1af2fc075c9a4db3690ecd2a148068"
 
 [[package]]
 name = "proc-macro2"
@@ -1283,17 +1290,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "rtori-core-ext"
+name = "rtori-core-ffi"
 version = "0.1.0"
 dependencies = [
- "bitflags",
  "bytemuck",
+ "diplomat",
+ "diplomat-runtime",
  "fold",
- "pkg-version",
  "pollster",
  "rtori-core",
  "serde_json",
- "static_assertions",
 ]
 
 [[package]]
@@ -1331,6 +1337,7 @@ dependencies = [
  "num-traits",
  "rtori-os-model",
  "simba",
+ "simd-common",
  "sleef",
  "static_assertions",
  "tracing",
@@ -1518,7 +1525,10 @@ dependencies = [
 name = "simd-common"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "cfg-if",
+ "nalgebra",
+ "simba",
  "static_assertions",
 ]
 
@@ -1561,6 +1571,15 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "strck"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42316e70da376f3d113a68d138a60d8a9883c604fe97942721ec2068dab13a9f"
+dependencies = [
+ "unicode-ident",
+]
 
 [[package]]
 name = "strsim"

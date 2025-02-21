@@ -1,6 +1,6 @@
 #include "Solver.hpp"
 
-#include "rtori_core.hpp"
+#include "rtori/Context.hpp"
 
 #include <chrono>
 #include <cassert>
@@ -29,7 +29,7 @@ using namespace rtori::rtori_td;
 OutputGuard::OutputGuard(Output const& output, std::unique_lock<std::mutex>&& guard)
 	: output(output), m_guard(std::move(guard)) {}
 
-SimulationThread::SimulationThread(rtori::Context const* ctx) : m_ctx(ctx) {
+SimulationThread::SimulationThread(std::shared_ptr<rtori::Context> ctx) : m_ctx(ctx) {
 	assert((void("ctx should be non-null"), ctx != nullptr));
 
 #ifdef __cpp_lib_jthread
@@ -112,12 +112,12 @@ std::string_view format_SolverOperationResult(rtori::SolverOperationResult resul
 /// This is the inner state of the simulation thread
 class SimulationThreadImpl final {
   public:
-	SimulationThreadImpl(rtori::Context const* ctx) : ctx(ctx), solver(ctx) {
+	SimulationThreadImpl(std::shared_ptr<rtori::Context> ctx) : ctx(ctx), solver(ctx) {
 		nameThread();
 	}
 
   private:
-	rtori::Context const* ctx;
+	std::shared_ptr<rtori::Context> ctx;
 	bool extractPosition = false;
 	bool extractVelocity = false;
 	bool extractError = false;

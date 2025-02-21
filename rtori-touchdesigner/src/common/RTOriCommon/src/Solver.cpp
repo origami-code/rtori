@@ -1,5 +1,5 @@
 #include "Solver.hpp"
-#include <rtori_core.hpp>
+#include <rtori/Solver.hpp>
 #include <cassert>
 #include <iostream>
 

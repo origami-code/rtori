@@ -11,7 +11,7 @@
 #include "Input.hpp"
 #include "Output.hpp"
 
-#include <rtori_core.hpp>
+#include <rtori/Context.hpp>
 
 #ifdef RTORI_TD_BUILD_SHARED
 #ifdef _MSC_VER
@@ -40,7 +40,7 @@ struct OutputGuard {
 
 class RTORI_TD_EXPORT SimulationThread final {
   public:
-	SimulationThread(rtori::Context const* ctx);
+	SimulationThread(std::shared_ptr<rtori::Context> ctx);
 	~SimulationThread();
 
 	/// This requests a stop of the worker
@@ -72,7 +72,7 @@ class RTORI_TD_EXPORT SimulationThread final {
 	std::mutex m_outputMutex;
 	Output m_output;
 
-	rtori::Context const* m_ctx;
+	std::shared_ptr<rtori::Context> m_ctx;
 
 	/// This is raised on the beginning of every cook, with the exact timestamp
 	/// This allows for calibrating the timing of the thread.

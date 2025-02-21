@@ -1,9 +1,11 @@
 #pragma once
 
-#include "rtori_core.hpp"
+#include "rtori/Context.hpp"
+#include "rtori/Solver.hpp"
 
 #include <optional>
 #include <format>
+#include <rtori/JSONParseError.d.hpp>
 
 namespace rtori::rtori_td {
 
@@ -18,13 +20,13 @@ struct SolverImportResult final {
   public:
 	SolverImportResultKind kind;
 	union {
-		rtori::JsonParseError parseError;
+		rtori::JSONParseError parseError;
 	} payload;
 
 	std::string format() const {
 		switch (kind) {
 		case SolverImportResultKind::FoldParseError: {
-			rtori::JsonParseError const& details = this->payload.parseError;
+			rtori::JSONParseError const& details = this->payload.parseError;
 			// std::format requires Xcode 15.3 or later
 			return /*std::format("[ERROR] Fold parse error \"{}\" on line {}, column {}",
 							   (int32_t)details.category,
@@ -45,14 +47,14 @@ struct SolverImportResult final {
 
 class Solver final {
   public:
-	rtori::Solver const* solver;
+	std::unique_ptr<rtori::Solver> solver;
 
-	rtori::FoldFile const* foldFile;
+	std::unique_ptr<rtori::FoldFile> foldFile;
 	uint16_t frameIndex;
 
-	rtori::SupplementedInput* transformedData;
+	// rtori::SupplementedInput* transformedData;
 
-	Solver(rtori::Context const* ctx);
+	Solver(std::shared_ptr<rtori::Context> ctx);
 	~Solver();
 
 	SolverImportResult update(std::optional<std::string_view> fold,
