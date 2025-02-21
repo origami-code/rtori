@@ -14,8 +14,7 @@ members = [
     "core/os/simd",
     "core/os/fold-importer",
     #"core/os//wgpu"
-    "xtask"
-]
+    "xtask"]
 
 #[patch.crates-io]
 #diplomat = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }

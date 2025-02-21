@@ -5,6 +5,7 @@
 
 #include <optional>
 #include <format>
+#include <rtori/FoldFileParseError.d.hpp>
 #include <rtori/JSONParseError.d.hpp>
 
 namespace rtori::rtori_td {
@@ -20,13 +21,13 @@ struct SolverImportResult final {
   public:
 	SolverImportResultKind kind;
 	union {
-		rtori::JSONParseError parseError;
+		rtori::FoldFileParseError parseError;
 	} payload;
 
 	std::string format() const {
 		switch (kind) {
 		case SolverImportResultKind::FoldParseError: {
-			rtori::JSONParseError const& details = this->payload.parseError;
+			rtori::FoldFileParseError const& details = this->payload.parseError;
 			// std::format requires Xcode 15.3 or later
 			return /*std::format("[ERROR] Fold parse error \"{}\" on line {}, column {}",
 							   (int32_t)details.category,
@@ -47,6 +48,8 @@ struct SolverImportResult final {
 
 class Solver final {
   public:
+	std::shared_ptr<rtori::Context> context;
+
 	std::unique_ptr<rtori::Solver> solver;
 
 	std::unique_ptr<rtori::FoldFile> foldFile;

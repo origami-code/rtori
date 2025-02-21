@@ -19,7 +19,7 @@ std::shared_ptr<rtori::Context> getContext(void) {
 	}
 
 	// Here we create a new context
-	auto shared = std::make_shared(rtori::Context::global());
-	sharedContext = std::weak_ptr(shared);
+	auto shared = std::shared_ptr(rtori::Context::global());
+	sharedContext = shared;
 	return shared;
 }

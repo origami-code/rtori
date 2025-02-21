@@ -119,10 +119,26 @@ pub mod ffi {
         }
     }
 
+    #[derive(Debug)]
     #[repr(C)]
     pub enum SolverCreationError {
         NoSuchSolverFamily,
         NoBackendMatching,
+    }
+
+    impl SolverCreationError {
+        #[diplomat::attr(auto, stringifier)]
+        pub fn format(&self, out: &mut DiplomatWrite) {
+            use std::fmt::Write;
+            match self {
+                Self::NoSuchSolverFamily => write!(out, "no such solver family"),
+                Self::NoBackendMatching => write!(
+                    out,
+                    "no backend matching the given flags for the given family"
+                ),
+            }
+            .unwrap();
+        }
     }
 
     impl<'alloc> Context<'alloc> {
