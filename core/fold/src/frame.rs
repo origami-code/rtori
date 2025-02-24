@@ -4,39 +4,39 @@ use crate::Lockstep;
 
 use super::*;
 
-#[derive(Debug, Clone /*, serde::Deserialize, serde::Serialize*/)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct FrameMetadata<'alloc> {
-    //#[serde(rename = "frame_title")]
+    #[serde(rename = "frame_title")]
     pub title: Option<String<'alloc>>,
 
-    //#[serde(rename = "frame_description")]
+    #[serde(rename = "frame_description")]
     pub description: Option<String<'alloc>>,
 
-    //#[serde(rename = "frame_classes")]
+    #[serde(rename = "frame_classes")]
     pub classes: Option<Vec<'alloc, String<'alloc>>>,
 
-    //#[serde(rename = "frame_attributes")]
+    #[serde(rename = "frame_attributes")]
     pub attributes: Option<Vec<'alloc, String<'alloc>>>,
 
-    //#[serde(rename = "frame_unit")]
+    #[serde(rename = "frame_unit")]
     pub unit: Option<String<'alloc>>,
 }
 
-#[derive(Debug, Clone /*, serde::Deserialize, serde::Serialize*/)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct FrameCore<'alloc> {
-    //#[serde(flatten)]
+    #[serde(flatten)]
     pub metadata: FrameMetadata<'alloc>,
 
-    //#[serde(flatten)]
+    #[serde(flatten)]
     pub vertices: VertexInformation<'alloc>,
 
-    //#[serde(flatten)]
+    #[serde(flatten)]
     pub edges: EdgeInformation<'alloc>,
 
-    //#[serde(flatten)]
+    #[serde(flatten)]
     pub faces: FaceInformation<'alloc>,
 
-    //#[serde(flatten)]
+    #[serde(flatten)]
     pub layering: LayerInformation<'alloc>,
 
     pub uvs: Lockstep<'alloc, [f32; 2]>,
@@ -56,13 +56,13 @@ impl<'a> FrameCore<'a> {
     }
 }
 
-#[derive(Debug, Clone /*, serde::Deserialize, serde::Serialize*/)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct NonKeyFrame<'alloc> {
-    //#[serde(flatten)]
+    #[serde(flatten)]
     pub frame: FrameCore<'alloc>,
-    //#[serde(rename = "frame_parent")]
+    #[serde(rename = "frame_parent")]
     pub parent: Option<FrameIndex>,
-    //#[serde(rename = "frame_inherit")]
+    #[serde(rename = "frame_inherit")]
     pub inherit: Option<bool>,
 }
 
@@ -74,7 +74,7 @@ pub struct InheritingFrame<'a> {
 }
 
 impl<'a> InheritingFrame<'a> {
-    fn itself(&self) -> &'a NonKeyFrame {
+    fn itself(&self) -> &'a NonKeyFrame<'a> {
         &self.frames[usize::from(self.frame_index - 1)]
     }
 

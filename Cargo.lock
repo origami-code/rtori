@@ -175,6 +175,9 @@ name = "bumpalo"
 version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46c5e41b57b8bba42a04676d81cb89e9ee8e859a1a66f80a5a72e1cb76b34d43"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bytemuck"
@@ -2321,3 +2324,8 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[patch.unused]]
+name = "bumpalo"
+version = "3.17.0"
+source = "git+https://github.com/aabizri/bumpalo.git?branch=main#277d3ee0ff72135c28af8a0e6a2b1cf2c68a3833"

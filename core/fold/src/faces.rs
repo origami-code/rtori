@@ -3,7 +3,7 @@ use super::indices::*;
 use crate::Handful;
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord /*, serde::Deserialize, serde::Serialize*/,
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
 )]
 #[repr(transparent)]
 pub struct Face<'alloc>(pub Handful<'alloc, VertexIndex, 4>);
@@ -16,16 +16,16 @@ impl core::ops::Deref for Face<'_> {
     }
 }
 
-#[derive(Debug, Clone /*, serde::Deserialize, serde::Serialize*/)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct FaceInformation<'alloc> {
-    //#[serde(rename = "faces_vertices")]
+    #[serde(rename = "faces_vertices")]
     pub vertices: Option<Vec<'alloc, Face<'alloc>>>,
 
     /// For each face, an array of edge IDs for the edges around the face in counterclockwise order.
     /// In addition to the matching cyclic order, faces_vertices and faces_edges should align in start
     /// so that faces_edges[f][i] is the edge connecting faces_vertices[f][i]
     /// and faces_vertices[f][(i+1)%d] where d is the degree of face f.
-    //#[serde(rename = "faces_edges")]
+    #[serde(rename = "faces_edges")]
     pub edges: Option<Vec<'alloc, Handful<'alloc, EdgeIndex, 8>>>,
 
     /// For each face, an array of face IDs for the faces sharing edges around the face, possibly including nulls.
@@ -33,12 +33,12 @@ pub struct FaceInformation<'alloc> {
     ///     f and faces_faces[f][i] should be the faces incident to the edge faces_edges[f][i],
     ///     unless that edge has no face on the other side, in which case faces_faces[f][i] should be null.
     /// Optimized for no more than 8 faces sharing edges with each face
-    //#[serde(rename = "faces_faces")]
+    #[serde(rename = "faces_faces")]
     pub faces: Option<Vec<'alloc, Handful<'alloc, Option<FaceIndex>, 8>>>,
 
     /// For each face, an array of uv indices corresponding to the vertices of the same index
     /// That is, for `rtori:faces_uvs[n][a] = k` assigns to the vertex index `faces_edges[n][a]` the uv `rtori:uvs[k]`
-    //#[serde(rename = "rtori:faces_uvs")]
+    #[serde(rename = "rtori:faces_uvs")]
     pub uvs: Option<Vec<'alloc, Handful<'alloc, u32, 8>>>,
 }
 

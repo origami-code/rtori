@@ -35,6 +35,8 @@ pub use frame::*;
 
 pub mod macros;
 
+mod deser;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Field {
     FacesVertices,
@@ -44,27 +46,29 @@ pub enum Field {
     VerticesCoords,
 }
 
-#[derive(Debug, Clone /*, serde::Deserialize, serde::Serialize*/)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct FileMetadata<'alloc> {
-    //#[serde(rename = "file_spec")]
+    #[serde(rename = "file_spec")]
     pub spec: Option<u32>,
-    //#[serde(rename = "file_creator")]
+    #[serde(rename = "file_creator")]
     pub creator: Option<String<'alloc>>,
-    //#[serde(rename = "file_author")]
+    #[serde(rename = "file_author")]
     pub author: Option<String<'alloc>>,
 }
 
-#[derive(Debug, Clone /*, serde::Deserialize, serde::Serialize*/)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct File<'alloc> {
-    //#[serde(flatten)]
+    #[serde(flatten)]
     pub file_metadata: Option<FileMetadata<'alloc>>,
 
-    //#[serde(rename = "file_frames")]
+    #[serde(rename = "file_frames")]
     pub frames: Vec<'alloc, NonKeyFrame<'alloc>>,
 
-    //#[serde(flatten)]
+    #[serde(flatten)]
     pub key_frame: FrameCore<'alloc>,
 }
+
+
 
 impl File<'_> {
     pub fn frame<'a>(&'a self, index: FrameIndex) -> Option<FrameRef<'a>> {
@@ -87,7 +91,7 @@ mod tests {
 
             #[test]
             pub fn $test_name() {
-                let output = serde_json::from_str::<File>($const_name).unwrap();
+                let output = serde_json::from_str::<File<'_>>($const_name).unwrap();
                 println!("Output: {:#?}", output);
             }
         }
