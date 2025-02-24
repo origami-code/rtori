@@ -19,6 +19,62 @@ impl From<serde_json::Error> for ffi::JSONParseError {
     }
 }
 
+impl ffi::JSONParseErrorCategory {
+    fn format_common<W: core::fmt::Write>(&self, mut f: W) -> core::fmt::Result {
+        match self {
+            Self::IO => write!(f, "io error"),
+            Self::Syntax => write!(f, "invalid JSON syntax"),
+            Self::Data => write!(f, "semantically invalid data"),
+            Self::Eof => write!(f, "uexpected eof"),
+        }
+    }
+}
+
+impl core::fmt::Display for ffi::JSONParseErrorCategory {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.format_common(f)
+    }
+}
+
+impl ffi::JSONParseError {
+    pub fn format_common<W: core::fmt::Write>(&self, mut f: W) -> core::fmt::Result {
+        write!(
+            f,
+            "json parsing error on line {}:{}: {}",
+            self.line, self.column, self.category
+        )
+    }
+}
+
+impl core::fmt::Display for ffi::JSONParseError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.format_common(f)
+    }
+}
+
+impl core::error::Error for ffi::JSONParseError {}
+
+impl ffi::FoldFileParseError {
+    pub fn format_common<W: core::fmt::Write>(&self, mut f: W) -> core::fmt::Result {
+        match self.status {
+            ffi::FoldFileParseErrorKind::Empty => write!(f, "empty FOLD source given"),
+            ffi::FoldFileParseErrorKind::Error => write!(
+                f,
+                "error while parsing the fold file: {}",
+                self.error.as_ref().unwrap()
+            ),
+        }
+    }
+}
+
+impl core::fmt::Display for ffi::FoldFileParseError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.format_common(f)
+    }
+}
+
+impl core::error::Error for ffi::FoldFileParseError {}
+
 #[diplomat::bridge]
 #[diplomat::abi_rename = "rtori_{0}"]
 #[diplomat::attr(auto, namespace = "rtori")] // todo: ::fold when https://github.com/rust-diplomat/diplomat/issues/591
@@ -32,7 +88,7 @@ pub mod ffi {
     pub enum JSONParseErrorCategory {
         /// failure to read or write bytes on an I/O stream
         IO,
-        ///  input that is not syntactically valid JSON
+        /// input that is not syntactically valid JSON
         Syntax,
         /// input data that is semantically incorrect
         Data,
@@ -40,11 +96,25 @@ pub mod ffi {
         Eof,
     }
 
+    impl JSONParseErrorCategory {
+        #[diplomat::attr(auto, stringifier)]
+        pub fn format(&self, out: &mut DiplomatWrite) {
+            self.format_common(out).unwrap()
+        }
+    }
+
     #[derive(Debug)]
     pub struct JSONParseError {
         pub line: u32,
         pub column: u32,
         pub category: JSONParseErrorCategory,
+    }
+
+    impl JSONParseError {
+        #[diplomat::attr(auto, stringifier)]
+        pub fn format(self, out: &mut DiplomatWrite) {
+            self.format_common(out).unwrap()
+        }
     }
 
     #[diplomat::opaque]
@@ -56,7 +126,9 @@ pub mod ffi {
 
     #[derive(Debug)]
     pub enum FoldFileParseErrorKind {
+        /// Parsing failed because the input was empty(ish)
         Empty,
+        /// Error while parsing the fold file, meaning a JSON error
         Error,
     }
 
@@ -65,6 +137,13 @@ pub mod ffi {
     pub struct FoldFileParseError {
         pub status: FoldFileParseErrorKind,
         pub error: DiplomatOption<JSONParseError>,
+    }
+
+    impl FoldFileParseError {
+        #[diplomat::attr(auto, stringifier)]
+        pub fn format(self, out: &mut DiplomatWrite) {
+            self.format_common(out).unwrap()
+        }
     }
 
     impl<'ctx> FoldFile<'ctx> {

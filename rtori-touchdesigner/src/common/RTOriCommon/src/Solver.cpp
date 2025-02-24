@@ -7,7 +7,42 @@
 #include <iostream>
 #include <stdexcept>
 
+#if __has_include(<format>)
+#include <format>
+namespace fmt = std;
+#else
+#include <fmt/format.h>
+#endif
+
 using namespace rtori::rtori_td;
+
+std::string SolverImportResult::format(void) const {
+	switch (kind) {
+	case SolverImportResultKind::FoldParseError: {
+		rtori::FoldFileParseError const& details = this->payload.parseError;
+		if (details.status == rtori::FoldFileParseErrorKind::Empty) {
+			return std::string("[ERROR] Couldn't parse fold file as it was empty");
+		} else if (details.status == rtori::FoldFileParseErrorKind::Error) {
+			rtori::JSONParseError const& jsonParseError = details.error.value();
+
+			return fmt::format("[ERROR] Fold parse error \"{}\" on line {}, column {}",
+							   (int32_t)jsonParseError.category,
+							   jsonParseError.line,
+							   jsonParseError.column);
+		} else {
+			return std::string("[ERROR] Unknown fold parse error");
+		}
+	}
+	case SolverImportResultKind::FoldLoadError:
+		return std::string("[ERROR] Fold load error");
+	case SolverImportResultKind::FoldEmpty:
+		return std::string("[ERROR] Fold input is empty");
+	case SolverImportResultKind::Success:
+		return std::string("[SUCCESS] Fold loaded successfully");
+	default:
+		return std::string("[ERROR] Unknown error kind");
+	}
+}
 
 Solver::Solver(std::shared_ptr<rtori::Context> context)
 	: context(context), solver(nullptr), foldFile(nullptr), frameIndex(0) {

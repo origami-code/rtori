@@ -3,9 +3,11 @@
 #include "rtori/Context.hpp"
 #include "rtori/Solver.hpp"
 
+#include <iterator>
 #include <optional>
 #include <format>
 #include <rtori/FoldFileParseError.d.hpp>
+#include <rtori/FoldFileParseErrorKind.d.hpp>
 #include <rtori/JSONParseError.d.hpp>
 
 namespace rtori::rtori_td {
@@ -24,26 +26,7 @@ struct SolverImportResult final {
 		rtori::FoldFileParseError parseError;
 	} payload;
 
-	std::string format() const {
-		switch (kind) {
-		case SolverImportResultKind::FoldParseError: {
-			rtori::FoldFileParseError const& details = this->payload.parseError;
-			// std::format requires Xcode 15.3 or later
-			return /*std::format("[ERROR] Fold parse error \"{}\" on line {}, column {}",
-							   (int32_t)details.category,
-							   details.line,
-							   details.column);*/ std::string("[ERROR] Fold parse error");
-		}
-		case SolverImportResultKind::FoldLoadError:
-			return std::string("[ERROR] Fold load error");
-		case SolverImportResultKind::FoldEmpty:
-			return std::string("[ERROR] Fold input is empty");
-		case SolverImportResultKind::Success:
-			return std::string("[SUCCESS] Fold loaded successfully");
-		default:
-			return std::string("[ERROR] Unknown error kind");
-		}
-	}
+	std::string format() const;
 };
 
 class Solver final {

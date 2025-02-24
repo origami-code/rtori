@@ -42,7 +42,8 @@ if(MSVC)
     set_target_properties(
         RTOriCommon PROPERTIES
 
-        # Custom property
+        # Custom property, we direct rtori to use the windows heap allocator
+        # with a custom heap, allowing us to track memory consumption
         ALLOC_USE_WINDOWS_HEAP On
     )
 endif()

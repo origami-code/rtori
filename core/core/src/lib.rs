@@ -10,6 +10,26 @@ pub use fold;
 pub use rtori_os_fold_importer as fold_importer;
 pub use rtori_os_model as model;
 
+pub enum SolverKind {
+    OS(os_solver::Solver),
+}
+
+pub enum SolverPreprocessedData<'a, A>
+where
+    A: Allocator,
+{
+    /// Preprocessing data for the Origami Simulator family of solvers
+    OS(fold_importer::supplement::SupplementedInput<'a, A>),
+}
+
+pub struct Solver<'ctx, A>
+where
+    A: Allocator,
+{
+    context: &'ctx Context<A>,
+    inner: SolverKind,
+}
+
 pub struct Context<A> {
     allocator: A,
 }
