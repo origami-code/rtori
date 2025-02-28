@@ -1,26 +1,13 @@
-use crate::handful::LockstepNU;
+use crate::collections::{Handful, Lockstep, LockstepNU};
 
-use super::common::*;
 use super::indices::*;
-use super::Handful;
-use super::Lockstep;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize)]
-#[repr(transparent)]
-pub struct Vertex<'alloc>(pub Handful<'alloc, f32, 3>);
 
-impl core::ops::Deref for Vertex<'_> {
-    type Target = [f32];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
+#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
 pub struct VertexInformation<'alloc> {
     #[serde(rename = "vertices_coords")]
-    pub coords: Lockstep<'alloc, Vertex<'alloc>>,
+    pub coords: LockstepNU<'alloc, f32>,
 
     #[serde(rename = "vertices_vertices")]
     pub adjacent: LockstepNU<'alloc, VertexIndex>,
@@ -36,6 +23,7 @@ pub struct VertexInformation<'alloc> {
     #[serde(rename = "rtori:vertices_mass")]
     pub sim_weight: Lockstep<'alloc, f32>,
 }
+static_assertions::assert_impl_all!(VertexInformation<'static>: serde_seeded::DeserializeSeeded<'static, crate::deser::Seed<'static>>);
 
 impl VertexInformation<'_> {
     pub fn count(&self) -> usize {

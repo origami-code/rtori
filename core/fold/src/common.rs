@@ -1,5 +1,3 @@
-use crate::Handful;
-
 pub use bumpalo::collections::{String, Vec};
 
 #[derive(Debug, Clone)]

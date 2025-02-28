@@ -17,6 +17,7 @@ members = [
 [patch.crates-io]
 simba = { git = 'https://github.com/dimforge/simba.git', branch = "master"}
 bumpalo = { git = 'https://github.com/aabizri/bumpalo.git', branch = "main" }
+serde-seeded = { git = 'https://github.com/aabizri/serde-seeded-rs.git', branch = "main"}
 #diplomat = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
 #diplomat-runtime = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
 #diplomat_core = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }

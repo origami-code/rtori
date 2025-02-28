@@ -21,7 +21,7 @@ pub fn triangulate3d<'a, Vertex, FuncRF, FuncAE>(
     mut append_edge: FuncAE,
 ) -> Result<(), Triangulate3DError>
 where
-    Vertex: core::ops::Deref<Target = [f32]>,
+    Vertex: core::convert::AsRef<[f32]>,
     FuncRF: FnMut([VertexIndex; 3]),
     FuncAE: FnMut([VertexIndex; 2]),
 {
@@ -45,7 +45,7 @@ where
     } else if vertex_count == 4 {
         let f = |idx| {
             let vertex_index = face_vertex_indices[idx] as usize;
-            let vertices = &vertices[vertex_index];
+            let vertices = &vertices[vertex_index].as_ref();
             if vertices.len() != 3 {
                 return Err(Triangulate3DError::ErrVertexIsNot3D { vertex_index });
             }
@@ -112,14 +112,15 @@ pub fn triangulate3d_collect<Vertex, Face, A>(
     allocator: A,
 ) -> Result<TriangulatedDiff<A>, Triangulate3DError>
 where
-    Vertex: core::ops::Deref<Target = [f32]>,
-    Face: core::ops::Deref<Target = [u32]>,
+    Vertex: core::convert::AsRef<[f32]>,
+    Face: core::convert::AsRef<[u32]>,
     A: core::alloc::Allocator + Clone,
 {
     let mut face_indices = alloc::vec::Vec::new_in(allocator.clone());
     let mut face_replacing = alloc::vec::Vec::new_in(allocator.clone());
     let mut additional_edges = alloc::vec::Vec::new_in(allocator);
 
+    
     face_vertex_indices
         .as_ref()
         .iter()
@@ -132,7 +133,7 @@ where
 
             let append_edge = |edge: [VertexIndex; 2]| additional_edges.push(edge);
 
-            crate::triangulation::triangulate3d(&face, vertices, replace_face, append_edge)
+            crate::triangulation::triangulate3d(&face.as_ref(), vertices.as_ref(), replace_face, append_edge)
         })?;
 
     Ok(TriangulatedDiff {

@@ -5,15 +5,17 @@ edition = "2021"
 
 [feature]
 bytemuck = ["dep:bytemuck"]
-#serde = ["dep:serde"]
+serde = [] # dep:serde
 
 [dependencies]
 itertools = "0.14.0"
+static_assertions = "1.1.0"
 serde = { version = "1.0.207", default-features = false, features = ["derive", "std"] }
 serde_repr = {version = "0.1.20", default-features = false}
 tinyvec = { version = "1.8.0", default-features = false, features = ["alloc", "serde", "std"] }
 bytemuck = { version= "1.18.0", default-features = false, features = ["derive"], optional = true}
 bumpalo = {version = "3.17.0", features = ["collections", "serde", "boxed"] }
-
+serde-seeded = {version = "0.1.0", default-features = false, features = ["derive"]}
+derive_more = {version = "2.0.1", features = ["as_ref", "constructor", "display", "deref", "deref_mut", "from", "from_str", "index", "index_mut", "into", "into_iterator", "try_from", "try_into", "try_unwrap", "unwrap"], default-features = false}
 [dev-dependencies]
 serde_json = "1.0.125"

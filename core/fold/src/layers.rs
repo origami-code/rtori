@@ -1,5 +1,5 @@
+use super::collections::Lockstep;
 use super::indices::*;
-use super::Lockstep;
 
 #[derive(
     Debug,
@@ -33,7 +33,8 @@ pub struct EdgeOrder {
     pub s: Ordering,
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
+#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
 pub struct LayerInformation<'alloc> {
     #[serde(rename = "faceOrders")]
     pub face_orders: Lockstep<'alloc, FaceOrder>,

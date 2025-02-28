@@ -1,28 +1,30 @@
 use alloc::borrow::Cow;
 
-use crate::Lockstep;
+use crate::collections::{Lockstep, SeededOption, String};
 
 use super::*;
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
+#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
 pub struct FrameMetadata<'alloc> {
     #[serde(rename = "frame_title")]
-    pub title: Option<String<'alloc>>,
+    pub title: SeededOption<String<'alloc>>,
 
     #[serde(rename = "frame_description")]
-    pub description: Option<String<'alloc>>,
+    pub description: SeededOption<String<'alloc>>,
 
     #[serde(rename = "frame_classes")]
-    pub classes: Option<Vec<'alloc, String<'alloc>>>,
+    pub classes: Lockstep<'alloc, String<'alloc>>,
 
     #[serde(rename = "frame_attributes")]
-    pub attributes: Option<Vec<'alloc, String<'alloc>>>,
+    pub attributes: Lockstep<'alloc, String<'alloc>>,
 
     #[serde(rename = "frame_unit")]
-    pub unit: Option<String<'alloc>>,
+    pub unit: SeededOption<String<'alloc>>,
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
+#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
 pub struct FrameCore<'alloc> {
     #[serde(flatten)]
     pub metadata: FrameMetadata<'alloc>,
@@ -42,6 +44,7 @@ pub struct FrameCore<'alloc> {
     pub uvs: Lockstep<'alloc, [f32; 2]>,
 }
 
+
 impl<'a> FrameCore<'a> {
     pub fn vertices_count(&self) -> usize {
         self.vertices.count()
@@ -56,7 +59,8 @@ impl<'a> FrameCore<'a> {
     }
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
+#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
 pub struct NonKeyFrame<'alloc> {
     #[serde(flatten)]
     pub frame: FrameCore<'alloc>,

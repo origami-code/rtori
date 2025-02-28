@@ -9,11 +9,7 @@ extern crate alloc;
 mod indices;
 pub use indices::*;
 
-mod handful;
-use handful::Handful;
-
-mod lockstep;
-use lockstep::Lockstep;
+pub mod collections;
 
 mod common;
 use common::*;
@@ -46,29 +42,33 @@ pub enum Field {
     VerticesCoords,
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
+#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
 pub struct FileMetadata<'alloc> {
     #[serde(rename = "file_spec")]
     pub spec: Option<u32>,
-    #[serde(rename = "file_creator")]
-    pub creator: Option<String<'alloc>>,
-    #[serde(rename = "file_author")]
-    pub author: Option<String<'alloc>>,
-}
 
-#[derive(Debug, Clone, serde::Serialize)]
+    #[serde(rename = "file_creator")]
+    pub creator: collections::SeededOption<collections::String<'alloc>>,
+    
+    #[serde(rename = "file_author")]
+    pub author: collections::SeededOption<collections::String<'alloc>>,
+}
+static_assertions::assert_impl_all!(FileMetadata<'static>: serde_seeded::DeserializeSeeded<'static, crate::deser::Seed<'static>>);
+
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
+#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
 pub struct File<'alloc> {
     #[serde(flatten)]
-    pub file_metadata: Option<FileMetadata<'alloc>>,
+    pub file_metadata: FileMetadata<'alloc>,
 
     #[serde(rename = "file_frames")]
-    pub frames: Vec<'alloc, NonKeyFrame<'alloc>>,
+    pub frames: collections::VecU<'alloc, NonKeyFrame<'alloc>>,
 
     #[serde(flatten)]
     pub key_frame: FrameCore<'alloc>,
 }
-
-
+static_assertions::assert_impl_all!(FileMetadata<'static>: serde_seeded::DeserializeSeeded<'static, crate::deser::Seed<'static>>);
 
 impl File<'_> {
     pub fn frame<'a>(&'a self, index: FrameIndex) -> Option<FrameRef<'a>> {
@@ -85,14 +85,22 @@ impl File<'_> {
 mod tests {
     use super::*;
 
+    fn test_deserialization(contents: &str) {
+        let bump = bumpalo::Bump::new();
+        let seed = crate::deser::Seed::from_bump(&bump);
+        let mut deser = serde_json::de::Deserializer::from_str(contents);
+        let output =
+            <File as serde_seeded::DeserializeSeeded<_>>::deserialize_seeded(&seed, &mut deser);
+        println!("Output: {:#?}", output);
+    }
+
     macro_rules! declare_file(
         ($const_name:ident, $test_name:ident, $file:expr) => {
             const $const_name: &'static str = include_str!($file);
 
             #[test]
             pub fn $test_name() {
-                let output = serde_json::from_str::<File<'_>>($const_name).unwrap();
-                println!("Output: {:#?}", output);
+                test_deserialization($const_name);
             }
         }
     );

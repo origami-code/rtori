@@ -212,7 +212,7 @@ where
             .coords
             .as_ref()
             .unwrap()
-            .iter()
+            .into_iter()
             .map(|slice| {
                 if slice.len() != 3 {
                     panic!();
@@ -513,21 +513,27 @@ pub fn transform_in<A: Allocator + Clone>(
     allocator: A,
 ) -> Result<FoldSupplement<A>, TransformError> {
     // First, triangulate
-    let triangulated = crate::triangulation::triangulate3d_collect(
-        input
+    let face_vertex_indices = input
             .faces
             .vertices
             .as_ref()
             .ok_or(TransformError::MissingRequiredField(
                 fold::Field::FacesVertices,
-            ))?,
-        input
+            ))?;
+
+    let vertices_raw = input
             .vertices
             .coords
             .as_ref()
             .ok_or(TransformError::MissingRequiredField(
                 fold::Field::VerticesCoords,
-            ))?,
+            ))?;
+        
+    let vertices = vertices_raw.flatten_n_ref::<3>().expect("works on 3D vertices only, at least some were not 3D");
+
+    let triangulated = crate::triangulation::triangulate3d_collect(
+        face_vertex_indices,
+        vertices,
         allocator.clone(),
     )
     .map_err(|e| TransformError::TriangulationError(e))?;

@@ -1,19 +1,9 @@
-use crate::handful::LockstepNU;
-use crate::Handful;
-use crate::Lockstep;
+use crate::collections::{Lockstep, LockstepNU};
 
 use super::indices::*;
 
 #[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    serde::Serialize,
-    serde::Deserialize
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
 #[cfg_attr(
     feature = "bytemuck",
@@ -23,15 +13,7 @@ use super::indices::*;
 pub struct EdgeVertexIndices(pub [VertexIndex; 2]);
 
 #[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    serde::Serialize,
-    serde::Deserialize
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
 pub enum EdgeAssignment {
     /// Border/boundary edge
@@ -56,7 +38,8 @@ pub enum EdgeAssignment {
     F,
 }
 
-#[derive(Debug, Clone, Default, serde::Serialize)]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, Default, serde::Serialize)]
+#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
 pub struct EdgeInformation<'alloc> {
     /// For each edge, an array [u, v] of two vertex IDs for the two endpoints of the edge.
     /// This effectively defines the orientation of the edge, from u to v.

@@ -219,16 +219,16 @@ pub mod ffi {
                 return Err(());
             }
 
-            let result_str = self
+            let metadata =& self
                 .inner
-                .file_metadata
-                .as_ref()
-                .and_then(|metadata| match field {
-                    FoldMetadataQuery::Creator => metadata.creator.as_ref(),
-                    FoldMetadataQuery::Author => metadata.author.as_ref(),
-                    _ => unreachable!(),
-                })
-                .map(|x| x.as_str());
+                .file_metadata;
+
+
+            let result_str = match field {
+                FoldMetadataQuery::Creator => metadata.creator.as_ref(),
+                FoldMetadataQuery::Author => metadata.author.as_ref(),
+                _ => unreachable!(),
+            }.map(|x| x.as_str());
 
             match result_str {
                 Some(s) => {
