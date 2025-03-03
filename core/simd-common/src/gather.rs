@@ -1,5 +1,5 @@
 use crate::SimdU32;
-use core::simd::{LaneCount, SimdElement, SupportedLaneCount, num::SimdUint};
+use core::simd::{num::SimdUint, LaneCount, SimdElement, SupportedLaneCount};
 
 /// Converts a vector of logical indices (into vectors of dimension D) into D outer vectors of indices so as to access AoSoA layouts.
 ///

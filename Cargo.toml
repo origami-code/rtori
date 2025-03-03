@@ -3,14 +3,12 @@ cargo-features = ["profile-rustflags"]
 [workspace]
 resolver = "2"
 members = [
-    "rtori-server",
     # "rtori-cli",
     "core/fold",
     "core/core",
     "core/core-ffi",
     "core/simd-common",
     "core/os/model",
-    "core/os/interface",
     "core/os/simd",
     "core/os/fold-importer",
     #"core/os//wgpu"

@@ -7,7 +7,7 @@ edition = "2021"
 bytemuck = ["dep:bytemuck"]
 
 [dependencies]
-itertools = "0.13.0"
+itertools = "0.14.0"
 serde = { version = "1.0.207", default-features = false, features = ["derive", "std"] }
 serde_repr = {version = "0.1.19", default-features = false}
 tinyvec = { version = "1.8.0", default-features = false, features = ["alloc", "serde", "std"] }
