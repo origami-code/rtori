@@ -118,3 +118,12 @@ Potential support: (In LLVM/Rust triplet)
 - `riscv32imac-unknown-none-elf`: for rp2350 (riscv cores)
 - `wasm32-unknown-unknown`: for web/wasm
 - `arm64ec-pc-windows-msvc`: for windows on arm in "Emulation-Compatible" contexts
+
+## Contributors & Acknowledgements
+
+Matthew Gardiner (Ars Elecronica Futurelab)
+Alexandre Bizri (Ars Electronica Futurelab)
+
+Funded through the FWF Austrian Science Fund, PEEK Program (Project AR590)
+Origami Simulator by Amanda Ghassaei
+    Amanda Ghassaei, Erik D. Demaine, and Neil Gershenfeld, “Fast, Interactive Origami Simulation using GPU Computation”, in Origami7: Proceedings of the 7th International Meeting on Origami in Science, Mathematics and Education (OSME 2018), volume 4, Oxford, England, September 5–7, 2018, pages 1151–1166, Tarquin. 
