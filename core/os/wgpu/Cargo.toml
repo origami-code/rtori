@@ -1,0 +1,18 @@
+[package]
+name = "rtori-os-wgpu"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+dx12 = ["wgpu/dx12"]
+vulkan = [] # no effect right now
+metal = ["wgpu/metal"]
+webgpu = ["wgpu/webgpu"]
+
+[dependencies]
+encase = "0.9.0"
+fold = {path = "../fold"}
+static_assertions = "1.1.0"
+wgpu = {version = "22.1.0", features = ["wgsl"], default-features = false}
+rtori-os-model = {path = "../rtori-os-model", features = ["define_proxy"]}
+bitflags = "2.6.0"

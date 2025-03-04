@@ -13,7 +13,6 @@
 #include <string_view>
 
 #include "rtori/td/SimulationThread.hpp"
-#include "rtori_core.hpp"
 
 #include "Interests.hpp"
 
@@ -35,7 +34,7 @@ namespace rtori::rtori_td {
 
 class RTORI_TD_EXPORT Simulator final {
   public:
-	Simulator(rtori::Context const* context);
+	Simulator(std::shared_ptr<rtori::Context> context);
 	~Simulator();
 
 	/// Polls the simulator for the cook results
@@ -67,7 +66,7 @@ class RTORI_TD_EXPORT Simulator final {
 	void getErrorString(TD::OP_String* error);
 	void getInfoPopupString(TD::OP_String* info);
 
-	rtori::Context const* rtoriCtx;
+	std::shared_ptr<rtori::Context> rtoriCtx;
 
   private:
 	rtori::rtori_td::Input consolidateParameters(const TD::OP_Inputs* inputs,

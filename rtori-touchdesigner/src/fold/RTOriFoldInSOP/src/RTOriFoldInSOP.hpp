@@ -12,8 +12,6 @@
 
 #include "rtori/td/Context.hpp"
 
-#include "rtori_core.hpp"
-
 #include <cstdint>
 
 namespace rtori::rtori_td {

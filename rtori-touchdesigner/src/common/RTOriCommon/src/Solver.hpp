@@ -1,9 +1,14 @@
 #pragma once
 
-#include "rtori_core.hpp"
+#include "rtori/Context.hpp"
+#include "rtori/Solver.hpp"
 
+#include <iterator>
 #include <optional>
 #include <format>
+#include <rtori/FoldFileParseError.d.hpp>
+#include <rtori/FoldFileParseErrorKind.d.hpp>
+#include <rtori/JSONParseError.d.hpp>
 
 namespace rtori::rtori_td {
 
@@ -18,41 +23,24 @@ struct SolverImportResult final {
   public:
 	SolverImportResultKind kind;
 	union {
-		rtori::JsonParseError parseError;
+		rtori::FoldFileParseError parseError;
 	} payload;
 
-	std::string format() const {
-		switch (kind) {
-		case SolverImportResultKind::FoldParseError: {
-			rtori::JsonParseError const& details = this->payload.parseError;
-			// std::format requires Xcode 15.3 or later
-			return /*std::format("[ERROR] Fold parse error \"{}\" on line {}, column {}",
-							   (int32_t)details.category,
-							   details.line,
-							   details.column);*/ std::string("[ERROR] Fold parse error");
-		}
-		case SolverImportResultKind::FoldLoadError:
-			return std::string("[ERROR] Fold load error");
-		case SolverImportResultKind::FoldEmpty:
-			return std::string("[ERROR] Fold input is empty");
-		case SolverImportResultKind::Success:
-			return std::string("[SUCCESS] Fold loaded successfully");
-		default:
-			return std::string("[ERROR] Unknown error kind");
-		}
-	}
+	std::string format() const;
 };
 
 class Solver final {
   public:
-	rtori::Solver const* solver;
+	std::shared_ptr<rtori::Context> context;
 
-	rtori::FoldFile const* foldFile;
+	std::unique_ptr<rtori::Solver> solver;
+
+	std::unique_ptr<rtori::FoldFile> foldFile;
 	uint16_t frameIndex;
 
-	rtori::TransformedData* transformedData;
+	// rtori::SupplementedInput* transformedData;
 
-	Solver(rtori::Context const* ctx);
+	Solver(std::shared_ptr<rtori::Context> ctx);
 	~Solver();
 
 	SolverImportResult update(std::optional<std::string_view> fold,

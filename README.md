@@ -45,12 +45,13 @@ We thought about the following targets, please open an issue to express interest
 
 ### RTOri as Bindings
 
-| Ecosystem   | State |
-|:-----------:|:--:|
-| C++         | 🚧 |
-| .NET        | ❌ |
-| py          | ❌ | 
-| Web (wasm)  | ❌ |
+| Ecosystem     | State |
+|:-------------:|:--:|
+| C++           | 🚧 |
+| .NET          | ❌ |
+| ↪ [Unity Burst](https://docs.unity.cn/Packages/com.unity.burst@1.8/manual/csharp-burst-intrinsics-dllimport.html) | ❌ |
+| py (cpython)  | ❌ | 
+| Web (wasm)    | ❌ |
 
 ## Software architecture
 (mermaid graph)
@@ -79,7 +80,7 @@ flowchart TD
 ## TODO
 
 1. Reorganize rtori-core into its own directory with supporting rust code
-2. Rename rtori-core-simd (&-wgpu) to -os-simd
+2. Rename rtori-os-simd (&-wgpu) to -os-simd
 3. Compare performance with different x86_64 build configs (SSE2, SSE4.1, AVX, AVX2, AVX512, etc.) see https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels as inspiration (start with x86-64-v2 as a baseline)
     - See what makes sense to incorporate
 4. Run the subset of targets with VTune & tune the performance (on all three)

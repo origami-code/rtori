@@ -13,7 +13,7 @@
 #include "rtori/td/Simulator.hpp"
 #include "rtori/td/SimulateOP.hpp"
 
-#include "rtori_core.hpp"
+#include "rtori/Context.hpp"
 
 #include <cstdint>
 
@@ -22,7 +22,7 @@ namespace rtori::rtori_td {
 /// This SOP is a generator and it takes no input, though it does take a lot of parameters
 class SimulateSOP final : public TD::SOP_CPlusPlusBase, public rtori::rtori_td::SimulateOP {
   public:
-	SimulateSOP(const TD::OP_NodeInfo* info, rtori::Context const* rtoriCtx);
+	SimulateSOP(const TD::OP_NodeInfo* info, std::shared_ptr<rtori::Context> rtoriCtx);
 	virtual ~SimulateSOP();
 
 	virtual void getGeneralInfo(TD::SOP_GeneralInfo*, const TD::OP_Inputs*, void*) override;

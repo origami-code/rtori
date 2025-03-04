@@ -8,12 +8,23 @@ project(rtori-touchdesigner
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
+if((NOT cxx_std_20 IN_LIST CMAKE_CXX_COMPILE_FEATURES) AND(NOT TARGET fmt))
+    # We test the compiler, as we provide the fmt library (https://github.com/fmtlib/fmt) if it does not support std::format
+    include(FetchContent)
+    FetchContent_Declare(
+        fmt
+        GIT_REPOSITORY github.com/fmtlib/fmt
+        GIT_TAG 11.1.3
+    )
+    FetchContent_MakeAvailable(fmt)
+endif()
+
 if(APPLE)
     include(ext/cmake-macos/cmake-macos.cmake)
 endif()
 
-if(NOT TARGET rtori_core)
-    add_subdirectory("../rtori-core-ext" ${CMAKE_CURRENT_BINARY_DIR}/rtori_core)
+if(NOT TARGET rtori_core::CXXHeaders)
+    message(FATAL_ERROR "rtori_core::CXXHeaders not defined")
 endif()
 
 add_subdirectory(src)

@@ -1,41 +1,25 @@
 
+
+#include <memory>
+#include <rtori/Context.hpp>
+
 #include "rtori/td/Context.hpp"
-#include "rtori_core.hpp"
 
-#include "allocator/Allocator.hpp"
+/*
+ * Because the default constructor is constexpr, static std::weak_ptrs are initialized as part
+ * of static non-local initialization, before any dynamic non-local initialization begins. This
+ * makes it safe to use a std::weak_ptr in a constructor of any static object.
+ */
+static std::weak_ptr<rtori::Context> sharedContext;
 
-#include <mutex>
-#include <cstdlib>
-#include <cassert>
-
-/// There is a single context, shared between all OPs
-static rtori::Context const* staticRtoriContext = nullptr;
-
-/// Reference-counting doesn't need to be thread safe as
-/// touchdesigner's model is single-threaded
-static uint32_t instances = 0;
-
-namespace rtori::rtori_td {
-
-rtori::Context const* init() {
-	uint32_t previousInstanceCount = instances++;
-	if (previousInstanceCount == 0) {
-		// TODO: use the correct data structure
-		staticRtoriContext = rtori::rtori_ctx_init(nullptr);
+std::shared_ptr<rtori::Context> getContext(void) {
+	auto acquired = sharedContext.lock();
+	if (acquired.use_count() > 0) {
+		return acquired;
 	}
-	assert((void("context should be non-null by this point"), staticRtoriContext != nullptr));
-	return staticRtoriContext;
+
+	// Here we create a new context
+	auto shared = std::shared_ptr(rtori::Context::global());
+	sharedContext = shared;
+	return shared;
 }
-
-void deinit(rtori::Context const* ctx) {
-	assert((void("Unknown context given"), ctx == staticRtoriContext));
-	assert((void("Instance count should be non-zero"), instances >= 1));
-
-	instances -= 1;
-
-	if (instances == 0) {
-		rtori::rtori_ctx_deinit(staticRtoriContext);
-		staticRtoriContext = nullptr;
-	}
-}
-} // namespace rtori::rtori_td

@@ -58,8 +58,8 @@ constexpr const char* PARAMETER_KEYS_SIMULATION[] = {PARAMETER_KEY_FOLD_SOURCE,
 													 PARAMETER_KEY_ADAPTIVE,
 													 PARAMETER_KEY_FRAME_BUDGET};
 
-Simulator::Simulator(rtori::Context const* ctx)
-	: m_simulation(rtori::rtori_td::SimulationThread(ctx)), rtoriCtx(ctx) {}
+Simulator::Simulator(std::shared_ptr<rtori::Context> ctx)
+	: rtoriCtx(ctx), m_simulation(rtori::rtori_td::SimulationThread(ctx)) {}
 
 Simulator::~Simulator() {}
 

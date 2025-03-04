@@ -3,24 +3,25 @@ cargo-features = ["profile-rustflags"]
 [workspace]
 resolver = "2"
 members = [
-    "fold",
-    # "rtori-core-wgpu", 
-    "rtori-core-simd",
-    "rtori-server",
     # "rtori-cli",
-    "rtori-os-fold-importer",
-    "rtori-core",
-    "rtori-core-ext",
-    "rtori-os-model",
-    "rtori-core-ffi"
-]
+    "core/fold",
+    "core/core",
+    "core/core-ffi",
+    "core/simd-common",
+    "core/os/model",
+    "core/os/simd",
+    "core/os/fold-importer",
+    #"core/os//wgpu"
+    "xtask"]
 
+#[patch.crates-io]
+#diplomat = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
+#diplomat-runtime = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
+#diplomat_core = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
+#diplomat-tool = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
 
-[patch.crates-io]
-diplomat = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
-diplomat-runtime = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
-diplomat_core = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
-diplomat-tool = { git = 'https://github.com/aabizri/diplomat.git', branch = "feature-custom-allocators" }
+[profile.dev]
+debug = true
 
 [profile.release]
 codegen-units = 1

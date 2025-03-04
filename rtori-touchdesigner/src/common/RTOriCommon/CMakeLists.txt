@@ -4,18 +4,18 @@ set(RTOriCommon_AllocatorImpl
 )
 
 list(APPEND RTOriCommon_Impl
+    src/Context.cpp
     src/SimulationThread.cpp
     src/Solver.cpp
     src/Solver.hpp
-    src/Context.cpp
     ${RTOriCommon_AllocatorImpl}
 )
 
 list(APPEND RTOriCommon_Headers
+    include/rtori/td/Context.hpp
     include/rtori/td/Input.hpp
     include/rtori/td/Output.hpp
     include/rtori/td/SimulationThread.hpp
-    include/rtori/td/Context.hpp
 )
 
 add_library(RTOriCommon SHARED ${RTOriCommon_Impl})
@@ -34,14 +34,16 @@ target_link_libraries(
     RTOriCommon
 
     PUBLIC
-    rtori_core
+    rtori_core::Shared
+    rtori_core::CXXHeaders
 )
 
 if(MSVC)
     set_target_properties(
         RTOriCommon PROPERTIES
 
-        # Custom property
+        # Custom property, we direct rtori to use the windows heap allocator
+        # with a custom heap, allowing us to track memory consumption
         ALLOC_USE_WINDOWS_HEAP On
     )
 endif()

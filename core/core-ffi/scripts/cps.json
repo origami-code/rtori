@@ -1,0 +1,11 @@
+{
+    "name": "rtori_core",
+    "description": "RTOri Core Library",
+    "version": "0.0.0",
+    "compat_version": "0.0.0",
+    "platform": {
+        "isa": "x86_64",
+        "kernel": "windows",
+        "c_runtime_vendor": "microsoft"
+    }
+}
