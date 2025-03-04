@@ -9,6 +9,78 @@ set(RTORI_CORE_TARGET_ARCH {{target_arch}} CACHE INTERNAL "Target architecture o
 set(RTORI_CORE_TARGET_OS {{target_os}} CACHE INTERNAL "Target operating system (OS) of the compiled rtori_core" FORCE)
 set(RTORI_CORE_TARGET_ENV {% if let Some(env) = target_env %} {{env}} {% else %} "none" {% endif %} CACHE INTERNAL "Target environment of the compiled rtori_core" FORCE)
 
+# Extract the build architecture that is currently considered.
+# And error out in case of multi-build or unknown architectures in the generators which are multi-arch.
+# As well as guess what is the current architecture otherwise, in terms of rust architectures.
+if(XCODE)
+    list(LENGTH CMAKE_OSX_ARCHITECTURES arch_count)
+
+    if(${arch_count} GREATER 1)
+        message(FATAL_ERROR "Cannot generate more than one architecture")
+    elseif(${arch_count} EQUAL 0)
+        message(WARNING "Generating for current processor")
+    else()
+        if(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+            set(rust_arch "aarch64")
+        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
+            set(rust_arch "x86_64")
+        else()
+            message(FATAL_ERROR "Unknown architecture ${CMAKE_OSX_ARCHITECTURES}")
+        endif()
+
+        set(expected_triple "${rust_arch}-apple-darwin")
+    endif()
+
+elseif(MSVC)
+    if(CMAKE_VS_PLATFORM_NAME)
+        if(CMAKE_VS_PLATFORM_NAME STREQUAL "x64")
+            set(rust_arch "x86_64")
+        elseif(CMAKE_VS_PLATFORM_NAME STREQUAL "win32")
+            set(rust_arch "i686")
+        elseif(CMAKE_VS_PLATFORM_NAME STREQUAL "arm64")
+            set(rust_arch "aarch64")
+        elseif(CMAKE_VS_PLATFORM_NAME STREQUAL "arm64ec")
+            set(rust_arch "arm64ec")
+        else()
+            message(FATAL_ERROR "CMAKE_VS_PLATFORM_NAME detected but unknown platform: ${CMAKE_VS_PLATFORM_NAME}")
+        endif()
+    else()
+        if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
+            set(rust_arch "x86_64")
+        elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64")
+            set(rust_arch "aarch64")
+        endif()
+    endif()
+
+    if(NOT rust_arch)
+        message(FATAL_ERROR "Unknown platform")
+    endif()
+
+    set(expected_triple "${rust_arch}-pc-windows-msvc")
+else()
+    if((CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
+        OR(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64"))
+        set(rust_arch "x86_64")
+    elseif((CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64") OR(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64"))
+        set(rust_arch "aarch64")
+    elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64ec")
+        set(rust_arch "arm64ec")
+    elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "wasm32")
+        set(rust_arch "wasm32")
+    elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "powerpc")
+        set(rust_arch "powerpc")
+    else()
+        set(rust_arch "${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
+endif()
+
+# Checks to make sure the library matches the target architecture
+if(
+    NOT(rust_arch STREQUAL RTORI_CORE_TARGET_ARCH)
+)
+    message(WARNING "Unsupported target architecture: building for ${rust_arch} but rtori-core built for ${RTORI_CORE_TARGET_ARCH}. Continuing but this is VERY risky.")
+endif()
+
 add_library(rtori_core::CHeaders INTERFACE IMPORTED GLOBAL)
 set_target_properties(rtori_core::CHeaders PROPERTIES
     LANGUAGE C
@@ -21,22 +93,23 @@ set_target_properties(rtori_core::CXXHeaders PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${prefix}/headers/cpp"
 )
 
-{% if let Some(shared) = shared_path_rel %}
+    {% if let Some(shared) = shared_path_rel %}
 
 add_library(rtori_core::Shared SHARED IMPORTED GLOBAL)
 set_target_properties(rtori_core::Shared PROPERTIES
     LINKER_LANGUAGE C
     IMPORTED_LOCATION "${prefix}/{{shared.to_string_lossy()}}"
 )
+
 if(WIN32)
     set_target_properties(rtori_core::Shared PROPERTIES
         IMPORTED_IMPLIB "${prefix}/{{shared.to_string_lossy()}}.lib"
     )
 endif()
 
-{% endif %}
+    {% endif %}
 
-{% if let Some(static) = static_path_rel %}
+    {% if let Some(static) = static_path_rel %}
 
 add_library(rtori_core::Static STATIC IMPORTED GLOBAL)
 set_target_properties(rtori_core::Shared PROPERTIES
@@ -45,4 +118,4 @@ set_target_properties(rtori_core::Shared PROPERTIES
     INTERFACE_COMPILE_DEFINITIONS "-DRTORI_STATIC"
 )
 
-{% endif %}
+    {% endif %}
