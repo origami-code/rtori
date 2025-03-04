@@ -5,14 +5,14 @@ use std::{
 
 use cargo_metadata::Message;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CrateTypes {
     Shared,
     Static,
     Both,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BuildConfiguration {
     pub triple: String,
     pub profile: String,
@@ -20,13 +20,13 @@ pub struct BuildConfiguration {
     pub crate_types: CrateTypes,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LibraryKind {
     Shared,
     Static,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ArtifactRole {
     /// .lib on windows, .a otherwise
     Archive,
@@ -40,7 +40,24 @@ pub enum ArtifactRole {
 
 #[derive(Debug, Clone)]
 pub struct BuildOutput {
-    paths: Vec<(std::path::PathBuf, ArtifactRole)>,
+    pub config: BuildConfiguration,
+    pub paths: Vec<(std::path::PathBuf, ArtifactRole)>,
+}
+
+impl BuildOutput {
+    pub fn platform(&self) -> Option<&'static platforms::Platform> {
+        platforms::Platform::find(&self.config.triple)
+    }
+
+    pub fn get(&self, role: ArtifactRole) -> Option<&std::path::Path> {
+        self.paths.iter().find_map(|(path, candidate_role)| {
+            if candidate_role == &role {
+                Some(path.as_path())
+            } else {
+                None
+            }
+        })
+    }
 }
 
 fn contains_subslice<T: PartialEq>(data: &[T], needle: &[T]) -> bool {
@@ -56,6 +73,7 @@ pub fn kind_for_path<P: AsRef<std::path::Path>>(path: P) -> Option<ArtifactRole>
     if base_bytes.ends_with(b".dll")
         || base_bytes.ends_with(b".so")
         || base_bytes.ends_with(b".dylib")
+        || base_bytes.ends_with(b".wasm")
     {
         return Some(ArtifactRole::SharedLibrary);
     }
@@ -139,27 +157,81 @@ fn build(b: BuildConfiguration) -> Result<BuildOutput, BuildError> {
         .wait()
         .map_err(|e| BuildError::CouldNotGetExitStatus(e))?;
     if output.success() {
-        Ok(BuildOutput { paths: files })
+        Ok(BuildOutput {
+            config: b,
+            paths: files,
+        })
     } else {
         Err(BuildError::ExitStatus(output))
     }
 }
 
-fn generate_cmake() {
-    let template = include_str!("../resources/CMakeLists.txt.in");
+fn generate_cmake<P: AsRef<std::path::Path>>(outputs: &BuildOutput, output: P) {
+    #[derive(askama::Template)]
+    #[template(path = "../resources/CMakeLists.txt.in", escape = "none")]
+    struct Template<'a> {
+        target_triple: &'a str,
+        target_arch: &'a str,
+        target_os: &'a str,
+        target_env: Option<&'a str>,
+        static_path_rel: Option<&'a typed_path::UnixPath>,
+        shared_path_rel: Option<&'a typed_path::UnixPath>,
+    }
+
+    let shared_path_rel = outputs.get(ArtifactRole::SharedLibrary).map(|path| {
+        typed_path::UnixPath::new("shared").join(path.file_name().unwrap().as_encoded_bytes())
+    });
+    let static_path_rel = outputs.get(ArtifactRole::Archive).map(|path| {
+        typed_path::UnixPath::new("static").join(path.file_name().unwrap().as_encoded_bytes())
+    });
+    let platform = outputs.platform().unwrap();
+    let template = Template {
+        target_triple: &outputs.config.triple,
+        target_arch: platform.target_arch.as_str(),
+        target_os: platform.target_os.as_str(),
+        target_env: if let platforms::Env::None = platform.target_env {
+            None
+        } else {
+            Some(platform.target_env.as_str())
+        },
+        shared_path_rel: shared_path_rel.as_ref().map(|v| v.as_path()),
+        static_path_rel: static_path_rel.as_ref().map(|v| v.as_path()),
+    };
 
     let mut dest = std::fs::OpenOptions::new()
         .truncate(true)
         .write(true)
-        .open("output/CMakeLists.txt")
-        .unwrap();
-    dest.write_all(template.as_bytes()).unwrap();
+        .create(true)
+        .open(&output)
+        .expect(&format!(
+            "couldn't open <{:?}> for writing",
+            output.as_ref()
+        ));
+
+    use askama::Template as _;
+    let str = template.render().unwrap();
+    dest.write_all(str.as_bytes()).unwrap();
+}
+
+#[derive(clap::Parser, Debug)]
+struct Args {
+    #[arg(short, long, default_value_t = target_triple::HOST.into())]
+    target: String,
+
+    #[arg(short, long, default_value_t = String::from("release"))]
+    profile: String,
+
+    /// Directory where the output should be generated
+    #[arg(short, long, default_value = "./output")]
+    output: std::path::PathBuf,
 }
 
 fn main() {
+    let args = <Args as clap::Parser>::parse();
+
     let outputs = build(BuildConfiguration {
-        triple: String::from("x86_64-pc-windows-msvc"),
-        profile: String::from("release"),
+        triple: args.target,
+        profile: args.profile,
         features: Vec::new(),
         crate_types: CrateTypes::Both,
     })
@@ -168,20 +240,25 @@ fn main() {
     println!("outputs: {outputs:?}");
 
     /* Copying the files */
-    std::fs::create_dir_all("output/headers").unwrap();
-    std::fs::create_dir_all("output/shared").unwrap();
-    std::fs::create_dir_all("output/static").unwrap();
+    let headers_dir = args.output.join("headers");
+    std::fs::create_dir_all(&headers_dir).unwrap();
+
+    let shared_dir = args.output.join("shared");
+    std::fs::create_dir_all(&shared_dir).unwrap();
+
+    let static_dir = args.output.join("static");
+    std::fs::create_dir_all(&static_dir).unwrap();
 
     outputs.paths.iter().for_each(|(path, kind)| {
         let dst = match kind {
             ArtifactRole::Archive | ArtifactRole::AssociatedWith(LibraryKind::Static) => {
-                std::path::PathBuf::from("output/static/").join(path.file_name().unwrap())
+                static_dir.join(path.file_name().unwrap())
             }
             ArtifactRole::SharedLibrary
             | ArtifactRole::DebugSymbols
             | ArtifactRole::ImportLibrary
             | ArtifactRole::AssociatedWith(LibraryKind::Shared) => {
-                std::path::PathBuf::from("output/shared/").join(path.file_name().unwrap())
+                shared_dir.join(path.file_name().unwrap())
             }
         };
 
@@ -192,25 +269,25 @@ fn main() {
     /* Header generation */
     let mut c_bindings = std::process::Command::new("diplomat-tool")
         .args(&[
-            "cpp",
-            "output/headers/cpp/",
-            "--entry",
-            "core/core-ffi/src/lib.rs",
+            "cpp".into(),
+            headers_dir.join("cpp"),
+            "--entry".into(),
+            "core/core-ffi/src/lib.rs".into(),
         ])
         .spawn()
         .unwrap();
 
     let mut cpp_bindings = std::process::Command::new("diplomat-tool")
         .args(&[
-            "c",
-            "output/headers/c/rtori",
-            "--entry",
-            "core/core-ffi/src/lib.rs",
+            "c".into(),
+            headers_dir.join("c/rtori"),
+            "--entry".into(),
+            "core/core-ffi/src/lib.rs".into(),
         ])
         .spawn()
         .unwrap();
 
-    generate_cmake();
+    generate_cmake(&outputs, args.output.join("CMakeLists.txt"));
     /* CPS output */
 
     let cps = cps_deps::cps::Package {
@@ -237,4 +314,7 @@ fn main() {
 
     let cps_str = serde_json::to_string_pretty(&cps).unwrap();
     println!("cps: {cps_str}");
+
+    c_bindings.wait().unwrap();
+    cpp_bindings.wait().unwrap();
 }

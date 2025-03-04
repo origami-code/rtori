@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.21...3.31)
+
+# It should be placed in the root directory
 set(prefix ${CMAKE_CURRENT_LIST_DIR})
+
+set(RTORI_CORE_TARGET_TRIPLET {{target_triple}} CACHE INTERNAL "Target triple of the compiled rtori_core" FORCE)
+
+set(RTORI_CORE_TARGET_ARCH {{target_arch}} CACHE INTERNAL "Target architecture of the compiled rtori_core" FORCE)
+set(RTORI_CORE_TARGET_OS {{target_os}} CACHE INTERNAL "Target operating system (OS) of the compiled rtori_core" FORCE)
+set(RTORI_CORE_TARGET_ENV {% if let Some(env) = target_env %} {{env}} {% else %} "none" {% endif %} CACHE INTERNAL "Target environment of the compiled rtori_core" FORCE)
 
 add_library(rtori_core::CHeaders INTERFACE IMPORTED GLOBAL)
 set_target_properties(rtori_core::CHeaders PROPERTIES
@@ -13,20 +21,28 @@ set_target_properties(rtori_core::CXXHeaders PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${prefix}/headers/cpp"
 )
 
+{% if let Some(shared) = shared_path_rel %}
+
 add_library(rtori_core::Shared SHARED IMPORTED GLOBAL)
 set_target_properties(rtori_core::Shared PROPERTIES
     LINKER_LANGUAGE C
-    IMPORTED_LOCATION "${prefix}/shared/rtori_core.dll"
+    IMPORTED_LOCATION "${prefix}/{{shared.to_string_lossy()}}"
 )
 if(WIN32)
     set_target_properties(rtori_core::Shared PROPERTIES
-        IMPORTED_IMPLIB "${prefix}/shared/rtori_core.dll.lib"
+        IMPORTED_IMPLIB "${prefix}/{{shared.to_string_lossy()}}.lib"
     )
 endif()
+
+{% endif %}
+
+{% if let Some(static) = static_path_rel %}
 
 add_library(rtori_core::Static STATIC IMPORTED GLOBAL)
 set_target_properties(rtori_core::Shared PROPERTIES
     LINKER_LANGUAGE C
-    IMPORTED_LOCATION "${prefix}/static/rtori_core.lib"
+    IMPORTED_LOCATION "${prefix}/{{static.to_string_lossy()}}"
     INTERFACE_COMPILE_DEFINITIONS "-DRTORI_STATIC"
 )
+
+{% endif %}
