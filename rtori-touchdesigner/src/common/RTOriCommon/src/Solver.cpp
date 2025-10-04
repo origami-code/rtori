@@ -109,6 +109,7 @@ SolverImportResult Solver::update(std::optional<std::string_view> fold,
 	}
 
 	if (this->foldFile != nullptr && (fold.has_value() || frameIndex.has_value())) {
+		#if 0
 		// TODO: Cache by solver family
 		// So, TransformationCache which contains, for example, OSCache, which contains the
 		// supplemented data
@@ -129,6 +130,13 @@ SolverImportResult Solver::update(std::optional<std::string_view> fold,
 			return SolverImportResult{.kind = SolverImportResultKind::FoldLoadError};
 		}
 		std::cout << "Loaded fold file" << std::endl;
+		#else
+		
+		// The solver is created from the context
+		this->solver->load_from_fold(*this->foldFile, this->frameIndex);
+		std::cout << "Loaded fold file" << std::endl;
+
+		#endif
 	}
 
 	if (this->foldFile == nullptr) {
@@ -137,12 +145,15 @@ SolverImportResult Solver::update(std::optional<std::string_view> fold,
 		};
 	} else {
 		if (foldPercentage.has_value()) {
-			SolverOperationResult result =
-			  rtori::rtori_solver_set_fold_percentage(solver, foldPercentage.value());
-			assert(result == SolverOperationResult::Success);
+			const auto result = solver->set_fold_percentage(foldPercentage.value());
+			assert(result.is_ok());
 		}
 
 		// Done
 		return SolverImportResult{.kind = SolverImportResultKind::Success};
 	}
+}
+
+bool Solver::isLoaded() const {
+	return this->solver->is_loaded();
 }

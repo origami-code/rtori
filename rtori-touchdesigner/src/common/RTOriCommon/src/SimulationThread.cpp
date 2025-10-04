@@ -87,28 +87,6 @@ static void nameThread() {
 #endif
 }
 
-std::string_view format_SolverOperationResult(rtori::SolverOperationResult result) {
-	using rtori::SolverOperationResult;
-
-	switch (result) {
-	case SolverOperationResult::Success:
-		return "Success";
-	case SolverOperationResult::ErrorNotLoaded:
-		return "Error(ErrorNotLoaded): Attempted to do an operation requiring that "
-			   "a model be "
-			   "loaded, and no model is";
-	case SolverOperationResult::ErrorExtracting:
-		return "Error(ErrorExtracting): Attempted to do an operation that can only "
-			   "be done in "
-			   "the 'Standby' or 'Loaded' state, while it was in the 'Extracting' "
-			   "state";
-	case SolverOperationResult::ErrorNoSuchFrameInFold:
-		return "Error(ErrorNoSuchFrameInFold): No such Frame in fold";
-	default:
-		return "Error(Other): Other error";
-	}
-}
-
 /// This is the inner state of the simulation thread
 class SimulationThreadImpl final {
   public:
@@ -204,7 +182,7 @@ void SimulationThread::runWorker() {
 			  std::chrono::duration_cast<std::chrono::microseconds>(now - lastCookStart);
 			auto left = lastInterCookDuration - elapsed;
 
-			if ((solver.transformedData != nullptr) && (!packedThisFrame) &&
+			if (solver.isLoaded() && (!packedThisFrame) &&
 				(extractPosition || extractVelocity || extractError)) {
 				const bool shouldPack =
 				  newCook ||
@@ -219,28 +197,10 @@ void SimulationThread::runWorker() {
 					size_t error_written = 0;
 					size_t velocity_written = 0;
 
-					rtori::ExtractOutRequest extractRequest = {
-					  .positions =
-						rtori::ArrayOutput<float[3]>{.buffer = nullptr,
-													 .buffer_size = 0,
-													 .written_size = &positions_written},
-					  .velocity =
-						rtori::ArrayOutput<float[3]>{.buffer = nullptr,
-													 .buffer_size = 0,
-													 .written_size = &velocity_written },
-					  .error = rtori::ArrayOutput<float>{.buffer = nullptr,
-													 .buffer_size = 0,
-													 .written_size = &error_written	   }
-					};
+					std::unique_ptr<rtori::ExtractBuilder> extractRequest = rtori::ExtractBuilder::new_();
 
-					uint32_t vertex_count = 0;
-					{
-						QueryOutput queryOutput{.u32_output = &vertex_count};
-						rtori::rtori_fold_query_frame(solver.foldFile,
-													  solver.frameIndex,
-													  rtori::FoldFrameQuery::VerticesCount,
-													  &queryOutput);
-					}
+					uint32_t vertex_count = solver.foldFile->query_frame_metadata_u32(solver.frameIndex, rtori::FoldFrameInfoQuery::VerticesCount).value();
+					
 					/*std::cout << std::format("Outputting {} vertices", vertex_count)
 							  << std::endl;*/
 
@@ -265,15 +225,12 @@ void SimulationThread::runWorker() {
 							  std::make_tuple(static_cast<uint32_t>(cursor),
 											  static_cast<uint32_t>(sizeNeeded));
 
-							using val_t = float[3];
-							val_t* buffer = reinterpret_cast<val_t*>(
+							float* buffer = reinterpret_cast<float*>(
 							  this->m_output.backingBuffer.data() + cursor);
 
-							extractRequest.positions.buffer = buffer;
-							extractRequest.positions.buffer_size =
-							  vertex_count; /* as its a buffer of arrays of 3 elements already
-											 */
+							diplomat::span<float> bufferSpan(buffer, vertex_count * 3);
 
+							extractRequest->position(bufferSpan, 0);
 							cursor += sizeNeeded;
 						}
 
@@ -284,16 +241,13 @@ void SimulationThread::runWorker() {
 							this->m_output.velocity =
 							  std::make_tuple(static_cast<uint32_t>(cursor),
 											  static_cast<uint32_t>(sizeNeeded));
-
-							using val_t = float[3];
-							val_t* buffer = reinterpret_cast<val_t*>(
+							
+							float* buffer = reinterpret_cast<float*>(
 							  this->m_output.backingBuffer.data() + cursor);
 
-							extractRequest.velocity.buffer = buffer;
-							extractRequest.velocity.buffer_size =
-							  vertex_count; /* as its a buffer of arrays of 3 elements already
-											 */
+							diplomat::span<float> bufferSpan(buffer, vertex_count * 3);
 
+							extractRequest->velocity(bufferSpan, 0);
 							cursor += sizeNeeded;
 						}
 
@@ -305,21 +259,18 @@ void SimulationThread::runWorker() {
 							  std::make_tuple(static_cast<uint32_t>(cursor),
 											  static_cast<uint32_t>(sizeNeeded));
 
-							using val_t = float;
-							val_t* buffer = reinterpret_cast<val_t*>(
+							float* buffer = reinterpret_cast<float*>(
 							  this->m_output.backingBuffer.data() + cursor);
 
-							extractRequest.error.buffer = buffer;
-							extractRequest.error.buffer_size = vertex_count;
+							diplomat::span<float> bufferSpan(buffer, vertex_count);
+
+							extractRequest->error(bufferSpan, 0);
 
 							cursor += sizeNeeded;
 						}
 
-						const rtori::SolverOperationResult result =
-						  rtori::rtori_extract(solver.solver, &extractRequest);
-						assert((void("extraction should never fail"),
-								result == rtori::SolverOperationResult::Success));
-
+						solver.solver->extract(*extractRequest);
+						
 						if (this->m_output.positions.has_value()) {
 							// Add in the verticesUnchanging from the fold file as we only got
 							// the offset

@@ -1,3 +1,22 @@
+
+impl ffi::SolverOperationError {
+    pub const fn to_str(&self) -> &'static str {
+        match self {
+	    &Self::NotLoaded =>
+	        "Error(ErrorNotLoaded): Attempted to do an operation requiring that a model be loaded, and no model is",
+
+	    &Self::Extracting =>
+		    "Error(ErrorExtracting): Attempted to do an operation that can only be done in the 'Standby' or 'Loaded' state, while it was in the 'Extracting' state",
+
+        &Self::Other => "Error(Other): Other error"
+        }
+    }
+
+    pub fn format_common<W: core::fmt::Write>(&self, mut f: W) -> core::fmt::Result {
+       write!(f, "{}", self.to_str())
+    }
+}
+
 #[diplomat::bridge]
 #[diplomat::abi_rename = "rtori_{0}"]
 #[diplomat::attr(auto, namespace = "rtori")] // TODO: ::solver when https://github.com/rust-diplomat/diplomat/issues/591
@@ -17,6 +36,13 @@ pub mod ffi {
 
         /// Another error
         Other,
+    }
+
+    impl SolverOperationError {
+        #[diplomat::attr(auto, stringifier)]
+        pub fn format(&self, out: &mut DiplomatWrite) {
+            self.format_common(out).unwrap()
+        }
     }
 
     #[derive(Debug)]
@@ -46,7 +72,7 @@ pub mod ffi {
             let frame = fold.inner.frame(frame_index);
             match frame {
                 Some(frame) => {
-                    self.inner.load_fold_in(&frame.get(), self.ctx.allocator);
+                    self.inner.load_fold_in(&frame.resolve(), self.ctx.allocator);
                     Ok(())
                 }
                 None => Err(SolverLoadError::NoSuchFrame),
@@ -60,6 +86,14 @@ pub mod ffi {
                 rtori_core::os_solver::StepError::NotLoaded => SolverOperationError::NotLoaded,
                 _ => SolverOperationError::Other,
             })
+        }
+
+        pub fn set_fold_percentage(&mut self, fold: f32) -> Result<(), SolverOperationError> {
+            self.inner.set_fold_percentage(fold).map_err(|_| SolverOperationError::Other)
+        }
+
+        pub fn is_loaded(&self) -> bool {
+            self.inner.is_loaded()
         }
     }
 
@@ -75,9 +109,7 @@ pub mod ffi {
     #[repr(C)]
     pub enum ExtractBuilderError {
         /// The slice length need to be a multiple of 3 for the position & velocity
-        SliceLengthNotMultipleOfThree,
-        /// The offset need to be a multiple of 3 for the position & velocity
-        OffsetNotMultipleOfThree,
+        SliceLengthNotMultipleOfThree
     }
 
     impl<'a> ExtractBuilder<'a> {
@@ -90,6 +122,8 @@ pub mod ffi {
             })
         }
 
+        /// Configures a destination for the position buffer, made up of 3-component vectors [x,y,z]
+        /// The destination buffer's length must be a multiple of three
         pub fn position(
             &mut self,
             dest: &'a mut [f32],
@@ -97,14 +131,19 @@ pub mod ffi {
         ) -> Result<(), ExtractBuilderError> {
             if dest.len() % 3 != 0 {
                 Err(ExtractBuilderError::SliceLengthNotMultipleOfThree)
-            } else if offset % 3 != 0 {
-                Err(ExtractBuilderError::OffsetNotMultipleOfThree)
             } else {
                 self.position = Some((dest, offset));
                 Ok(())
             }
         }
 
+        /// Do not extract position (like by default)
+        pub fn no_position(&mut self) {
+            self.position = None;
+        }
+
+        /// Configures a destination for the velocity buffer, made up of 3-component vectors [x,y,z]
+        /// The destination buffer's length must be a multiple of three
         pub fn velocity(
             &mut self,
             dest: &'a mut [f32],
@@ -112,14 +151,18 @@ pub mod ffi {
         ) -> Result<(), ExtractBuilderError> {
             if dest.len() % 3 != 0 {
                 Err(ExtractBuilderError::SliceLengthNotMultipleOfThree)
-            } else if offset % 3 != 0 {
-                Err(ExtractBuilderError::OffsetNotMultipleOfThree)
             } else {
                 self.velocity = Some((dest, offset));
                 Ok(())
             }
         }
 
+        /// Do not extract velocity (like by default)
+        pub fn no_velocity(&mut self) {
+            self.velocity = None;
+        }
+
+        /// Configures a destination for the error buffer, made up of single floats encoding the error value
         pub fn error(
             &mut self,
             dest: &'a mut [f32],
@@ -128,9 +171,15 @@ pub mod ffi {
             self.error = Some((dest, offset));
             Ok(())
         }
+
+        /// Do not extract error (like by default)
+        pub fn no_error(&mut self) {
+            self.error = None;
+        }
     }
 
     impl<'ctx> Solver<'ctx> {
+        /// Extracts the current state of the solver to the configured builder
         pub fn extract<'a>(&self, request: &mut ExtractBuilder<'a>) {
             let extract_flags = rtori_core::model::ExtractFlags::from_bits_truncate(
                 0 | if request.position.as_ref().map(|p| p.0.len()).unwrap_or(0) > 0 {

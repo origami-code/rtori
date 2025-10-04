@@ -60,7 +60,7 @@ pub struct File {
     pub file_metadata: Option<FileMetadata>,
 
     #[serde(rename = "file_frames")]
-    pub frames: Option<Vec<NonKeyFrame>>,
+    pub frames: Vec<NonKeyFrame>,
 
     #[serde(flatten)]
     pub key_frame: FrameCore,
@@ -68,22 +68,12 @@ pub struct File {
 
 impl File {
     pub fn frame<'a>(&'a self, index: FrameIndex) -> Option<FrameRef<'a>> {
-        match index {
-            0 => Some(FrameRef::Key(&self.key_frame)),
-            other => self
-                .frames
-                .as_ref()
-                .and_then(|frame_vec| frame_vec.get(usize::from(other - 1)))
-                .map(|frame| FrameRef::NonKey(frame)),
-        }
+        FrameRef::create(&self.frames, &self.key_frame, index)
     }
 
     pub fn frame_count(&self) -> FrameIndex {
-        1u16 + self
-            .frames
-            .as_ref()
-            .map(|v| u16::try_from(v.len()).unwrap())
-            .unwrap_or(0u16)
+        let nonkey_frame_count =  self.frames.len();
+        1u16 + u16::try_from(nonkey_frame_count).unwrap()
     }
 }
 

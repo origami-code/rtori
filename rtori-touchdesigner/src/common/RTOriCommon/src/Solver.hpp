@@ -14,6 +14,7 @@ namespace rtori::rtori_td {
 
 enum class SolverImportResultKind {
 	Success,
+	SolverCreationError,
 	FoldEmpty,
 	FoldParseError,
 	FoldLoadError,
@@ -46,6 +47,8 @@ class Solver final {
 	SolverImportResult update(std::optional<std::string_view> fold,
 							  std::optional<uint16_t> frameIndex,
 							  std::optional<float> foldPercentage);
+
+	bool isLoaded() const;
 };
 
 } // namespace rtori::rtori_td

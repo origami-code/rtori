@@ -238,6 +238,36 @@ pub mod ffi {
         pub fn query_metadata_u16(&self, query: FoldMetadataQuery) -> u16 {
             todo!()
         }
+
+        pub fn query_frame_metadata_u32(&self, frame_index: u16, field: FoldFrameInfoQuery) -> Option<u32> {
+            let frame_ref = self.inner.frame(frame_index)?;
+            Some(match field {
+                FoldFrameInfoQuery::VerticesCount => frame_ref.vertices_count() as u32,
+                FoldFrameInfoQuery::EdgeCount => frame_ref.edges_count() as u32,
+                FoldFrameInfoQuery::FaceCount => frame_ref.faces_count() as u32
+            })
+        }
+    }
+
+    pub enum FoldFrameInfoQuery {
+        VerticesCount,
+        EdgeCount,
+        FaceCount
+    }
+
+    pub enum FoldFrameFloatQuery {
+        /// corresponds to vertices_coords
+        VerticesCoords,
+        /// corresponds to edges_foldAangle
+        EdgesFoldAngle,
+        /// corresponds to edges_length
+        EdgesLength
+    }
+
+    pub enum FoldFrameIntQuery {
+        /// edges_vertices
+        /// arity of two
+        EdgesVertices,
     }
 
     pub enum FoldMetadataQuery {

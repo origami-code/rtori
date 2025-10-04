@@ -175,6 +175,13 @@ impl Solver {
         }
     }
 
+    pub fn is_loaded(&self) -> bool {
+        match self {
+            Self::CPU(runner) => runner.is_some(),
+            _ => false
+        }
+    }
+
     /*
     pub fn extract(&self) -> impl rtori_os_model::Extractor<'_> {
         todo!()
