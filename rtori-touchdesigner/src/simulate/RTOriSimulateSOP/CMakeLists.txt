@@ -3,21 +3,25 @@ list(APPEND RTOriSimulateSOP_Sources
     src/RTOriSimulateSOP.hpp
 )
 
-add_library(
-    RTOriSimulateSOP
-    MODULE
-    ${RTOriSimulateSOP_Sources}
-)
-target_compile_features(RTOriSimulateSOP PRIVATE cxx_std_20)
-target_link_libraries(
-    RTOriSimulateSOP
+foreach (td_version ${RTORI_TD_TARGETED_VERSIONS})
+    set(target_name RTOriSimulateSOP_td${td_version})
+    
+    add_library(
+        ${target_name}
+        MODULE
+        ${RTOriSimulateSOP_Sources}
+    )
+    target_compile_features(${target_name} PRIVATE cxx_std_20)
+    target_link_libraries(
+        ${target_name} 
 
-    PUBLIC
+        PUBLIC
 
-    TouchDesigner_Common
-    TouchDesigner_SOP
-    RTOriSimulateCommon
-    RTOriCommon # Temporary, during transition to using only RTOriSimulateCommon
-)
+        TouchDesigner_${td_version}_Common
+        TouchDesigner_${td_version}_SOP
+        RTOriSimulateCommon_td${td_version}
+        RTOriCommon
+    )
 
-prepare_plugin(TARGET RTOriSimulateSOP)
+    prepare_plugin(TARGET ${target_name} TD_VERSION ${td_version})
+endforeach()

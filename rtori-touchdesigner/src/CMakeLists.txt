@@ -72,12 +72,16 @@ endfunction()
 function(prepare_plugin)
     cmake_parse_arguments(PARSE_ARGV 0 arg
         ""
-        "TARGET;NAME"
+        "TARGET;NAME;TD_VERSION"
         ""
     )
 
     if(NOT TARGET ${arg_TARGET})
         message(FATAL_ERROR "No TARGET given")
+    endif()
+
+    if(NOT ${arg_TD_VERSION})
+        message(FATAL_ERROR "No TD version targeted")
     endif()
 
     prepare_shared_library(TARGET ${arg_TARGET})
@@ -87,6 +91,8 @@ function(prepare_plugin)
     if(NOT(${target_property} STREQUAL "MODULE_LIBRARY"))
         message(FATAL_ERROR "TouchDesigner Plugins need to be configured as MODULE")
     endif()
+
+    set_target_properties(${arg_TARGET} PROPERTIES RTORI_TARGETED_TD_VERSION ${arg_TD_VERSION})
 
     # Configure file extensions
     if(APPLE)

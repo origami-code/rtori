@@ -38,22 +38,22 @@ struct OutputGuard {
 	std::unique_lock<std::mutex> m_guard;
 };
 
-class RTORI_TD_EXPORT SimulationThread final {
+class SimulationThread final {
   public:
-	SimulationThread(std::shared_ptr<rtori::Context> ctx);
-	~SimulationThread();
+	RTORI_TD_EXPORT SimulationThread(std::shared_ptr<rtori::Context> ctx);
+	RTORI_TD_EXPORT ~SimulationThread();
 
 	/// This requests a stop of the worker
 	/// This will be done by the destructor anyway
-	void requestStopWorker();
+	RTORI_TD_EXPORT void requestStopWorker();
 
-	Input const& getInput() const;
-	void update(Input);
+	RTORI_TD_EXPORT Input const& getInput() const;
+	RTORI_TD_EXPORT void update(Input);
 
-	OutputGuard getOutput();
+	RTORI_TD_EXPORT OutputGuard getOutput();
 
-	void notifyCook();
-	bool isStopRequested();
+	RTORI_TD_EXPORT void notifyCook();
+	RTORI_TD_EXPORT bool isStopRequested();
   private:
 	/// This should be called from the newly created thread
 	void runWorker();
