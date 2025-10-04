@@ -19,7 +19,6 @@
 #![feature(allocator_api)]
 #![feature(btreemap_alloc)]
 #![feature(map_try_insert)]
-#![feature(iter_chain)]
 use core::alloc::Allocator;
 
 pub mod creases;
