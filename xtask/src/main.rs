@@ -267,25 +267,26 @@ fn main() {
     });
 
     /* Header generation */
-    let mut c_bindings = std::process::Command::new("diplomat-tool")
-        .args(&[
-            "cpp".into(),
-            headers_dir.join("cpp"),
-            "--entry".into(),
-            "core/core-ffi/src/lib.rs".into(),
-        ])
-        .spawn()
-        .unwrap();
 
-    let mut cpp_bindings = std::process::Command::new("diplomat-tool")
-        .args(&[
-            "c".into(),
-            headers_dir.join("c/rtori"),
-            "--entry".into(),
-            "core/core-ffi/src/lib.rs".into(),
-        ])
-        .spawn()
-        .unwrap();
+    // c bindings
+    diplomat_tool::gen(
+        &std::path::PathBuf::from("core/core-ffi/src/lib.rs"),
+        "c",
+        &headers_dir.join("c/rtori"),
+        &diplomat_tool::DocsUrlGenerator::default(),
+        None,
+        false
+    ).unwrap();
+
+    // c++ bindings
+    diplomat_tool::gen(
+        &std::path::PathBuf::from("core/core-ffi/src/lib.rs"),
+        "cpp",
+        &headers_dir.join("cpp"),
+        &diplomat_tool::DocsUrlGenerator::default(),
+        None,
+        false
+    ).unwrap();
 
     generate_cmake(&outputs, args.output.join("CMakeLists.txt"));
     /* CPS output */
@@ -314,7 +315,4 @@ fn main() {
 
     let cps_str = serde_json::to_string_pretty(&cps).unwrap();
     println!("cps: {cps_str}");
-
-    c_bindings.wait().unwrap();
-    cpp_bindings.wait().unwrap();
 }
