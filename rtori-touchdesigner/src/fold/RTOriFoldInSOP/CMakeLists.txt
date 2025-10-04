@@ -3,7 +3,7 @@ list(APPEND RTOriFoldInSOP_Sources
     src/RTOriFoldInSOP.hpp
 )
 foreach (td_version ${RTORI_TD_TARGETED_VERSIONS})
-    set(target_name RTOriFoldInSOP_${td_version})
+    set(target_name RTOriFoldInSOP_td${td_version})
     add_library(
         ${target_name}
         MODULE
@@ -16,8 +16,8 @@ foreach (td_version ${RTORI_TD_TARGETED_VERSIONS})
 
         PUBLIC
 
-        TouchDesigner_${td_version}_Common
-        TouchDesigner_${td_version}_SOP
+        TouchDesigner::${td_version}::Common
+        TouchDesigner::${td_version}::SOP
 
         RTOriCommon
     )

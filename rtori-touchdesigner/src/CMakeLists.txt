@@ -199,6 +199,9 @@ function(prepare_plugin)
 endfunction()
 
 add_subdirectory(common)
+
+set(RTORI_TD_TARGETED_VERSIONS "2023.12480;2025.30960" CACHE STRING "Targeted versions of TouchDesigner")
+
 add_subdirectory(simulate)
 add_subdirectory(fold)
 

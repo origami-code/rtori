@@ -31,7 +31,7 @@ foreach (td_version ${RTORI_TD_TARGETED_VERSIONS})
 
         PUBLIC
         RTOriCommon
-        TouchDesigner_${td_version}_Common
+        TouchDesigner::${td_version}::Common
     )
 
     if(APPLE)

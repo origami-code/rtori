@@ -17,8 +17,8 @@ foreach (td_version ${RTORI_TD_TARGETED_VERSIONS})
 
         PUBLIC
 
-        TouchDesigner_${td_version}_Common
-        TouchDesigner_${td_version}_SOP
+        TouchDesigner::${td_version}::Common
+        TouchDesigner::${td_version}::SOP
         RTOriSimulateCommon_td${td_version}
         RTOriCommon
     )

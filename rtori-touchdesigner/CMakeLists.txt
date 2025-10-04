@@ -6,7 +6,6 @@ project(rtori-touchdesigner
     LANGUAGES CXX
 )
 
-set(RTORI_TD_TARGETED_VERSIONS "2023;2025" CACHE STRING "Targeted versions of TouchDesigner")
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 if((NOT cxx_std_20 IN_LIST CMAKE_CXX_COMPILE_FEATURES) AND(NOT TARGET fmt))
