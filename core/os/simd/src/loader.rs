@@ -139,7 +139,7 @@ where
     L,
     rtori_os_model::Vector3F,
     &'a mut [simd_common::SimdVec3F<L>],
-    impl Fn(&mut &mut [simd_common::SimdVec3F<L>], usize, rtori_os_model::Vector3F),
+    fn(&mut &mut [simd_common::SimdVec3F<L>], usize, rtori_os_model::Vector3F),
 >;
 
 pub type Vec3UAccess<'a, const L: usize>
@@ -150,7 +150,7 @@ where
     L,
     rtori_os_model::Vector3U,
     &'a mut [simd_common::SimdVec3U<L>],
-    impl Fn(&mut &mut [simd_common::SimdVec3U<L>], usize, rtori_os_model::Vector3U),
+    fn(&mut &mut [simd_common::SimdVec3U<L>], usize, rtori_os_model::Vector3U),
 >;
 
 impl<'loader, 'backer, const L: usize> rtori_os_model::Loader<'loader>
