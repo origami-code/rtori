@@ -202,15 +202,26 @@ fn generate_cmake<P: AsRef<std::path::Path>>(outputs: &BuildOutput, output: P) {
         .truncate(true)
         .write(true)
         .create(true)
-        .open(&output)
-        .expect(&format!(
-            "couldn't open <{:?}> for writing",
-            output.as_ref()
-        ));
+        .open(&output.as_ref())
+        .expect(&format!("couldn't open {:?} for writing", output.as_ref()));
 
     use askama::Template as _;
     let str = template.render().unwrap();
     dest.write_all(str.as_bytes()).unwrap();
+
+    // Now, copy the assisting cmake script(s)
+    let dest_check_abi_path = output.as_ref().parent().unwrap().join("CheckABI.cmake");
+    let mut dest_check_abi = std::fs::OpenOptions::new()
+        .truncate(true)
+        .write(true)
+        .create(true)
+        .open(&dest_check_abi_path)
+        .expect(&format!(
+            "couldn't open {:?} for writing",
+            &dest_check_abi_path
+        ));
+    let source = include_str!("../resources/CheckABI.cmake");
+    dest_check_abi.write_all(source.as_bytes()).unwrap();
 }
 
 #[derive(clap::Parser, Debug)]
