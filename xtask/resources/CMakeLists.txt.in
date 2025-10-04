@@ -109,12 +109,12 @@ endif()
 
     {% endif %}
 
-    {% if let Some(static) = static_path_rel %}
+    {% if let Some(static_path_rel) = static_path_rel %}
 
 add_library(rtori_core::Static STATIC IMPORTED GLOBAL)
 set_target_properties(rtori_core::Shared PROPERTIES
     LINKER_LANGUAGE C
-    IMPORTED_LOCATION "${prefix}/{{static.to_string_lossy()}}"
+    IMPORTED_LOCATION "${prefix}/{{static_path_rel.to_string_lossy()}}"
     INTERFACE_COMPILE_DEFINITIONS "-DRTORI_STATIC"
 )
 

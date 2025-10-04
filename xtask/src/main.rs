@@ -274,7 +274,7 @@ fn main() {
         "c",
         &headers_dir.join("c/rtori"),
         &diplomat_tool::DocsUrlGenerator::default(),
-        None,
+        diplomat_tool::config::Config::default(),
         false
     ).unwrap();
 
@@ -284,7 +284,7 @@ fn main() {
         "cpp",
         &headers_dir.join("cpp"),
         &diplomat_tool::DocsUrlGenerator::default(),
-        None,
+        diplomat_tool::config::Config::default(),
         false
     ).unwrap();
 

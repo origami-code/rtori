@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cargo_metadata = "0.19.1"
+cargo_metadata = "0.23.0"
 cps-deps = "0.3.2"
 serde_json = "1.0.138"
 clap = {version = "4.5.31", features=["derive"], default-features = false}
-askama = "0.12.0"
+askama = "0.14.0"
 target-triple = "0.1.4"
-typed-path = "0.10.0"
+typed-path = "0.11.0"
 platforms = "3.5.0"
-diplomat-tool = "0.10.0"
+diplomat-tool = "0.13.0"

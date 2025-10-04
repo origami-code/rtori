@@ -8,8 +8,8 @@ name = "rtori_core"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-diplomat = "0.10.0"
-diplomat-runtime = "0.10.0"
+diplomat = "0.13.0"
+diplomat-runtime = "0.13.0"
 bytemuck = "1.18.0"
 pollster = "0.4.0"
 
