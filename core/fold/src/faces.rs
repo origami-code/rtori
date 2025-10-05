@@ -2,32 +2,11 @@ use super::common::*;
 use super::indices::*;
 use crate::collections::{Handful, Lockstep, LockstepNU};
 
-#[derive(
-    serde_seeded::DeserializeSeeded, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
-)]
-#[repr(transparent)]
-#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
-pub struct Face<'alloc>(pub Handful<'alloc, VertexIndex, 4>);
-
-impl core::ops::Deref for Face<'_> {
-    type Target = [VertexIndex];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl core::convert::AsRef<[u32]> for Face<'_> {
-    fn as_ref(&self) -> &[u32] {
-        &self.0
-    }
-}
-
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
 #[seeded(de(seed(crate::deser::Seed<'alloc>)))]
 pub struct FaceInformation<'alloc> {
     #[serde(rename = "faces_vertices")]
-    pub vertices: Lockstep<'alloc, Face<'alloc>>,
+    pub vertices: LockstepNU<'alloc, VertexIndex>,
 
     /// For each face, an array of edge IDs for the edges around the face in counterclockwise order.
     /// In addition to the matching cyclic order, faces_vertices and faces_edges should align in start
@@ -50,8 +29,20 @@ pub struct FaceInformation<'alloc> {
     pub uvs: LockstepNU<'alloc, u32>,
 }
 
-impl FaceInformation<'_> {
-    pub fn count(&self) -> usize {
+impl<'a> crate::frame::FrameFaces<'a> for &'a FaceInformation<'a> {
+    fn count(&self) -> usize {
         self.vertices.as_ref().map(|c| c.len()).unwrap_or(0)
+    }
+    
+    fn vertices(&self) -> &'a crate::collections::LockstepNU<'a, VertexIndex> {
+        &self.vertices
+    }
+
+    fn edges(&self) -> &'a crate::collections::LockstepNU<'a, EdgeIndex> {
+        &self.edges
+    }
+
+    fn uvs(&self) -> &'a crate::collections::LockstepNU<'a, u32> {
+        &self.uvs
     }
 }

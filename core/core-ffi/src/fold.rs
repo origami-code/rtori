@@ -75,6 +75,23 @@ impl core::fmt::Display for ffi::FoldFileParseError {
 
 impl core::error::Error for ffi::FoldFileParseError {}
 
+mod internal {
+    type FF<'a> = fold::File<'a>;
+    use self_cell::self_cell;
+
+    self_cell!(
+        pub(crate) struct FoldFileBump {
+            owner: fold::collections::bumpalo::Bump,
+
+            #[covariant]
+            dependent: FF,
+        }
+
+        impl {Debug}
+    );
+}
+use internal::*;
+
 #[diplomat::bridge]
 #[diplomat::abi_rename = "rtori_{0}"]
 #[diplomat::attr(auto, namespace = "rtori")] // todo: ::fold when https://github.com/rust-diplomat/diplomat/issues/591
@@ -121,9 +138,10 @@ pub mod ffi {
 
     #[diplomat::opaque]
     #[diplomat::rust_link(fold::File, Struct)]
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     pub struct FoldFile<'ctx> {
-        pub(crate) inner: fold::File<'ctx>
+        pub(crate) inner: super::FoldFileBump,
+        _marker: core::marker::PhantomData<&'ctx super::FoldFileBump>
     }
 
     #[derive(Debug)]
@@ -148,6 +166,27 @@ pub mod ffi {
         }
     }
 
+    impl<'ctx> Clone for FoldFile<'ctx> {
+        fn clone(&self) -> FoldFile<'ctx> {
+            let bytes = postcard::to_allocvec(&self.inner.borrow_dependent()).unwrap();
+            let mut deserializer = postcard::Deserializer::from_bytes(&bytes);
+
+            let bump = fold::collections::bumpalo::Bump::new();
+            let inner = super::FoldFileBump::new(bump, |b| {
+                let seed = fold::Seed::from_bump(&b);
+                use fold::collections::serde_seeded::DeserializeSeeded;
+           
+                let parsed = fold::File::deserialize_seeded(&seed, &mut deserializer).expect("this is a roundtrip");
+                parsed
+            });
+
+            Self {
+                inner,
+                _marker: core::marker::PhantomData
+            }
+        }
+    }
+
     impl<'ctx> FoldFile<'ctx> {
         #[diplomat::attr(*, rename = "clone")]
         pub fn ffi_clone(&self) -> Box<FoldFile<'ctx>, crate::A<'ctx>> {
@@ -167,17 +206,25 @@ pub mod ffi {
                 });
             }
 
-            let parsed = serde_json::from_slice::<fold::File>(bytes).map_err(|inner| {
-                FoldFileParseError {
+            let bump = fold::collections::bumpalo::Bump::new();
+            let inner = super::FoldFileBump::try_new(bump, |b| {
+                let mut deserializer = serde_json::Deserializer::from_slice(bytes);
+                let seed = fold::Seed::from_bump(&b);
+
+                use fold::collections::serde_seeded::DeserializeSeeded;
+                fold::File::deserialize_seeded(&seed, &mut deserializer).map_err(|inner| FoldFileParseError {
                     status: FoldFileParseErrorKind::Error,
                     error: DiplomatOption::from(Some(JSONParseError::from(inner))),
-                }
+                })
             })?;
 
+            let ff = Self {
+                inner,
+                _marker: core::marker::PhantomData
+            };
+
             Ok(Box::new_in(
-                FoldFile {
-                    inner: parsed
-                },
+                ff,
                 ctx.allocator,
             ))
         }
@@ -193,16 +240,25 @@ pub mod ffi {
                 });
             }
 
-            let parsed =
-                serde_json::from_str::<fold::File>(str).map_err(|inner| FoldFileParseError {
+            let bump = fold::collections::bumpalo::Bump::new();
+            let inner = super::FoldFileBump::try_new(bump, |b| {
+                let mut deserializer = serde_json::Deserializer::from_str(str);
+                let seed = fold::Seed::from_bump(&b);
+
+                use fold::collections::serde_seeded::DeserializeSeeded;
+                fold::File::deserialize_seeded(&seed, &mut deserializer).map_err(|inner| FoldFileParseError {
                     status: FoldFileParseErrorKind::Error,
                     error: DiplomatOption::from(Some(JSONParseError::from(inner))),
-                })?;
+                })
+            })?;
+
+            let ff = Self {
+                inner,
+                _marker: core::marker::PhantomData
+            };
 
             Ok(Box::new_in(
-                FoldFile {
-                    inner: parsed
-                },
+                ff,
                 ctx.allocator,
             ))
         }
@@ -221,6 +277,7 @@ pub mod ffi {
 
             let metadata =& self
                 .inner
+                .borrow_dependent()
                 .file_metadata;
 
 
@@ -245,7 +302,7 @@ pub mod ffi {
         }
 
         pub fn frame<'a>(&'a self, index: u16) -> Option<Box<FoldFrame<'a>>> {
-            self.inner.frame(index)
+            self.inner.borrow_dependent().frame(index)
                 .map(|inner| Box::new(FoldFrame {inner}))
         }
     }
@@ -271,6 +328,8 @@ pub mod ffi {
         inner: fold::FrameRef<'fold>
     }
 
+    use fold::{Frame, FrameVertices, FrameEdges, FrameFaces};
+
     impl<'f> FoldFrame<'f> {
         pub fn kind(&self) -> FoldFrameKind {
             match self.inner {
@@ -281,15 +340,15 @@ pub mod ffi {
         }
 
         pub fn vertices_count(&self) -> u32 {
-            self.inner.vertices_count() as u32
+            (&self.inner).vertices().count() as u32
         }
 
         pub fn edges_count(&self) -> u32 {
-            self.inner.edges_count() as u32
+            (&self.inner).edges().count() as u32
         }
 
         pub fn faces_count(&self) -> u32 {
-            self.inner.faces_count() as u32
+            (&self.inner).faces().count() as u32
         }
 
         pub fn iterate_vertices(&self) -> Box<VerticesIterator<'f>> {

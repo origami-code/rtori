@@ -82,7 +82,7 @@ pub mod ffi {
             fold: &fold_ffi::FoldFile,
             frame_index: u16,
         ) -> Result<(), SolverLoadError> {
-            let frame = fold.inner.frame(frame_index);
+            let frame = fold.inner.borrow_dependent().frame(frame_index);
             match frame {
                 Some(frame) => {
                     self.inner.load_fold_in(&frame.resolve());

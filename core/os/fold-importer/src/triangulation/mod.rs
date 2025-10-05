@@ -106,14 +106,14 @@ where
     }
 }
 
-pub fn triangulate3d_collect<Vertex, Face, A>(
-    face_vertex_indices: &[Face],
-    vertices: &[Vertex],
+pub fn triangulate3d_collect<'a, Vertex, FVI_IT, A>(
+    face_vertex_indices: FVI_IT,
+    vertices: &'a [Vertex],
     allocator: A,
 ) -> Result<TriangulatedDiff<A>, Triangulate3DError>
 where
     Vertex: core::convert::AsRef<[f32]>,
-    Face: core::convert::AsRef<[u32]>,
+    FVI_IT: core::iter::Iterator<Item=&'a [u32]>,
     A: core::alloc::Allocator + Clone,
 {
     let mut face_indices = alloc::vec::Vec::new_in(allocator.clone());
@@ -122,8 +122,6 @@ where
 
     
     face_vertex_indices
-        .as_ref()
-        .iter()
         .enumerate()
         .try_for_each(|(i, face)| {
             let replace_face = |face: [VertexIndex; 3]| {

@@ -77,12 +77,12 @@ fn create_edges_faces<'a, A: Allocator + Clone>(
         alloc::collections::BTreeMap::<Key, Vec<FaceIndex, A>, A>::new_in(allocator.clone());
 
     for (face_index, face_vertex_indices) in
-        input.faces.vertices.as_ref().unwrap().iter().enumerate()
+        input.faces.vertices.as_ref().unwrap().into_iter().enumerate()
     {
-        let face_order = face_vertex_indices.0.len();
+        let face_order = face_vertex_indices.len();
         for i in 0..face_order {
-            let u = face_vertex_indices.0[i];
-            let v = face_vertex_indices.0[(i + 1) % face_order];
+            let u = face_vertex_indices[i];
+            let v = face_vertex_indices[(i + 1) % face_order];
             let k = Key::new([u, v]);
 
             let faces_for_edge = edge_to_face_map.try_insert(k, Vec::new_in(allocator.clone()));
@@ -97,8 +97,9 @@ fn create_edges_faces<'a, A: Allocator + Clone>(
         return Err(());
     }
 
-    let mut edges_faces = Vec::with_capacity_in(input.edges.count(), allocator.clone());
-    edges_faces.resize(input.edges.count(), Vec::new_in(allocator));
+    use fold::{Frame, FrameEdges};
+    let mut edges_faces = Vec::with_capacity_in(input.edges().count(), allocator.clone());
+    edges_faces.resize(input.edges().count(), Vec::new_in(allocator));
 
     for (edge_index, edge_vertex_indices) in
         input.edges.vertices.as_ref().unwrap().iter().enumerate()
@@ -184,7 +185,8 @@ where
     type Output = [f32; 3];
 
     fn count(&self) -> usize {
-        self.0.source.vertices.count()
+        use fold::{Frame, FrameVertices};
+        self.0.source.vertices().count()
     }
 
     fn get(&self, idx: usize) -> Option<Self::Output> {
@@ -521,6 +523,7 @@ pub fn transform_in<A: Allocator + Clone>(
                 fold::Field::FacesVertices,
             ))?;
 
+
     let vertices_raw = input
             .vertices
             .coords
@@ -532,7 +535,7 @@ pub fn transform_in<A: Allocator + Clone>(
     let vertices = vertices_raw.flatten_n_ref::<3>().expect("works on 3D vertices only, at least some were not 3D");
 
     let triangulated = crate::triangulation::triangulate3d_collect(
-        face_vertex_indices,
+        face_vertex_indices.into_iter(),
         vertices,
         allocator.clone(),
     )
@@ -547,7 +550,8 @@ pub fn transform_triangulated_in<A: Allocator + Clone>(
     allocator: A,
 ) -> Result<FoldSupplement<A>, TransformError> {
     // Then, we compute the required mappings
-    let vertices_count = input.vertices.count();
+    use fold::{Frame, FrameVertices};
+    let vertices_count = input.vertices().count();
     let vertices_edges = create_vertices_edges(
         core::iter::chain(
             input

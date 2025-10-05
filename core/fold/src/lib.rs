@@ -32,6 +32,8 @@ pub use frame::*;
 pub mod macros;
 
 mod deser;
+pub use deser::Seed;
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Field {
@@ -68,6 +70,7 @@ pub struct File<'alloc> {
     #[serde(flatten)]
     pub key_frame: FrameCore<'alloc>,
 }
+
 static_assertions::assert_impl_all!(FileMetadata<'static>: serde_seeded::DeserializeSeeded<'static, crate::deser::Seed<'static>>);
 
 impl File<'_> {

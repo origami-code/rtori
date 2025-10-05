@@ -49,7 +49,6 @@ pub struct EdgeInformation<'alloc> {
     pub vertices: Lockstep<'alloc, EdgeVertexIndices>,
 
     #[serde(rename = "edges_faces")]
-    // TODO: SmallVec optimization for this one
     pub faces: LockstepNU<'alloc, Option<VertexIndex>>, // an edge will generally have no more than two faces, though it can happen
 
     #[serde(rename = "edges_assignment")]
@@ -68,8 +67,28 @@ pub struct EdgeInformation<'alloc> {
     pub axial_stiffness: Lockstep<'alloc, Option<f32>>,
 }
 
-impl EdgeInformation<'_> {
-    pub fn count(&self) -> usize {
+impl<'a> crate::frame::FrameEdges<'a> for &'a EdgeInformation<'a> {
+    fn count(&self) -> usize {
         self.vertices.as_ref().map(|c| c.len()).unwrap_or(0)
+    }
+    
+    fn vertices(&self) -> &'a crate::collections::Lockstep<'a, EdgeVertexIndices> {
+        &self.vertices
+    }
+
+    fn faces(&self) -> &'a crate::collections::LockstepNU<'a, Option<VertexIndex>> {
+        &self.faces
+    }
+
+    fn assignment(&self) -> &'a crate::collections::Lockstep<'a, EdgeAssignment> {
+        &self.assignments
+    }
+
+    fn fold_angle(&self) -> &'a crate::collections::Lockstep<'a, Option<f32>> {
+        &self.fold_angles
+    }
+
+    fn length(&self) -> &'a crate::collections::Lockstep<'a, f32> {
+        &self.length
     }
 }

@@ -1,7 +1,6 @@
-use crate::collections::{Handful, Lockstep, LockstepNU};
+use crate::collections::{Lockstep, LockstepNU};
 
 use super::indices::*;
-
 
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
 #[seeded(de(seed(crate::deser::Seed<'alloc>)))]
@@ -25,8 +24,24 @@ pub struct VertexInformation<'alloc> {
 }
 static_assertions::assert_impl_all!(VertexInformation<'static>: serde_seeded::DeserializeSeeded<'static, crate::deser::Seed<'static>>);
 
-impl VertexInformation<'_> {
-    pub fn count(&self) -> usize {
+impl<'a> crate::frame::FrameVertices<'a> for &'a VertexInformation<'a> {
+    fn count(&self) -> usize {
         self.coords.as_ref().map(|c| c.len()).unwrap_or(0)
+    }
+
+    fn coords(& self) -> &'a crate::collections::LockstepNU<'a, f32> {
+        &self.coords
+    }
+
+    fn adjacent(&self) -> &'a crate::collections::LockstepNU<'a, VertexIndex> {
+        &self.adjacent
+    }
+
+    fn edges(&self) -> &'a crate::collections::LockstepNU<'a, EdgeIndex> {
+        &self.edges
+    }
+
+    fn faces(&self) -> &'a crate::collections::LockstepNU<'a, Option<FaceIndex>> {
+        &self.faces
     }
 }
