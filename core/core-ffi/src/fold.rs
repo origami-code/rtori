@@ -149,7 +149,6 @@ pub mod ffi {
     }
 
     impl<'ctx> FoldFile<'ctx> {
-        #[diplomat::abi_rename = "clone"]
         #[diplomat::attr(*, rename = "clone")]
         pub fn ffi_clone(&self) -> Box<FoldFile<'ctx>, crate::A<'ctx>> {
             Box::new(self.clone())
