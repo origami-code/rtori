@@ -247,13 +247,300 @@ pub mod ffi {
             todo!()
         }
 
-        pub fn query_frame_metadata_u32(&self, frame_index: u16, field: FoldFrameInfoQuery) -> Option<u32> {
-            let frame_ref = self.inner.frame(frame_index)?;
-            Some(match field {
-                FoldFrameInfoQuery::VerticesCount => frame_ref.vertices_count() as u32,
-                FoldFrameInfoQuery::EdgeCount => frame_ref.edges_count() as u32,
-                FoldFrameInfoQuery::FaceCount => frame_ref.faces_count() as u32
-            })
+        pub fn frame<'a>(&'a self, index: u16) -> Option<Box<FoldFrame<'a>>> {
+            self.inner.frame(index)
+                .map(|inner| Box::new(FoldFrame {inner}))
+        }
+    }
+
+    #[repr(C)]
+    #[diplomat::rust_link(fold::FrameRef, Struct)]
+    #[derive(Debug, PartialEq)]
+    pub enum FoldFrameKind {
+        /// The key frame is the default one in a fold file
+        Key,
+        /// A frame that is self-contained, even if it might be referring to another one,
+        /// it does not inherit from it
+        NonInheriting,
+        /// A frame that "patches" another one with changes
+        Inheriting
+    }
+    
+    /// A reference to a fold frame
+    #[diplomat::opaque]
+    #[diplomat::rust_link(fold::FrameRef, Struct)]
+    #[derive(Debug, Clone, Copy)]
+    pub struct FoldFrame<'fold> {
+        inner: fold::FrameRef<'fold>
+    }
+
+    impl<'f> FoldFrame<'f> {
+        pub fn kind(&self) -> FoldFrameKind {
+            match self.inner {
+                fold::FrameRef::Key(_) => FoldFrameKind::Key,
+                fold::FrameRef::NonInheriting{..} => FoldFrameKind::NonInheriting,
+                fold::FrameRef::Inheriting(_) => FoldFrameKind::Inheriting
+            }
+        }
+
+        pub fn vertices_count(&self) -> u32 {
+            self.inner.vertices_count() as u32
+        }
+
+        pub fn edges_count(&self) -> u32 {
+            self.inner.edges_count() as u32
+        }
+
+        pub fn faces_count(&self) -> u32 {
+            self.inner.faces_count() as u32
+        }
+
+        pub fn iterate_vertices(&self) -> Box<VerticesIterator<'f>> {
+            Box::new(VerticesIterator { inner: *self, cursor: 0 })
+        }
+
+        pub fn iterate_edges(&self) -> Box<EdgesIterator<'f>> {
+            Box::new(EdgesIterator { inner: *self, cursor: 0 })
+        }
+
+        pub fn iterate_faces(&self) -> Box<FacesIterator<'f>> {
+            Box::new(FacesIterator { inner: *self, cursor: 0 })
+        }
+
+        /* access & copy */
+        
+        #[diplomat::attr(auto, getter = "vertices_coords")]
+        pub fn vertices_coords(&self) -> &'f [f32] {
+            todo!()
+        }
+
+        pub fn vertices_coords_copy(&self, dst: &mut[f32], offset: u32) -> u32 {
+            todo!()
+        }
+
+        #[diplomat::attr(auto, getter = "vertices_edges")]
+        pub fn vertices_edges(&self) -> &'f [u32] {
+            todo!()
+        }
+
+        pub fn vertices_edges_copy(&self, dst: &mut[u32], offset: u32) -> u32 {
+            todo!()
+        }
+
+        #[diplomat::attr(auto, getter = "vertices_faces")]
+        pub fn vertices_faces(&self) -> &'f [u32] {
+            todo!()
+        }
+
+        pub fn vertices_faces_copy(&self, dst: &mut[u32], offset: u32) -> u32 {
+            todo!()
+        }
+
+        #[diplomat::attr(auto, getter = "edges_vertices")]
+        pub fn edges_vertices(&self) -> &'f [u32] {
+            todo!()
+        }
+
+        pub fn edges_vertices_copy(&self, dst: &mut[u32], offset: u32) -> u32 {
+            todo!()
+        }
+
+        #[diplomat::attr(auto, getter = "edges_faces")]
+        pub fn edges_faces(&self) -> &'f [u32] {
+            todo!()
+        }
+
+        pub fn edges_faces_copy(&self, dst: &mut[u32], offset: u32) -> u32 {
+            todo!()
+        }
+    }
+
+    /// This is a cursor into the flattened values given by the raw_ methods on a frame
+    #[repr(C)]
+    pub struct RawSpan {
+        pub start: u32,
+        pub length: u32
+    }
+
+    #[diplomat::opaque]
+    pub struct VerticesIterator<'frame> {
+        inner: FoldFrame<'frame>,
+        cursor: fold::VertexIndex
+    }
+
+    impl<'f> VerticesIterator<'f> {
+        #[diplomat::attr(auto, iterator)]
+        pub fn next(&mut self) -> Option<u32> {
+            let next_cursor = self.cursor + 1;
+            if next_cursor >= self.inner.vertices_count() {
+                None
+            } else {
+                self.cursor = next_cursor;
+                Some(next_cursor)
+            }
+        }
+
+        /// Writes the vertices coordinates corresponding to the current vertex index (from `vertices_coords`)
+        /// Might be 2D or 3D
+        pub fn coords(&self, dst: &mut [f32]) -> u32 {
+            todo!()
+        }
+
+        /// Writes the vertex indices corresponding to the neighbours of the current vertex index (from `vertices_vertices`)
+        pub fn vertices(&self, dst: &mut [u32]) -> u32 {
+            todo!()
+        }
+
+        pub fn vertices_bounds(&self) -> Option<RawSpan> {
+            todo!()
+        }
+
+        /// Writes the edge indices corresponding to the current vertex index (from `vertices_edges`)
+        pub fn edges(&self, dst: &mut [u32]) -> u32 {
+            todo!()
+        }
+
+        pub fn edges_bounds(&self) -> Option<RawSpan> {
+            todo!()
+        }
+
+        /// Writes the face indices corresponding to the current vertex index (from `vertices_faces`)
+        /// Null values will be written as U32::MAX
+        pub fn faces(&self, dst: &mut [u32]) -> u32 {
+            todo!()
+        }
+
+        pub fn faces_bounds(&self) -> Option<RawSpan> {
+            todo!()
+        }
+    }
+
+    #[diplomat::enum_convert(fold::EdgeAssignment)]
+    #[repr(C)]
+    pub enum EdgeAssignment {
+        /// Border/boundary edge
+        B,
+
+        /// Montain Crease
+        M,
+
+        /// Valley Crease
+        V,
+
+        /// Unassigned/Unknown crease
+        U,
+
+        /// Cut/slit edge
+        C,
+
+        /// Join edge
+        J,
+
+        /// Facet
+        F,
+    }
+
+    #[repr(C)]
+    pub struct Edge {
+        pub from: u32,
+        pub to: u32
+    }
+
+    #[diplomat::opaque]
+    pub struct EdgesIterator<'frame> {
+        inner: FoldFrame<'frame>,
+        cursor: fold::EdgeIndex
+    }
+
+    impl<'f> EdgesIterator<'f> {
+        #[diplomat::attr(auto, iterator)]
+        pub fn next(&mut self) -> Option<u32> {
+            let next_cursor = self.cursor + 1;
+            if next_cursor >= self.inner.edges_count() {
+                None
+            } else {
+                self.cursor = next_cursor;
+                Some(next_cursor)
+            }
+        }
+
+        /// Writes the vertex indices corresponding to the current edge index (from `edges_vertices`)
+        /// It's always two per edge
+        pub fn vertices(&self) -> Option<Edge> {
+            todo!()
+        }
+
+        /// Writes the face indices corresponding to the neighbours of the current edge index (from `edges_faces`)
+        /// If null, it will write a U32::MAX
+        pub fn faces(&self, dst: &mut [u32]) -> u32 {
+            todo!()
+        }
+
+        pub fn faces_bounds(&self) -> Option<RawSpan> {
+            todo!()
+        }
+
+        /// Writes the edge assignment corresponding to the current edge index (from `edges_assignment`)
+        pub fn assignment(&self) -> Option<EdgeAssignment> {
+            todo!()
+        }
+
+        /// From `edges_foldAngle`
+        pub fn fold_angle(&self) -> Option<f32> {
+            todo!()
+        }
+
+        /// From `edges_length`
+        pub fn length(&self) -> Option<f32> {
+            todo!()
+        }
+    }
+
+    #[diplomat::opaque]
+    pub struct FacesIterator<'frame> {
+        inner: FoldFrame<'frame>,
+        cursor: fold::FaceIndex
+    }
+
+    impl<'f> FacesIterator<'f> {
+        #[diplomat::attr(auto, iterator)]
+        pub fn next(&mut self) -> Option<u32> {
+            let next_cursor = self.cursor + 1;
+            if next_cursor >= self.inner.faces_count() {
+                None
+            } else {
+                self.cursor = next_cursor;
+                Some(next_cursor)
+            }
+        }
+
+        /// Writes the vertex indices corresponding to the current face (from `faces_vertices`)
+        pub fn vertices(&self, dst: &mut [u32]) -> u32 {
+            todo!()
+        }
+
+        pub fn vertices_bounds(&self) -> Option<RawSpan> {
+            todo!()
+        }
+
+        /// Writes the edge indices corresponding to the current face (from `edges_vertices`),
+        /// in counterclockwise order
+        pub fn edges(&self, dst: &mut [u32]) -> u32 {
+            todo!()
+        }
+
+        pub fn edges_bounds(&self) -> Option<RawSpan> {
+            todo!()
+        }
+
+        /// Writes the face indices corresponding to the neighbours of the current face (from `faces_vertices`)
+        /// If null, it will write a U32::MAX
+        pub fn faces(&self, dst: &mut [u32]) -> u32 {
+            todo!()
+        }
+
+        pub fn faces_bounds(&self) -> Option<RawSpan> {
+            todo!()
         }
     }
 
