@@ -114,12 +114,13 @@ pub mod ffi {
 
     impl JSONParseError {
         #[diplomat::attr(auto, stringifier)]
-        pub fn format(self, out: &mut DiplomatWrite) {
+        pub fn format(&self, out: &mut DiplomatWrite) {
             self.format_common(out).unwrap()
         }
     }
 
     #[diplomat::opaque]
+    #[diplomat::rust_link(fold::File, Struct)]
     #[derive(Debug, Clone)]
     pub struct FoldFile<'ctx> {
         pub(crate) inner: fold::File, //<'ctx>
@@ -143,7 +144,7 @@ pub mod ffi {
 
     impl FoldFileParseError {
         #[diplomat::attr(auto, stringifier)]
-        pub fn format(self, out: &mut DiplomatWrite) {
+        pub fn format(&self, out: &mut DiplomatWrite) {
             self.format_common(out).unwrap()
         }
     }
@@ -277,13 +278,6 @@ pub mod ffi {
         EdgesVertices,
     }
 
-    
-    #[diplomat::opaque]
-    #[derive(Debug, Clone)]
-    pub struct FoldFrame<'ctx> {
-        pub(crate) inner: Box<FoldFile<'ctx>, crate::A<'ctx>>, //<'ctx>
-        pub(crate) frame_index: u16
-    }
 
     pub enum FoldMetadataQuery {
         /// Implies the use of [`query_metadata_string`]

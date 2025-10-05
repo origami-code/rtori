@@ -197,15 +197,18 @@ void SimulationThread::runWorker() {
 					size_t error_written = 0;
 					size_t velocity_written = 0;
 
-					std::unique_ptr<rtori::ExtractBuilder> extractRequest = rtori::ExtractBuilder::new_();
+					std::unique_ptr<rtori::OSExtractBuilder> extractRequest = rtori::OSExtractBuilder::new_();
 
-					uint32_t vertex_count = solver.foldFile->query_frame_metadata_u32(solver.frameIndex, rtori::FoldFrameInfoQuery::VerticesCount).value();
+					// needs the solver.foldFile to stay alive
+					std::unique_ptr<rtori::FoldFrame> frame = solver.foldFile->frame(solver.frameIndex);
+
+					uint32_t vertex_count = frame->vertices_count();
 					
 					/*std::cout << std::format("Outputting {} vertices", vertex_count)
 							  << std::endl;*/
 
 					size_t sizeNeededTotal = ((extractPosition ? 3 * vertex_count : 0) +
-											  (extractError ? 3 * vertex_count : 0) +
+											  (extractError ? vertex_count : 0) +
 											  (extractVelocity ? 3 * vertex_count : 0));
 
 					const std::unique_lock<std::mutex> lock(this->m_outputMutex,
@@ -281,21 +284,13 @@ void SimulationThread::runWorker() {
 								size_t writtenSize = 0;
 								using val_t = float[3];
 
-								rtori::QueryOutput queryOutput = QueryOutput{
-								  .vec3f_array_output = {.buffer = reinterpret_cast<val_t*>(
-verticesUnchanging.data()),
-														 .buffer_size = vertex_count,
-														 .written_size = &writtenSize,
-														 .offset = 0}
-								 };
+								// Todo: use a frame->vertices_copy(dst) method (tbw)
+								auto dst = diplomat::span<float>(verticesUnchanging.data(), vertex_count * 3);
+								std::uint32_t written = frame->vertices_coords_copy(dst, 0);
+								if (written != vertex_count * 3) {
+									// ERROR !
+								}
 
-								rtori::FoldOperationStatus queryStatus =
-								  rtori::rtori_fold_query_frame(solver.foldFile,
-																solver.frameIndex,
-																FoldFrameQuery::VerticesCoords,
-																&queryOutput);
-
-								assert(queryStatus == rtori::FoldOperationStatus::Success);
 								verticesCachedUnchanging = true;
 							}
 

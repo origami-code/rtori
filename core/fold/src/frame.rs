@@ -66,6 +66,7 @@ pub struct NonKeyFrame {
     pub inherit: Option<bool>,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct InheritingFrame<'a> {
     frames: &'a [NonKeyFrame],
     key_frame: &'a FrameCore,
@@ -107,6 +108,7 @@ impl<'a> InheritingFrame<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum FrameRef<'a> {
     Key(&'a FrameCore),
     NonInheriting{core: &'a FrameCore, parent: Option<u16>},
