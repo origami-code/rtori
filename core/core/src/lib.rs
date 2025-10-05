@@ -10,6 +10,36 @@ pub use fold;
 pub use rtori_os_fold_importer as fold_importer;
 pub use rtori_os_model as model;
 
+use bitflags::bitflags;
+bitflags! {
+    #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
+    #[repr(C)]
+    pub struct BackendFlags: u8 {
+        const CPU = 1 << 0;
+        const CPU_MT = 1 << 1;
+
+        const GPU_METAL = 1 << 3;
+        const GPU_VULKAN = 1 << 4;
+        const GPU_DX12 = 1 << 5;
+        const GPU_WEBGPU = 1 << 6;
+
+        const GPU_ANY = BackendFlags::GPU_METAL.bits() | BackendFlags::GPU_VULKAN.bits() | BackendFlags::GPU_DX12.bits() | BackendFlags::GPU_WEBGPU.bits();
+        const ANY = BackendFlags::GPU_ANY.bits() | BackendFlags::CPU.bits() | BackendFlags::CPU_MT.bits();
+    }
+}
+
+impl Default for BackendFlags {
+    fn default() -> Self {
+        BackendFlags::ANY
+    }
+}
+
+#[derive(Debug)]
+pub enum SolverFamily {
+    OrigamiSimulator,
+}
+
+#[derive(Debug)]
 pub enum SolverKind {
     OS(os_solver::Solver),
 }
@@ -22,14 +52,50 @@ where
     OS(fold_importer::supplement::SupplementedInput<'a, A>),
 }
 
+#[derive(Debug)]
 pub struct Solver<'ctx, A>
 where
     A: Allocator,
 {
     context: &'ctx Context<A>,
-    inner: SolverKind,
+    pub inner: SolverKind,
 }
 
+impl<'ctx, A> Solver<'ctx, A>
+where
+    A: Allocator,
+{
+    pub async fn create(
+        ctx: &'ctx Context<A>,
+        family: SolverFamily,
+        backend: BackendFlags,
+    ) -> Result<Solver<'ctx, A>, ()> {
+        match family {
+            SolverFamily::OrigamiSimulator => {
+                os_solver::Solver::create(backend).await.map(|inner| Self {
+                    context: ctx,
+                    inner: SolverKind::OS(inner),
+                })
+            }
+        }
+    }
+
+    pub fn load_fold_in(&mut self, frame: &fold::FrameCore) -> Result<(), ()> {
+        match &mut self.inner {
+            SolverKind::OS(solver) => solver.load_fold_in(frame, &self.context.allocator),
+        }
+
+        Ok(())
+    }
+
+    pub fn loaded(&self) -> bool {
+        match &self.inner {
+            SolverKind::OS(s) => s.loaded()
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Context<A> {
     allocator: A,
 }
@@ -37,14 +103,5 @@ pub struct Context<A> {
 impl<A: Allocator> Context<A> {
     pub const fn new(allocator: A) -> Self {
         Self { allocator }
-    }
-}
-
-impl<A> Context<A> {
-    pub async fn create_os_solver(
-        &self,
-        backends: os_solver::BackendFlags,
-    ) -> Result<os_solver::Solver, ()> {
-        os_solver::Solver::create(backends).await
     }
 }

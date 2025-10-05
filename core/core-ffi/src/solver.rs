@@ -51,19 +51,32 @@ pub mod ffi {
         NoSuchFrame,
     }
 
+    #[repr(C)]
+    pub enum SolverFamily {
+        /// Origami Simulator by Amanda Ghaessi
+        OrigamiSimulator,
+    }
+
+    /// A Solver is an abstraction over the different solver than can be supported
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct Solver<'ctx> {
         pub(crate) ctx: &'ctx context::Context<'ctx>,
-        pub(crate) inner: rtori_core::os_solver::Solver,
+        pub(crate) inner: rtori_core::Solver<'ctx, alloc::alloc::Global>,
     }
 
     impl<'ctx> Solver<'ctx> {
+        #[diplomat::attr(auto, getter("family"))]
+        pub fn family(&self) -> SolverFamily {
+            todo!()
+        }
+
         #[diplomat::attr(auto, getter("context"))]
-        pub fn get_context(&self) -> &'ctx context::Context<'ctx> {
+        pub fn context(&self) -> &'ctx context::Context<'ctx> {
             self.ctx
         }
 
+        /// Load from a fold file & frame index
         pub fn load_from_fold(
             &mut self,
             fold: &fold_ffi::FoldFile,
@@ -72,7 +85,7 @@ pub mod ffi {
             let frame = fold.inner.frame(frame_index);
             match frame {
                 Some(frame) => {
-                    self.inner.load_fold_in(&frame.resolve(), self.ctx.allocator);
+                    self.inner.load_fold_in(&frame.resolve());
                     Ok(())
                 }
                 None => Err(SolverLoadError::NoSuchFrame),
@@ -82,37 +95,45 @@ pub mod ffi {
         /// For a 'steppable' solver, step the solver.
         /// Some solvers cannot be stepped, as they do not have any intermediary state.
         pub fn step(&mut self, step_count: u32) -> Result<(), SolverOperationError> {
-            self.inner.step(step_count).map_err(|e| match e {
-                rtori_core::os_solver::StepError::NotLoaded => SolverOperationError::NotLoaded,
-                _ => SolverOperationError::Other,
-            })
+            if let rtori_core::SolverKind::OS(os_solver) = &mut self.inner.inner {
+                os_solver.step(step_count).map_err(|e| match e {
+                    rtori_core::os_solver::StepError::NotLoaded => SolverOperationError::NotLoaded,
+                    _ => SolverOperationError::Other,
+                })
+            } else {
+                Err(SolverOperationError::Other)
+            }
         }
 
         pub fn set_fold_percentage(&mut self, fold: f32) -> Result<(), SolverOperationError> {
-            self.inner.set_fold_percentage(fold).map_err(|_| SolverOperationError::Other)
+            if let rtori_core::SolverKind::OS(os_solver) = &mut self.inner.inner {
+                os_solver.set_fold_percentage(fold).map_err(|_| SolverOperationError::Other)
+            } else {
+                Err(SolverOperationError::Other)
+            }
         }
 
-        pub fn is_loaded(&self) -> bool {
-            self.inner.is_loaded()
+        pub fn loaded(&self) -> bool {
+            self.inner.loaded()
         }
     }
 
     /* Extraction */
 
     #[diplomat::opaque]
-    pub struct ExtractBuilder<'a> {
+    pub struct OSExtractBuilder<'a> {
         position: Option<(&'a mut [f32], u32)>,
         velocity: Option<(&'a mut [f32], u32)>,
         error: Option<(&'a mut [f32], u32)>,
     }
 
     #[repr(C)]
-    pub enum ExtractBuilderError {
+    pub enum OSExtractBuilderError {
         /// The slice length need to be a multiple of 3 for the position & velocity
         SliceLengthNotMultipleOfThree
     }
 
-    impl<'a> ExtractBuilder<'a> {
+    impl<'a> OSExtractBuilder<'a> {
         #[diplomat::attr(auto, constructor)]
         pub fn new() -> Box<Self> {
             Box::new(Self {
@@ -128,9 +149,9 @@ pub mod ffi {
             &mut self,
             dest: &'a mut [f32],
             offset: u32,
-        ) -> Result<(), ExtractBuilderError> {
+        ) -> Result<(), OSExtractBuilderError> {
             if dest.len() % 3 != 0 {
-                Err(ExtractBuilderError::SliceLengthNotMultipleOfThree)
+                Err(OSExtractBuilderError::SliceLengthNotMultipleOfThree)
             } else {
                 self.position = Some((dest, offset));
                 Ok(())
@@ -148,9 +169,9 @@ pub mod ffi {
             &mut self,
             dest: &'a mut [f32],
             offset: u32,
-        ) -> Result<(), ExtractBuilderError> {
+        ) -> Result<(), OSExtractBuilderError> {
             if dest.len() % 3 != 0 {
-                Err(ExtractBuilderError::SliceLengthNotMultipleOfThree)
+                Err(OSExtractBuilderError::SliceLengthNotMultipleOfThree)
             } else {
                 self.velocity = Some((dest, offset));
                 Ok(())
@@ -167,7 +188,7 @@ pub mod ffi {
             &mut self,
             dest: &'a mut [f32],
             offset: u32,
-        ) -> Result<(), ExtractBuilderError> {
+        ) -> Result<(), OSExtractBuilderError> {
             self.error = Some((dest, offset));
             Ok(())
         }
@@ -180,7 +201,7 @@ pub mod ffi {
 
     impl<'ctx> Solver<'ctx> {
         /// Extracts the current state of the solver to the configured builder
-        pub fn extract<'a>(&self, request: &mut ExtractBuilder<'a>) {
+        pub fn extract<'a>(&self, request: &mut OSExtractBuilder<'a>) {
             let extract_flags = rtori_core::model::ExtractFlags::from_bits_truncate(
                 0 | if request.position.as_ref().map(|p| p.0.len()).unwrap_or(0) > 0 {
                     rtori_core::model::ExtractFlags::POSITION.bits()
@@ -199,7 +220,12 @@ pub mod ffi {
 
             {
                 use rtori_core::model::ExtractorDyn as _;
-                let extractor = self.inner.extract(extract_flags).unwrap();
+                let os_solver = if let rtori_core::SolverKind::OS(os_solver) = &self.inner.inner {
+                    os_solver
+                } else {
+                    unreachable!("This should have been eliminated");
+                };
+                let extractor = os_solver.extract(extract_flags).unwrap();
 
                 if let Some((out, offset)) = request.position.as_mut() {
                     let out: &mut [rtori_core::model::Vector3F] = bytemuck::cast_slice_mut(out);

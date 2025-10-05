@@ -85,6 +85,7 @@ pub mod ffi {
     use diplomat_runtime::DiplomatWrite;
 
     #[derive(Debug)]
+    #[repr(C)]
     pub enum JSONParseErrorCategory {
         /// failure to read or write bytes on an I/O stream
         IO,
@@ -103,7 +104,8 @@ pub mod ffi {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
+    #[repr(C)]
     pub struct JSONParseError {
         pub line: u32,
         pub column: u32,
@@ -118,7 +120,7 @@ pub mod ffi {
     }
 
     #[diplomat::opaque]
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct FoldFile<'ctx> {
         pub(crate) inner: fold::File, //<'ctx>
         _marker: std::marker::PhantomData<&'ctx fold::File>,
@@ -147,6 +149,12 @@ pub mod ffi {
     }
 
     impl<'ctx> FoldFile<'ctx> {
+        #[diplomat::abi_rename = "clone"]
+        #[diplomat::attr(*, rename = "clone")]
+        pub fn ffi_clone(&self) -> Box<FoldFile<'ctx>, crate::A<'ctx>> {
+            Box::new(self.clone())
+        }
+
         // Disabled on dart, not sure why but I get a "custom handling" unreachable! invoke
         #[diplomat::attr(dart, disable)]
         pub fn parse_bytes(
@@ -268,6 +276,14 @@ pub mod ffi {
         /// edges_vertices
         /// arity of two
         EdgesVertices,
+    }
+
+    
+    #[diplomat::opaque]
+    #[derive(Debug, Clone)]
+    pub struct FoldFrame<'ctx> {
+        pub(crate) inner: Box<FoldFile<'ctx>, crate::A<'ctx>>, //<'ctx>
+        pub(crate) frame_index: u16
     }
 
     pub enum FoldMetadataQuery {

@@ -5,31 +5,10 @@ use rtori_core_wgpu as os_wgpu;
 #[cfg(feature = "cpu")]
 use rtori_os_simd as os_cpu;
 
-use bitflags::bitflags;
+use crate::BackendFlags;
 pub use rtori_os_fold_importer as fold_importer;
 
-bitflags! {
-    #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
-    #[repr(C)]
-    pub struct BackendFlags: u8 {
-        const CPU = 1 << 0;
-
-        const GPU_METAL = 1 << 3;
-        const GPU_VULKAN = 1 << 4;
-        const GPU_DX12 = 1 << 5;
-        const GPU_WEBGPU = 1 << 6;
-
-        const GPU_ANY = BackendFlags::GPU_METAL.bits() | BackendFlags::GPU_VULKAN.bits() | BackendFlags::GPU_DX12.bits() | BackendFlags::GPU_WEBGPU.bits();
-        const ANY = BackendFlags::GPU_ANY.bits() | BackendFlags::CPU.bits();
-    }
-}
-
-impl Default for BackendFlags {
-    fn default() -> Self {
-        BackendFlags::ANY
-    }
-}
-
+/// Origami based solver
 #[derive(Debug)]
 pub enum Solver {
     #[cfg(feature = "cpu")]
@@ -175,7 +154,7 @@ impl Solver {
         }
     }
 
-    pub fn is_loaded(&self) -> bool {
+    pub fn loaded(&self) -> bool {
         match self {
             Self::CPU(runner) => runner.is_some(),
             _ => false

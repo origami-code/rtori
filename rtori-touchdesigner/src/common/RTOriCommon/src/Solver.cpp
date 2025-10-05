@@ -155,5 +155,5 @@ SolverImportResult Solver::update(std::optional<std::string_view> fold,
 }
 
 bool Solver::isLoaded() const {
-	return this->solver->is_loaded();
+	return this->solver->loaded();
 }
