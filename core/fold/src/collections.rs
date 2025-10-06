@@ -67,7 +67,10 @@ pub struct VecU<'alloc, T>(pub bumpalo::collections::Vec<'alloc, T>);
     Ord,
     serde::Serialize,
     serde::Deserialize,
+    bytemuck::AnyBitPattern,
+    bytemuck::NoUninit
 )]
+#[repr(C)]
 pub struct VecNURange {
     pub idx: u32,
     pub count: u32,

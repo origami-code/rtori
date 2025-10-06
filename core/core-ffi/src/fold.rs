@@ -92,10 +92,66 @@ mod internal {
 }
 use internal::*;
 
+/// If an indices destination is given, then this copies up to that destination buffer size of indices, using the provided offset,
+/// as well as the matching backing data, if the destination backing buffer is provided, limited to its capacity.
+/// 
+/// If no indices destination is given, the offset is applied to the backing data and the it is copied up to the capacity of the destination backing buffer.
+fn copy_helper<T>(
+    backing_src: &[T],
+    indices_src: &[ffi::RawSpan],
+    backing_dst: Option<&mut [T]>,
+    indices_dst: Option<&mut [ffi::RawSpan]>,
+    offset: u32
+) -> ffi::NUCopyInfo where T: num_traits::Num + Copy {
+    let indices = &indices_src[(offset as usize)..];
+    let indices_written = indices_dst.map(|dst| 
+    {
+        let src = indices;
+        let len = src.len().min(dst.len());
+        dst.copy_from_slice(src);
+        len as u32
+    });
+    
+    let backing_written = if let Some(backing_dst) = backing_dst {
+        let src = backing_src;
+
+        let (from, end) = if let Some(indices_written) = indices_written {
+            let from = indices[offset as usize].start;
+
+            let last_index_written = indices_written.saturating_sub(1);
+            let max_backing = &indices[last_index_written as usize];
+            let end = (src.len() as u32).min(max_backing.start + max_backing.length);
+
+            (from, end)
+        } else {
+            let from = offset as u32;
+            let end = src.len() as u32;
+
+            (from, end)
+        };
+
+        // Ensure we don't go over the backing destination
+        let backing_wants_to_write = end - from;
+        let len = backing_wants_to_write.min(backing_dst.len() as u32);
+
+        let src = &src[(from as usize)..((from + len) as usize)];
+        backing_dst.copy_from_slice(src);
+        len as u32
+    } else {
+        0
+    };
+
+
+    ffi::NUCopyInfo { backing_written, indices_written: indices_written.unwrap_or(0) }
+}
+
 #[diplomat::bridge]
 #[diplomat::abi_rename = "rtori_{0}"]
 #[diplomat::attr(auto, namespace = "rtori")] // todo: ::fold when https://github.com/rust-diplomat/diplomat/issues/591
 pub mod ffi {
+
+
+
     use crate::context::ffi as context;
 
     use diplomat_runtime::DiplomatByte;
@@ -365,13 +421,39 @@ pub mod ffi {
 
         /* access & copy */
         
-        #[diplomat::attr(auto, getter = "vertices_coords")]
-        pub fn vertices_coords(&self) -> &'f [f32] {
-            todo!()
+        // TODO: Figure out how to use diplomat's macro_rules support to automatize that code for vertices, edges, etc.
+
+        /// This copies the raw values behind the coordinates
+        /// While they may all be 2D or 3D, this is not by default guaranteed
+        /// Some fold files may mix those
+        // TODO: When supported by Diplomat, return a special Non-uniform span which also
+        // contains the range slices
+        #[diplomat::attr(auto, getter = "vertices_coords_backing")]
+        pub fn vertices_coords_backing<'s>(&'s self) -> &'s [f32] {
+            (&self.inner).vertices().coords().as_ref().map(|v| v.backing.as_slice()).unwrap_or(&[])
         }
 
-        pub fn vertices_coords_copy(&self, dst: &mut[f32], offset: u32) -> u32 {
-            todo!()
+        // This requires a backend that supports slices of structs ('abi_compatible')
+        #[diplomat::attr(not(supports = abi_compatible), disable)]
+        #[diplomat::attr(auto, getter = "vertices_coords_indices")]
+        pub fn vertices_coords_indices<'s>(&'s self) -> &'s [RawSpan] {
+            let original = (&self.inner).vertices().coords().as_ref().map(|v| v.indices.as_slice()).unwrap_or(&[]);
+            bytemuck::cast_slice(original)
+        }
+                
+        /// If an indices destination is given, then this copies up to that destination buffer size of indices, using the provided offset,
+        /// as well as the matching backing data, if the destination backing buffer is provided, limited to its capacity.
+        /// 
+        /// If no indices destination is given, the offset is applied to the backing data and the it is copied up to the capacity of the destination backing buffer.
+        #[diplomat::attr(not(supports = abi_compatible), disable)]
+        pub fn vertices_coords_copy(&self, backing_dst: Option<&mut[f32]>, indices_dst: Option<&mut [RawSpan]>, offset: u32) -> NUCopyInfo {
+            super::copy_helper(
+                &self.vertices_coords_backing(),
+                &self.vertices_coords_indices(),
+                backing_dst,
+                indices_dst,
+                offset
+            )
         }
 
         #[diplomat::attr(auto, getter = "vertices_edges")]
@@ -411,8 +493,16 @@ pub mod ffi {
         }
     }
 
+    #[derive(Debug, Clone, Copy)]
+    pub struct NUCopyInfo {
+        pub backing_written: u32,
+        pub indices_written: u32
+    }
+
     /// This is a cursor into the flattened values given by the raw_ methods on a frame
-    #[repr(C)]
+    #[diplomat::attr(auto, abi_compatible)]
+    #[derive(Debug, Clone, Copy)]
+    #[derive(bytemuck::AnyBitPattern)]
     pub struct RawSpan {
         pub start: u32,
         pub length: u32

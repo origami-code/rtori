@@ -1515,6 +1515,7 @@ dependencies = [
  "diplomat",
  "diplomat-runtime",
  "fold",
+ "num-traits",
  "pollster",
  "postcard",
  "rtori-core",
