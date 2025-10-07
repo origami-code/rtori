@@ -14,14 +14,9 @@ pub mod collections;
 mod common;
 use common::*;
 
-mod vertices;
-pub use vertices::*;
 
 mod edges;
 pub use edges::*;
-
-mod faces;
-pub use faces::*;
 
 mod layers;
 pub use layers::*;
@@ -34,6 +29,9 @@ pub mod macros;
 mod deser;
 pub use deser::Seed;
 
+mod file;
+pub use file::*;
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Field {
@@ -42,46 +40,6 @@ pub enum Field {
     VerticesFaces,
     VerticesEdges,
     VerticesCoords,
-}
-
-#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
-#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
-pub struct FileMetadata<'alloc> {
-    #[serde(rename = "file_spec")]
-    pub spec: Option<u32>,
-
-    #[serde(rename = "file_creator")]
-    pub creator: collections::SeededOption<collections::String<'alloc>>,
-    
-    #[serde(rename = "file_author")]
-    pub author: collections::SeededOption<collections::String<'alloc>>,
-}
-static_assertions::assert_impl_all!(FileMetadata<'static>: serde_seeded::DeserializeSeeded<'static, crate::deser::Seed<'static>>);
-
-#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
-#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
-pub struct File<'alloc> {
-    #[serde(flatten)]
-    pub file_metadata: FileMetadata<'alloc>,
-
-    #[serde(rename = "file_frames")]
-    pub frames: collections::VecU<'alloc, NonKeyFrame<'alloc>>,
-
-    #[serde(flatten)]
-    pub key_frame: FrameCore<'alloc>,
-}
-
-static_assertions::assert_impl_all!(FileMetadata<'static>: serde_seeded::DeserializeSeeded<'static, crate::deser::Seed<'static>>);
-
-impl File<'_> {
-    pub fn frame<'a>(&'a self, index: FrameIndex) -> Option<FrameRef<'a>> {
-        FrameRef::create(&self.frames, &self.key_frame, index)
-    }
-
-    pub fn frame_count(&self) -> FrameIndex {
-        let nonkey_frame_count =  self.frames.len();
-        1u16 + u16::try_from(nonkey_frame_count).unwrap()
-    }
 }
 
 #[cfg(test)]
@@ -93,7 +51,7 @@ mod tests {
         let seed = crate::deser::Seed::from_bump(&bump);
         let mut deser = serde_json::de::Deserializer::from_str(contents);
         let output =
-            <File as serde_seeded::DeserializeSeeded<_>>::deserialize_seeded(&seed, &mut deser);
+            <file::File as serde_seeded::DeserializeSeeded<_>>::deserialize_seeded(&seed, &mut deser);
         println!("Output: {:#?}", output);
     }
 

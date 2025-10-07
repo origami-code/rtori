@@ -1,6 +1,6 @@
 use crate::collections::{Lockstep, LockstepNU};
 
-use super::indices::*;
+use crate::indices::*;
 
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
 #[seeded(de(seed(crate::deser::Seed<'alloc>)))]
