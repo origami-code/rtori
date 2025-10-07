@@ -20,13 +20,18 @@ impl From<serde_json::Error> for ffi::JSONParseError {
 }
 
 impl ffi::JSONParseErrorCategory {
-    fn format_common<W: core::fmt::Write>(&self, mut f: W) -> core::fmt::Result {
-        match self {
-            Self::IO => write!(f, "io error"),
-            Self::Syntax => write!(f, "invalid JSON syntax"),
-            Self::Data => write!(f, "semantically invalid data"),
-            Self::Eof => write!(f, "uexpected eof"),
+    fn to_str(&self) -> &'static str {
+         match self {
+            Self::Unknown => "unknown",
+            Self::IO => "io error",
+            Self::Syntax => "invalid JSON syntax",
+            Self::Data => "semantically invalid data",
+            Self::Eof =>  "uexpected eof",
         }
+    }
+
+    fn format_common<W: core::fmt::Write>(&self, mut f: W) -> core::fmt::Result {
+        write!(f, "{}", self.to_str())
     }
 }
 
@@ -92,27 +97,58 @@ mod internal {
 }
 use internal::*;
 
+fn access_u<Scalar, Composed>(
+    src: &[Composed],
+    offset: u32
+) -> &[Scalar]
+where
+    Scalar: bytemuck::AnyBitPattern,
+    Composed: bytemuck::NoUninit
+{
+    bytemuck::cast_slice(&src[(offset as usize)..])
+}
+
+fn copy_u<Scalar, Composed>(
+    dst: &mut [Scalar],
+    src: &[Composed],
+    offset: u32
+) -> Result<u32, ffi::UniformCopyError> where Scalar: bytemuck::AnyBitPattern, Composed: bytemuck::NoUninit {
+    let required_alignment = core::mem::size_of::<Composed>() / core::mem::size_of::<Scalar>();
+    if dst.len() % required_alignment != 0 {
+        return Err(ffi::UniformCopyError::DestinationAlignmentInvalid);
+    }
+
+    let src = access_u(src, offset);
+    let copy_len = src.len().min(dst.len());
+    dst[..copy_len].copy_from_slice(&src[..copy_len]);
+
+    Ok(copy_len as u32)
+}
+
 /// If an indices destination is given, then this copies up to that destination buffer size of indices, using the provided offset,
 /// as well as the matching backing data, if the destination backing buffer is provided, limited to its capacity.
 /// 
 /// If no indices destination is given, the offset is applied to the backing data and the it is copied up to the capacity of the destination backing buffer.
-fn copy_helper<T>(
+fn copy_nu<T>(
     backing_src: &[T],
     indices_src: &[ffi::RawSpan],
-    backing_dst: Option<&mut [T]>,
-    indices_dst: Option<&mut [ffi::RawSpan]>,
+    backing_dst: &mut [T],
+    indices_dst: &mut [ffi::RawSpan],
     offset: u32
 ) -> ffi::NUCopyInfo where T: num_traits::Num + Copy {
     let indices = &indices_src[(offset as usize)..];
-    let indices_written = indices_dst.map(|dst| 
-    {
+    let has_indices_destination = indices_dst.len() > 0;
+    let indices_written = if has_indices_destination {
         let src = indices;
-        let len = src.len().min(dst.len());
-        dst.copy_from_slice(src);
-        len as u32
-    });
+        let len = src.len().min(indices_dst.len());
+        indices_dst.copy_from_slice(src);
+        Some(len as u32)
+    } else {
+        None
+    };
     
-    let backing_written = if let Some(backing_dst) = backing_dst {
+    let has_backing_destination = backing_dst.len() > 0;
+    let backing_written = if has_backing_destination {
         let src = backing_src;
 
         let (from, end) = if let Some(indices_written) = indices_written {
@@ -157,9 +193,11 @@ pub mod ffi {
     use diplomat_runtime::DiplomatByte;
     use diplomat_runtime::DiplomatWrite;
 
-    #[derive(Debug)]
+    #[derive(Debug, Default)]
     #[repr(C)]
     pub enum JSONParseErrorCategory {
+        #[default]
+        Unknown,
         /// failure to read or write bytes on an I/O stream
         IO,
         /// input that is not syntactically valid JSON
@@ -171,13 +209,22 @@ pub mod ffi {
     }
 
     impl JSONParseErrorCategory {
+        #[diplomat::attr(not(supports = struct_refs), disable)]
         #[diplomat::attr(auto, stringifier)]
-        pub fn format(&self, out: &mut DiplomatWrite) {
+        #[diplomat::attr(*, rename = "format")]
+        pub fn format_ref(&self, out: &mut DiplomatWrite) {
+            self.format_common(out).unwrap()
+        }
+
+        #[diplomat::attr(supports = struct_refs, disable)]
+        #[diplomat::attr(auto, stringifier)]
+        #[diplomat::attr(*, rename = "format")]
+        pub fn format(self, out: &mut DiplomatWrite) {
             self.format_common(out).unwrap()
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Default)]
     #[repr(C)]
     pub struct JSONParseError {
         pub line: u32,
@@ -186,8 +233,17 @@ pub mod ffi {
     }
 
     impl JSONParseError {
+        #[diplomat::attr(not(supports = struct_refs), disable)]
         #[diplomat::attr(auto, stringifier)]
-        pub fn format(&self, out: &mut DiplomatWrite) {
+        #[diplomat::attr(*, rename = "format")]
+        pub fn format_ref(&self, out: &mut DiplomatWrite) {
+            self.format_common(out).unwrap()
+        }
+
+        #[diplomat::attr(supports = struct_refs, disable)]
+        #[diplomat::attr(auto, stringifier)]
+        #[diplomat::attr(*, rename = "format")]
+        pub fn format(self, out: &mut DiplomatWrite) {
             self.format_common(out).unwrap()
         }
     }
@@ -216,8 +272,17 @@ pub mod ffi {
     }
 
     impl FoldFileParseError {
+        #[diplomat::attr(not(supports = struct_refs), disable)]
         #[diplomat::attr(auto, stringifier)]
-        pub fn format(&self, out: &mut DiplomatWrite) {
+        #[diplomat::attr(*, rename = "format")]
+        pub fn format_ref(&self, out: &mut DiplomatWrite) {
+            self.format_common(out).unwrap()
+        }
+
+        #[diplomat::attr(supports = struct_refs, disable)]
+        #[diplomat::attr(auto, stringifier)]
+        #[diplomat::attr(*, rename = "format")]
+        pub fn format(self, out: &mut DiplomatWrite) {
             self.format_common(out).unwrap()
         }
     }
@@ -386,6 +451,73 @@ pub mod ffi {
 
     use fold::{Frame, FrameVertices, FrameEdges, FrameFaces};
 
+
+    pub enum UniformCopyError {
+        /// Destination alignment 
+        DestinationAlignmentInvalid
+    }
+
+
+    /// A uniform member (like edges_vertices, edges_assignment, edges_length, edges_foldAngle)
+    /// As there is a known size per element, there is no indices to be exposed
+    #[diplomat::macro_rules]
+    macro_rules! define_member_u {
+        ($kind:ident, $member:ident, $access:ident, $copy:ident, $scalar:ty) => {
+            pub fn $access<'s>(&'s self) -> &'s [$scalar] {
+                super::access_u((&self.inner).$kind().$member().as_ref().map(|v| v.as_slice()).unwrap_or(&[]), 0)
+            }
+
+            pub fn $copy(&self,
+                dst: &mut [$scalar],
+                offset: u32) -> Result<u32, UniformCopyError> {
+                super::copy_u(dst, (&self.inner).$kind().$member().as_ref().map(|v| v.as_slice()).unwrap_or(&[]), offset)
+            }
+        };
+    }
+
+    #[diplomat::macro_rules]
+    macro_rules! define_member_nu {
+        ($kind:ident, $member:ident, $backing:ident, $indices:ident, $copy:ident, $scalar:ty) => {
+            /// This copies the raw values behind the coordinates
+            /// While they may all be 2D or 3D, this is not by default guaranteed
+            /// Some fold files may mix those
+            // TODO: When supported by Diplomat, return a special Non-uniform span which also
+            // contains the range slices
+            //#[diplomat::attr(auto, getter = $backing)]
+            pub fn $backing<'s>(&'s self) -> &'s [$scalar] {
+                (&self.inner).$kind().$member().as_ref().map(|v| v.backing.as_slice()).unwrap_or(&[])
+            }
+
+            // This requires a backend that supports slices of structs ('abi_compatible')
+            #[diplomat::attr(not(supports = abi_compatibles), disable)]
+            //#[diplomat::attr(auto, getter = "vertices_coords_indices")]
+            pub fn $indices<'s>(&'s self) -> &'s [RawSpan] {
+                let original = (&self.inner).$kind().$member().as_ref().map(|v| v.indices.as_slice()).unwrap_or(&[]);
+                bytemuck::cast_slice(original)
+            }
+                    
+            /// If an indices destination is given (len > 0), then this copies up to that destination buffer size of indices, using the provided offset,
+            /// as well as the matching backing data, if the destination backing buffer is provided, limited to its capacity.
+            /// 
+            /// If no indices destination is given (len == 0), the offset is applied to the backing data and the it is copied up to the capacity of the destination backing buffer.
+            #[diplomat::attr(not(supports = abi_compatibles), disable)]
+            pub fn $copy(&self,
+                backing_dst: &mut [$scalar],
+                indices_dst: &mut [RawSpan],
+                offset: u32) -> NUCopyInfo {
+                super::copy_nu(
+                    &self.$backing(),
+                    &self.$indices(),
+                    backing_dst,
+                    indices_dst,
+                    offset
+                )
+            }
+
+        };
+    }
+        
+
     impl<'f> FoldFrame<'f> {
         pub fn kind(&self) -> FoldFrameKind {
             match self.inner {
@@ -420,77 +552,23 @@ pub mod ffi {
         }
 
         /* access & copy */
-        
+
         // TODO: Figure out how to use diplomat's macro_rules support to automatize that code for vertices, edges, etc.
 
-        /// This copies the raw values behind the coordinates
-        /// While they may all be 2D or 3D, this is not by default guaranteed
-        /// Some fold files may mix those
-        // TODO: When supported by Diplomat, return a special Non-uniform span which also
-        // contains the range slices
-        #[diplomat::attr(auto, getter = "vertices_coords_backing")]
-        pub fn vertices_coords_backing<'s>(&'s self) -> &'s [f32] {
-            (&self.inner).vertices().coords().as_ref().map(|v| v.backing.as_slice()).unwrap_or(&[])
-        }
+        // FIXME: add macros for the uniform ones
 
-        // This requires a backend that supports slices of structs ('abi_compatible')
-        #[diplomat::attr(not(supports = abi_compatible), disable)]
-        #[diplomat::attr(auto, getter = "vertices_coords_indices")]
-        pub fn vertices_coords_indices<'s>(&'s self) -> &'s [RawSpan] {
-            let original = (&self.inner).vertices().coords().as_ref().map(|v| v.indices.as_slice()).unwrap_or(&[]);
-            bytemuck::cast_slice(original)
-        }
-                
-        /// If an indices destination is given, then this copies up to that destination buffer size of indices, using the provided offset,
-        /// as well as the matching backing data, if the destination backing buffer is provided, limited to its capacity.
-        /// 
-        /// If no indices destination is given, the offset is applied to the backing data and the it is copied up to the capacity of the destination backing buffer.
-        #[diplomat::attr(not(supports = abi_compatible), disable)]
-        pub fn vertices_coords_copy(&self, backing_dst: Option<&mut[f32]>, indices_dst: Option<&mut [RawSpan]>, offset: u32) -> NUCopyInfo {
-            super::copy_helper(
-                &self.vertices_coords_backing(),
-                &self.vertices_coords_indices(),
-                backing_dst,
-                indices_dst,
-                offset
-            )
-        }
-
-        #[diplomat::attr(auto, getter = "vertices_edges")]
-        pub fn vertices_edges(&self) -> &'f [u32] {
-            todo!()
-        }
-
-        pub fn vertices_edges_copy(&self, dst: &mut[u32], offset: u32) -> u32 {
-            todo!()
-        }
-
-        #[diplomat::attr(auto, getter = "vertices_faces")]
-        pub fn vertices_faces(&self) -> &'f [u32] {
-            todo!()
-        }
-
-        pub fn vertices_faces_copy(&self, dst: &mut[u32], offset: u32) -> u32 {
-            todo!()
-        }
-
-        #[diplomat::attr(auto, getter = "edges_vertices")]
-        pub fn edges_vertices(&self) -> &'f [u32] {
-            todo!()
-        }
-
-        pub fn edges_vertices_copy(&self, dst: &mut[u32], offset: u32) -> u32 {
-            todo!()
-        }
-
-        #[diplomat::attr(auto, getter = "edges_faces")]
-        pub fn edges_faces(&self) -> &'f [u32] {
-            todo!()
-        }
-
-        pub fn edges_faces_copy(&self, dst: &mut[u32], offset: u32) -> u32 {
-            todo!()
-        }
+        define_member_nu!(vertices, coords, vertices_coords_backing, vertices_coords_indices, vertices_coords_copy, f32);
+        define_member_nu!(vertices, edges, vertices_edges_backing, vertices_edges_indices, vertices_edges_copy, u32);
+        // FIXME: handle the option
+        //define_member_nu!(vertices, faces, vertices_faces_backing, vertices_faces_indices, vertices_faces_copy, f32);
+        
+        // this is uniform, we don't need the non-uniform support
+        define_member_u!(edges, vertices, edges_vertices, edges_vertices_copy, u32);
+        // FIXME: handle the option
+        //define_member_nu!(edges, faces, edges_faces_backing, edges_faces_indices, edges_faces_copy, u32);
+        define_member_nu!(faces, vertices, faces_vertices_backing, faces_vertices_indices, faces_vertices_copy, u32);
+        define_member_nu!(faces, edges, faces_edges_backing, faces_edges_indices, faces_edges_copy, u32);
+        define_member_nu!(faces, uvs, faces_uvs_backing, faces_uvs_indices, faces_uvs_copy, u32);
     }
 
     #[derive(Debug, Clone, Copy)]
