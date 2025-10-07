@@ -171,9 +171,9 @@ mod test {
     pub fn test_partial() {
         let edges = crate::EdgeInformation::default();
 
-        let unary = iter_partial!(&edges, vertices);
+        let _unary = iter_partial!(&edges, vertices);
         let binary = iter_partial!(&edges, vertices, length);
-        for (left, right) in binary.unwrap() {}
+        for (_left, _right) in binary.unwrap() {}
     }
 
     #[test]

@@ -1,4 +1,3 @@
-use super::collections::Lockstep;
 use super::indices::*;
 
 #[derive(

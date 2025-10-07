@@ -43,3 +43,12 @@ impl File<'_> {
         1u16 + u16::try_from(nonkey_frame_count).unwrap()
     }
 }
+
+#[macro_export]
+macro_rules! implement_member{
+    ($member:ident, $type:ty) => {
+        fn $member(&self) -> $type {
+            &self.$member
+        }
+    }
+}

@@ -6,54 +6,46 @@ use crate::edges::{EdgeVertexIndices, EdgeAssignment};
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, Default, serde::Serialize)]
 #[seeded(de(seed(crate::deser::Seed<'alloc>)))]
 pub struct EdgeInformation<'alloc> {
-    /// For each edge, an array [u, v] of two vertex IDs for the two endpoints of the edge.
-    /// This effectively defines the orientation of the edge, from u to v.
-    /// (This orientation choice is arbitrary, but is used to define the ordering of edges_faces.)
-    /// Recommended in frames having any edges_... property (e.g., to represent mountain-valley assignment).
+    /// see [crate::FrameEdges::vertices]
     #[serde(rename = "edges_vertices")]
     pub vertices: Lockstep<'alloc, EdgeVertexIndices>,
 
+    /// see [crate::FrameEdges::faces]
     #[serde(rename = "edges_faces")]
     pub faces: LockstepNU<'alloc, Option<VertexIndex>>, // an edge will generally have no more than two faces, though it can happen
 
+    /// see [crate::FrameEdges::assignment]
     #[serde(rename = "edges_assignment")]
-    pub assignments: Lockstep<'alloc, EdgeAssignment>,
+    pub assignment: Lockstep<'alloc, EdgeAssignment>,
 
+    /// see [crate::FrameEdges::fold_angle]
     #[serde(rename = "edges_foldAngle")]
-    pub fold_angles: Lockstep<'alloc, Option<f32>>,
+    pub fold_angle: Lockstep<'alloc, Option<f32>>,
 
+    /// see [crate::FrameEdges::length]
     #[serde(rename = "edges_length")]
     pub length: Lockstep<'alloc, f32>,
 
+    /// see [crate::FrameEdges::crease_stiffness]
     #[serde(rename = "rtori:edges_creaseStiffness")]
     pub crease_stiffness: Lockstep<'alloc, Option<f32>>,
 
+    /// see [crate::FrameEdges::axial_stiffness]
     #[serde(rename = "rtori:edges_axialStiffness")]
     pub axial_stiffness: Lockstep<'alloc, Option<f32>>,
 }
+
+use crate::implement_member;
 
 impl<'a> crate::frame::FrameEdges<'a> for &'a EdgeInformation<'a> {
     fn count(&self) -> usize {
         self.vertices.as_ref().map(|c| c.len()).unwrap_or(0)
     }
     
-    fn vertices(&self) -> &'a crate::collections::Lockstep<'a, EdgeVertexIndices> {
-        &self.vertices
-    }
-
-    fn faces(&self) -> &'a crate::collections::LockstepNU<'a, Option<VertexIndex>> {
-        &self.faces
-    }
-
-    fn assignment(&self) -> &'a crate::collections::Lockstep<'a, EdgeAssignment> {
-        &self.assignments
-    }
-
-    fn fold_angle(&self) -> &'a crate::collections::Lockstep<'a, Option<f32>> {
-        &self.fold_angles
-    }
-
-    fn length(&self) -> &'a crate::collections::Lockstep<'a, f32> {
-        &self.length
-    }
+    implement_member!(vertices, &'a Lockstep<'a, EdgeVertexIndices>);
+    implement_member!(faces,  &'a LockstepNU<'a, Option<VertexIndex>>);
+    implement_member!(assignment, &'a Lockstep<'a, EdgeAssignment>);
+    implement_member!(fold_angle, &'a Lockstep<'a, Option<f32>>);
+    implement_member!(length, &'a Lockstep<'a, f32>);
+    implement_member!(axial_stiffness, &'a Lockstep<'a, Option<f32>>);
 }

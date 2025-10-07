@@ -66,10 +66,12 @@ pub struct VecU<'alloc, T>(pub bumpalo::collections::Vec<'alloc, T>);
     PartialOrd,
     Ord,
     serde::Serialize,
-    serde::Deserialize,
+    serde::Deserialize
+)]
+#[cfg_attr(feature = "bytemuck", derive(
     bytemuck::AnyBitPattern,
     bytemuck::NoUninit
-)]
+))]
 #[repr(C)]
 pub struct VecNURange {
     pub idx: u32,
@@ -121,6 +123,7 @@ impl<'a, T> VecNU<'a, T> {
     /// Attempts to flatten the non-uniform vector, checking if every
     /// entry is the same length, and if so, discards the non-uniform wrapper
     /// around the indices.
+    #[cfg(feature = "bytemuck")]
     pub fn flatten_n_ref<const N: usize>(&self) -> core::option::Option<&'_ [[T; N]]> where T: bytemuck::Pod {
         if self.indices.iter().any(|range| range.count != (N as u32)) {
             return None;
@@ -139,7 +142,6 @@ pub struct NUIterator<'a, T> {
     indices: &'a [VecNURange],
     index: usize,
 }
-
 
 impl<'a, T> Iterator for NUIterator<'a, T> {
     type Item = &'a [T];
@@ -172,7 +174,6 @@ impl<'a, T> Iterator for NUIterator<'a, T> {
         self.nth(self.len().saturating_sub(1))
     }
 }
-
 
 impl<T> ExactSizeIterator for NUIterator<'_, T> {}
 impl<T> core::iter::FusedIterator for NUIterator<'_, T> {}
