@@ -76,8 +76,13 @@ fn create_edges_faces<'a, A: Allocator + Clone>(
     let mut edge_to_face_map =
         alloc::collections::BTreeMap::<Key, Vec<FaceIndex, A>, A>::new_in(allocator.clone());
 
-    for (face_index, face_vertex_indices) in
-        input.faces.vertices.as_ref().unwrap().into_iter().enumerate()
+    for (face_index, face_vertex_indices) in input
+        .faces
+        .vertices
+        .as_ref()
+        .unwrap()
+        .into_iter()
+        .enumerate()
     {
         let face_order = face_vertex_indices.len();
         for i in 0..face_order {
@@ -515,7 +520,8 @@ pub fn transform_in<A: Allocator + Clone>(
     allocator: A,
 ) -> Result<FoldSupplement<A>, TransformError> {
     // First, triangulate
-    let face_vertex_indices = input
+    let face_vertex_indices =
+        input
             .faces
             .vertices
             .as_ref()
@@ -523,16 +529,18 @@ pub fn transform_in<A: Allocator + Clone>(
                 fold::Field::FacesVertices,
             ))?;
 
-
-    let vertices_raw = input
+    let vertices_raw =
+        input
             .vertices
             .coords
             .as_ref()
             .ok_or(TransformError::MissingRequiredField(
                 fold::Field::VerticesCoords,
             ))?;
-        
-    let vertices = vertices_raw.flatten_n_ref::<3>().expect("works on 3D vertices only, at least some were not 3D");
+
+    let vertices = vertices_raw
+        .flatten_n_ref::<3>()
+        .expect("works on 3D vertices only, at least some were not 3D");
 
     let triangulated = crate::triangulation::triangulate3d_collect(
         face_vertex_indices.into_iter(),

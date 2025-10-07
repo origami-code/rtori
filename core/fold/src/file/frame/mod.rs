@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::collections::{Lockstep};
+use crate::collections::Lockstep;
 use crate::Frame;
 
 mod metadata;

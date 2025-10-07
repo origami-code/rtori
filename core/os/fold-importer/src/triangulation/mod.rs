@@ -113,26 +113,28 @@ pub fn triangulate3d_collect<'a, Vertex, FVI_IT, A>(
 ) -> Result<TriangulatedDiff<A>, Triangulate3DError>
 where
     Vertex: core::convert::AsRef<[f32]>,
-    FVI_IT: core::iter::Iterator<Item=&'a [u32]>,
+    FVI_IT: core::iter::Iterator<Item = &'a [u32]>,
     A: core::alloc::Allocator + Clone,
 {
     let mut face_indices = alloc::vec::Vec::new_in(allocator.clone());
     let mut face_replacing = alloc::vec::Vec::new_in(allocator.clone());
     let mut additional_edges = alloc::vec::Vec::new_in(allocator);
 
-    
-    face_vertex_indices
-        .enumerate()
-        .try_for_each(|(i, face)| {
-            let replace_face = |face: [VertexIndex; 3]| {
-                face_indices.push(face);
-                face_replacing.push(i as u32);
-            };
+    face_vertex_indices.enumerate().try_for_each(|(i, face)| {
+        let replace_face = |face: [VertexIndex; 3]| {
+            face_indices.push(face);
+            face_replacing.push(i as u32);
+        };
 
-            let append_edge = |edge: [VertexIndex; 2]| additional_edges.push(edge);
+        let append_edge = |edge: [VertexIndex; 2]| additional_edges.push(edge);
 
-            crate::triangulation::triangulate3d(&face.as_ref(), vertices.as_ref(), replace_face, append_edge)
-        })?;
+        crate::triangulation::triangulate3d(
+            &face.as_ref(),
+            vertices.as_ref(),
+            replace_face,
+            append_edge,
+        )
+    })?;
 
     Ok(TriangulatedDiff {
         face_indices,

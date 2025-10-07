@@ -16,7 +16,7 @@ pub use frame::*;
 mod metadata;
 pub use metadata::*;
 
-use crate::{FrameIndex, collections};
+use crate::{collections, FrameIndex};
 
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
 #[seeded(de(seed(crate::deser::Seed<'alloc>)))]
@@ -39,16 +39,16 @@ impl File<'_> {
     }
 
     pub fn frame_count(&self) -> FrameIndex {
-        let nonkey_frame_count =  self.frames.len();
+        let nonkey_frame_count = self.frames.len();
         1u16 + u16::try_from(nonkey_frame_count).unwrap()
     }
 }
 
 #[macro_export]
-macro_rules! implement_member{
+macro_rules! implement_member {
     ($member:ident, $type:ty) => {
         fn $member(&self) -> $type {
             &self.$member
         }
-    }
+    };
 }

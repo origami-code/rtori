@@ -1,5 +1,5 @@
 use super::FrameCore;
-use crate::{FrameIndex};
+use crate::FrameIndex;
 
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
 #[seeded(de(seed(crate::deser::Seed<'alloc>)))]

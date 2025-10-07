@@ -1,5 +1,5 @@
-use crate::indices::*;
 use crate::collections::LockstepNU;
+use crate::indices::*;
 
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
 #[seeded(de(seed(crate::deser::Seed<'alloc>)))]
@@ -27,7 +27,7 @@ impl<'a> crate::frame::FrameFaces<'a> for &'a FaceInformation<'a> {
     fn count(&self) -> usize {
         self.vertices.as_ref().map(|c| c.len()).unwrap_or(0)
     }
-    
+
     implement_member!(vertices, &'a LockstepNU<'a, VertexIndex>);
     implement_member!(edges, &'a LockstepNU<'a, EdgeIndex>);
     implement_member!(faces, &'a LockstepNU<'a, Option<FaceIndex>>);

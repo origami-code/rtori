@@ -157,7 +157,7 @@ impl Solver {
     pub fn loaded(&self) -> bool {
         match self {
             Self::CPU(runner) => runner.is_some(),
-            _ => false
+            _ => false,
         }
     }
 

@@ -90,7 +90,7 @@ where
 
     pub fn loaded(&self) -> bool {
         match &self.inner {
-            SolverKind::OS(s) => s.loaded()
+            SolverKind::OS(s) => s.loaded(),
         }
     }
 }

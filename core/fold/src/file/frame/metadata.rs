@@ -1,4 +1,4 @@
-use crate::collections::{SeededOption, Lockstep, String};
+use crate::collections::{Lockstep, SeededOption, String};
 
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
 #[seeded(de(seed(crate::deser::Seed<'alloc>)))]

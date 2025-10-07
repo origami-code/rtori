@@ -286,8 +286,9 @@ fn main() {
         &headers_dir.join("c/rtori"),
         &diplomat_tool::DocsUrlGenerator::default(),
         diplomat_tool::config::Config::default(),
-        false
-    ).unwrap();
+        false,
+    )
+    .unwrap();
 
     // c++ bindings
     diplomat_tool::gen(
@@ -296,8 +297,9 @@ fn main() {
         &headers_dir.join("cpp"),
         &diplomat_tool::DocsUrlGenerator::default(),
         diplomat_tool::config::Config::default(),
-        false
-    ).unwrap();
+        false,
+    )
+    .unwrap();
 
     generate_cmake(&outputs, args.output.join("CMakeLists.txt"));
     /* CPS output */

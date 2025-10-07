@@ -14,7 +14,6 @@ pub mod collections;
 mod common;
 use common::*;
 
-
 mod edges;
 pub use edges::*;
 
@@ -31,7 +30,6 @@ pub use deser::Seed;
 
 mod file;
 pub use file::*;
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Field {
@@ -50,8 +48,9 @@ mod tests {
         let bump = bumpalo::Bump::new();
         let seed = crate::deser::Seed::from_bump(&bump);
         let mut deser = serde_json::de::Deserializer::from_str(contents);
-        let output =
-            <file::File as serde_seeded::DeserializeSeeded<_>>::deserialize_seeded(&seed, &mut deser);
+        let output = <file::File as serde_seeded::DeserializeSeeded<_>>::deserialize_seeded(
+            &seed, &mut deser,
+        );
         println!("Output: {:#?}", output);
     }
 

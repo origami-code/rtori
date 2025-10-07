@@ -1,4 +1,3 @@
-
 impl ffi::SolverOperationError {
     pub const fn to_str(&self) -> &'static str {
         match self {
@@ -13,7 +12,7 @@ impl ffi::SolverOperationError {
     }
 
     pub fn format_common<W: core::fmt::Write>(&self, mut f: W) -> core::fmt::Result {
-       write!(f, "{}", self.to_str())
+        write!(f, "{}", self.to_str())
     }
 }
 
@@ -107,7 +106,9 @@ pub mod ffi {
 
         pub fn set_fold_percentage(&mut self, fold: f32) -> Result<(), SolverOperationError> {
             if let rtori_core::SolverKind::OS(os_solver) = &mut self.inner.inner {
-                os_solver.set_fold_percentage(fold).map_err(|_| SolverOperationError::Other)
+                os_solver
+                    .set_fold_percentage(fold)
+                    .map_err(|_| SolverOperationError::Other)
             } else {
                 Err(SolverOperationError::Other)
             }
@@ -130,7 +131,7 @@ pub mod ffi {
     #[repr(C)]
     pub enum OSExtractBuilderError {
         /// The slice length need to be a multiple of 3 for the position & velocity
-        SliceLengthNotMultipleOfThree
+        SliceLengthNotMultipleOfThree,
     }
 
     impl<'a> OSExtractBuilder<'a> {

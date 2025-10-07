@@ -1,5 +1,5 @@
 use crate::collections::Lockstep;
-use crate::layers::{FaceOrder, EdgeOrder};
+use crate::layers::{EdgeOrder, FaceOrder};
 
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
 #[seeded(de(seed(crate::deser::Seed<'alloc>)))]

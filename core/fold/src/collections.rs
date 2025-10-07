@@ -66,12 +66,12 @@ pub struct VecU<'alloc, T>(pub bumpalo::collections::Vec<'alloc, T>);
     PartialOrd,
     Ord,
     serde::Serialize,
-    serde::Deserialize
+    serde::Deserialize,
 )]
-#[cfg_attr(feature = "bytemuck", derive(
-    bytemuck::AnyBitPattern,
-    bytemuck::NoUninit
-))]
+#[cfg_attr(
+    feature = "bytemuck",
+    derive(bytemuck::AnyBitPattern, bytemuck::NoUninit)
+)]
 #[repr(C)]
 pub struct VecNURange {
     pub idx: u32,
@@ -91,8 +91,9 @@ impl<'a, T> VecNU<'a, T> {
     }
 
     pub fn get(&self, idx: usize) -> Option<&[T]> {
-        self.indices.get(idx)
-            .map( |range| &self.backing.as_slice()[(range.idx as usize)..((range.idx + range.count) as usize)])
+        self.indices.get(idx).map(|range| {
+            &self.backing.as_slice()[(range.idx as usize)..((range.idx + range.count) as usize)]
+        })
     }
 
     /// It is possible for the non-uniform vector to actually house a perfectly
@@ -102,29 +103,36 @@ impl<'a, T> VecNU<'a, T> {
         enum State {
             Standby,
             UniformForNow(u32),
-            NotUniform
+            NotUniform,
         }
 
-        let state = self.indices.iter().fold_while(State::Standby, |state, el| {
-            match state {
+        let state = self
+            .indices
+            .iter()
+            .fold_while(State::Standby, |state, el| match state {
                 State::Standby => itertools::FoldWhile::Continue(State::UniformForNow(el.count)),
-                State::UniformForNow(n) if n != el.count => itertools::FoldWhile::Done(State::NotUniform),
+                State::UniformForNow(n) if n != el.count => {
+                    itertools::FoldWhile::Done(State::NotUniform)
+                }
                 State::UniformForNow(_n) => itertools::FoldWhile::Continue(state),
-                State::NotUniform => panic!("should have short-circuited")
-            }
-        }).into_inner();
+                State::NotUniform => panic!("should have short-circuited"),
+            })
+            .into_inner();
 
         match state {
             State::Standby | State::NotUniform => None,
-            State::UniformForNow(n) => Some(n)
+            State::UniformForNow(n) => Some(n),
         }
     }
-    
+
     /// Attempts to flatten the non-uniform vector, checking if every
     /// entry is the same length, and if so, discards the non-uniform wrapper
     /// around the indices.
     #[cfg(feature = "bytemuck")]
-    pub fn flatten_n_ref<const N: usize>(&self) -> core::option::Option<&'_ [[T; N]]> where T: bytemuck::Pod {
+    pub fn flatten_n_ref<const N: usize>(&self) -> core::option::Option<&'_ [[T; N]]>
+    where
+        T: bytemuck::Pod,
+    {
         if self.indices.iter().any(|range| range.count != (N as u32)) {
             return None;
         }
@@ -152,9 +160,13 @@ impl<'a, T> Iterator for NUIterator<'a, T> {
         let indices = self.indices.get(self.index)?;
         self.index += 1; // we still have to consume it
 
-        let start = usize::try_from(indices.idx).expect("start index for given element overflows usize");
-        let end = usize::try_from(indices.idx + indices.count).expect("end index for given element overflows usize");
-        Some(self.backing.get(start..end).expect("an invalid source NUVec was provided: the indices point to non-existent backing"))
+        let start =
+            usize::try_from(indices.idx).expect("start index for given element overflows usize");
+        let end = usize::try_from(indices.idx + indices.count)
+            .expect("end index for given element overflows usize");
+        Some(self.backing.get(start..end).expect(
+            "an invalid source NUVec was provided: the indices point to non-existent backing",
+        ))
     }
 
     fn next(&mut self) -> core::option::Option<Self::Item> {

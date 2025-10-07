@@ -8,7 +8,7 @@ pub struct FileMetadata<'alloc> {
 
     #[serde(rename = "file_creator")]
     pub creator: collections::SeededOption<collections::String<'alloc>>,
-    
+
     #[serde(rename = "file_author")]
     pub author: collections::SeededOption<collections::String<'alloc>>,
 }

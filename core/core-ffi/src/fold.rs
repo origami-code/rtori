@@ -21,12 +21,12 @@ impl From<serde_json::Error> for ffi::JSONParseError {
 
 impl ffi::JSONParseErrorCategory {
     fn to_str(&self) -> &'static str {
-         match self {
+        match self {
             Self::Unknown => "unknown",
             Self::IO => "io error",
             Self::Syntax => "invalid JSON syntax",
             Self::Data => "semantically invalid data",
-            Self::Eof =>  "uexpected eof",
+            Self::Eof => "uexpected eof",
         }
     }
 
@@ -97,13 +97,10 @@ mod internal {
 }
 use internal::*;
 
-fn access_u<Scalar, Composed>(
-    src: &[Composed],
-    offset: u32
-) -> &[Scalar]
+fn access_u<Scalar, Composed>(src: &[Composed], offset: u32) -> &[Scalar]
 where
     Scalar: bytemuck::AnyBitPattern,
-    Composed: bytemuck::NoUninit
+    Composed: bytemuck::NoUninit,
 {
     bytemuck::cast_slice(&src[(offset as usize)..])
 }
@@ -111,8 +108,12 @@ where
 fn copy_u<Scalar, Composed>(
     dst: &mut [Scalar],
     src: &[Composed],
-    offset: u32
-) -> Result<u32, ffi::UniformCopyError> where Scalar: bytemuck::AnyBitPattern, Composed: bytemuck::NoUninit {
+    offset: u32,
+) -> Result<u32, ffi::UniformCopyError>
+where
+    Scalar: bytemuck::AnyBitPattern,
+    Composed: bytemuck::NoUninit,
+{
     let required_alignment = core::mem::size_of::<Composed>() / core::mem::size_of::<Scalar>();
     if dst.len() % required_alignment != 0 {
         return Err(ffi::UniformCopyError::DestinationAlignmentInvalid);
@@ -127,15 +128,18 @@ fn copy_u<Scalar, Composed>(
 
 /// If an indices destination is given, then this copies up to that destination buffer size of indices, using the provided offset,
 /// as well as the matching backing data, if the destination backing buffer is provided, limited to its capacity.
-/// 
+///
 /// If no indices destination is given, the offset is applied to the backing data and the it is copied up to the capacity of the destination backing buffer.
 fn copy_nu<T>(
     backing_src: &[T],
     indices_src: &[ffi::RawSpan],
     backing_dst: &mut [T],
     indices_dst: &mut [ffi::RawSpan],
-    offset: u32
-) -> ffi::NUCopyInfo where T: num_traits::Num + Copy {
+    offset: u32,
+) -> ffi::NUCopyInfo
+where
+    T: num_traits::Num + Copy,
+{
     let indices = &indices_src[(offset as usize)..];
     let has_indices_destination = indices_dst.len() > 0;
     let indices_written = if has_indices_destination {
@@ -146,7 +150,7 @@ fn copy_nu<T>(
     } else {
         None
     };
-    
+
     let has_backing_destination = backing_dst.len() > 0;
     let backing_written = if has_backing_destination {
         let src = backing_src;
@@ -177,16 +181,16 @@ fn copy_nu<T>(
         0
     };
 
-
-    ffi::NUCopyInfo { backing_written, indices_written: indices_written.unwrap_or(0) }
+    ffi::NUCopyInfo {
+        backing_written,
+        indices_written: indices_written.unwrap_or(0),
+    }
 }
 
 #[diplomat::bridge]
 #[diplomat::abi_rename = "rtori_{0}"]
 #[diplomat::attr(auto, namespace = "rtori")] // todo: ::fold when https://github.com/rust-diplomat/diplomat/issues/591
 pub mod ffi {
-
-
 
     use crate::context::ffi as context;
 
@@ -253,7 +257,7 @@ pub mod ffi {
     #[derive(Debug)]
     pub struct FoldFile<'ctx> {
         pub(crate) inner: super::FoldFileBump,
-        _marker: core::marker::PhantomData<&'ctx super::FoldFileBump>
+        _marker: core::marker::PhantomData<&'ctx super::FoldFileBump>,
     }
 
     #[derive(Debug)]
@@ -296,14 +300,15 @@ pub mod ffi {
             let inner = super::FoldFileBump::new(bump, |b| {
                 let seed = fold::Seed::from_bump(&b);
                 use fold::collections::serde_seeded::DeserializeSeeded;
-           
-                let parsed = fold::File::deserialize_seeded(&seed, &mut deserializer).expect("this is a roundtrip");
+
+                let parsed = fold::File::deserialize_seeded(&seed, &mut deserializer)
+                    .expect("this is a roundtrip");
                 parsed
             });
 
             Self {
                 inner,
-                _marker: core::marker::PhantomData
+                _marker: core::marker::PhantomData,
             }
         }
     }
@@ -333,21 +338,20 @@ pub mod ffi {
                 let seed = fold::Seed::from_bump(&b);
 
                 use fold::collections::serde_seeded::DeserializeSeeded;
-                fold::File::deserialize_seeded(&seed, &mut deserializer).map_err(|inner| FoldFileParseError {
-                    status: FoldFileParseErrorKind::Error,
-                    error: DiplomatOption::from(Some(JSONParseError::from(inner))),
+                fold::File::deserialize_seeded(&seed, &mut deserializer).map_err(|inner| {
+                    FoldFileParseError {
+                        status: FoldFileParseErrorKind::Error,
+                        error: DiplomatOption::from(Some(JSONParseError::from(inner))),
+                    }
                 })
             })?;
 
             let ff = Self {
                 inner,
-                _marker: core::marker::PhantomData
+                _marker: core::marker::PhantomData,
             };
 
-            Ok(Box::new_in(
-                ff,
-                ctx.allocator,
-            ))
+            Ok(Box::new_in(ff, ctx.allocator))
         }
 
         pub fn parse_str(
@@ -367,21 +371,20 @@ pub mod ffi {
                 let seed = fold::Seed::from_bump(&b);
 
                 use fold::collections::serde_seeded::DeserializeSeeded;
-                fold::File::deserialize_seeded(&seed, &mut deserializer).map_err(|inner| FoldFileParseError {
-                    status: FoldFileParseErrorKind::Error,
-                    error: DiplomatOption::from(Some(JSONParseError::from(inner))),
+                fold::File::deserialize_seeded(&seed, &mut deserializer).map_err(|inner| {
+                    FoldFileParseError {
+                        status: FoldFileParseErrorKind::Error,
+                        error: DiplomatOption::from(Some(JSONParseError::from(inner))),
+                    }
                 })
             })?;
 
             let ff = Self {
                 inner,
-                _marker: core::marker::PhantomData
+                _marker: core::marker::PhantomData,
             };
 
-            Ok(Box::new_in(
-                ff,
-                ctx.allocator,
-            ))
+            Ok(Box::new_in(ff, ctx.allocator))
         }
 
         pub fn query_metadata_string(
@@ -396,17 +399,14 @@ pub mod ffi {
                 return Err(());
             }
 
-            let metadata =& self
-                .inner
-                .borrow_dependent()
-                .file_metadata;
-
+            let metadata = &self.inner.borrow_dependent().file_metadata;
 
             let result_str = match field {
                 FoldMetadataQuery::Creator => metadata.creator.as_ref(),
                 FoldMetadataQuery::Author => metadata.author.as_ref(),
                 _ => unreachable!(),
-            }.map(|x| x.as_str());
+            }
+            .map(|x| x.as_str());
 
             match result_str {
                 Some(s) => {
@@ -423,8 +423,10 @@ pub mod ffi {
         }
 
         pub fn frame<'a>(&'a self, index: u16) -> Option<Box<FoldFrame<'a>>> {
-            self.inner.borrow_dependent().frame(index)
-                .map(|inner| Box::new(FoldFrame {inner}))
+            self.inner
+                .borrow_dependent()
+                .frame(index)
+                .map(|inner| Box::new(FoldFrame { inner }))
         }
     }
 
@@ -438,25 +440,23 @@ pub mod ffi {
         /// it does not inherit from it
         NonInheriting,
         /// A frame that "patches" another one with changes
-        Inheriting
+        Inheriting,
     }
-    
+
     /// A reference to a fold frame
     #[diplomat::opaque]
     #[diplomat::rust_link(fold::FrameRef, Struct)]
     #[derive(Debug, Clone, Copy)]
     pub struct FoldFrame<'fold> {
-        inner: fold::FrameRef<'fold>
+        inner: fold::FrameRef<'fold>,
     }
 
-    use fold::{Frame, FrameVertices, FrameEdges, FrameFaces};
-
+    use fold::{Frame, FrameEdges, FrameFaces, FrameVertices};
 
     pub enum UniformCopyError {
-        /// Destination alignment 
-        DestinationAlignmentInvalid
+        /// Destination alignment
+        DestinationAlignmentInvalid,
     }
-
 
     /// A uniform member (like edges_vertices, edges_assignment, edges_length, edges_foldAngle)
     /// As there is a known size per element, there is no indices to be exposed
@@ -464,13 +464,28 @@ pub mod ffi {
     macro_rules! define_member_u {
         ($kind:ident, $member:ident, $access:ident, $copy:ident, $scalar:ty) => {
             pub fn $access<'s>(&'s self) -> &'s [$scalar] {
-                super::access_u((&self.inner).$kind().$member().as_ref().map(|v| v.as_slice()).unwrap_or(&[]), 0)
+                super::access_u(
+                    (&self.inner)
+                        .$kind()
+                        .$member()
+                        .as_ref()
+                        .map(|v| v.as_slice())
+                        .unwrap_or(&[]),
+                    0,
+                )
             }
 
-            pub fn $copy(&self,
-                dst: &mut [$scalar],
-                offset: u32) -> Result<u32, UniformCopyError> {
-                super::copy_u(dst, (&self.inner).$kind().$member().as_ref().map(|v| v.as_slice()).unwrap_or(&[]), offset)
+            pub fn $copy(&self, dst: &mut [$scalar], offset: u32) -> Result<u32, UniformCopyError> {
+                super::copy_u(
+                    dst,
+                    (&self.inner)
+                        .$kind()
+                        .$member()
+                        .as_ref()
+                        .map(|v| v.as_slice())
+                        .unwrap_or(&[]),
+                    offset,
+                )
             }
         };
     }
@@ -485,45 +500,55 @@ pub mod ffi {
             // contains the range slices
             //#[diplomat::attr(auto, getter = $backing)]
             pub fn $backing<'s>(&'s self) -> &'s [$scalar] {
-                (&self.inner).$kind().$member().as_ref().map(|v| v.backing.as_slice()).unwrap_or(&[])
+                (&self.inner)
+                    .$kind()
+                    .$member()
+                    .as_ref()
+                    .map(|v| v.backing.as_slice())
+                    .unwrap_or(&[])
             }
 
             // This requires a backend that supports slices of structs ('abi_compatible')
             #[diplomat::attr(not(supports = abi_compatibles), disable)]
             //#[diplomat::attr(auto, getter = "vertices_coords_indices")]
             pub fn $indices<'s>(&'s self) -> &'s [RawSpan] {
-                let original = (&self.inner).$kind().$member().as_ref().map(|v| v.indices.as_slice()).unwrap_or(&[]);
+                let original = (&self.inner)
+                    .$kind()
+                    .$member()
+                    .as_ref()
+                    .map(|v| v.indices.as_slice())
+                    .unwrap_or(&[]);
                 bytemuck::cast_slice(original)
             }
-                    
+
             /// If an indices destination is given (len > 0), then this copies up to that destination buffer size of indices, using the provided offset,
             /// as well as the matching backing data, if the destination backing buffer is provided, limited to its capacity.
-            /// 
+            ///
             /// If no indices destination is given (len == 0), the offset is applied to the backing data and the it is copied up to the capacity of the destination backing buffer.
             #[diplomat::attr(not(supports = abi_compatibles), disable)]
-            pub fn $copy(&self,
+            pub fn $copy(
+                &self,
                 backing_dst: &mut [$scalar],
                 indices_dst: &mut [RawSpan],
-                offset: u32) -> NUCopyInfo {
+                offset: u32,
+            ) -> NUCopyInfo {
                 super::copy_nu(
                     &self.$backing(),
                     &self.$indices(),
                     backing_dst,
                     indices_dst,
-                    offset
+                    offset,
                 )
             }
-
         };
     }
-        
 
     impl<'f> FoldFrame<'f> {
         pub fn kind(&self) -> FoldFrameKind {
             match self.inner {
                 fold::FrameRef::Key(_) => FoldFrameKind::Key,
-                fold::FrameRef::NonInheriting{..} => FoldFrameKind::NonInheriting,
-                fold::FrameRef::Inheriting(_) => FoldFrameKind::Inheriting
+                fold::FrameRef::NonInheriting { .. } => FoldFrameKind::NonInheriting,
+                fold::FrameRef::Inheriting(_) => FoldFrameKind::Inheriting,
             }
         }
 
@@ -540,15 +565,24 @@ pub mod ffi {
         }
 
         pub fn iterate_vertices(&self) -> Box<VerticesIterator<'f>> {
-            Box::new(VerticesIterator { inner: *self, cursor: 0 })
+            Box::new(VerticesIterator {
+                inner: *self,
+                cursor: 0,
+            })
         }
 
         pub fn iterate_edges(&self) -> Box<EdgesIterator<'f>> {
-            Box::new(EdgesIterator { inner: *self, cursor: 0 })
+            Box::new(EdgesIterator {
+                inner: *self,
+                cursor: 0,
+            })
         }
 
         pub fn iterate_faces(&self) -> Box<FacesIterator<'f>> {
-            Box::new(FacesIterator { inner: *self, cursor: 0 })
+            Box::new(FacesIterator {
+                inner: *self,
+                cursor: 0,
+            })
         }
 
         /* access & copy */
@@ -557,39 +591,73 @@ pub mod ffi {
 
         // FIXME: add macros for the uniform ones
 
-        define_member_nu!(vertices, coords, vertices_coords_backing, vertices_coords_indices, vertices_coords_copy, f32);
-        define_member_nu!(vertices, edges, vertices_edges_backing, vertices_edges_indices, vertices_edges_copy, u32);
+        define_member_nu!(
+            vertices,
+            coords,
+            vertices_coords_backing,
+            vertices_coords_indices,
+            vertices_coords_copy,
+            f32
+        );
+        define_member_nu!(
+            vertices,
+            edges,
+            vertices_edges_backing,
+            vertices_edges_indices,
+            vertices_edges_copy,
+            u32
+        );
         // FIXME: handle the option
         //define_member_nu!(vertices, faces, vertices_faces_backing, vertices_faces_indices, vertices_faces_copy, f32);
-        
+
         // this is uniform, we don't need the non-uniform support
         define_member_u!(edges, vertices, edges_vertices, edges_vertices_copy, u32);
         // FIXME: handle the option
         //define_member_nu!(edges, faces, edges_faces_backing, edges_faces_indices, edges_faces_copy, u32);
-        define_member_nu!(faces, vertices, faces_vertices_backing, faces_vertices_indices, faces_vertices_copy, u32);
-        define_member_nu!(faces, edges, faces_edges_backing, faces_edges_indices, faces_edges_copy, u32);
-        define_member_nu!(faces, uvs, faces_uvs_backing, faces_uvs_indices, faces_uvs_copy, u32);
+        define_member_nu!(
+            faces,
+            vertices,
+            faces_vertices_backing,
+            faces_vertices_indices,
+            faces_vertices_copy,
+            u32
+        );
+        define_member_nu!(
+            faces,
+            edges,
+            faces_edges_backing,
+            faces_edges_indices,
+            faces_edges_copy,
+            u32
+        );
+        define_member_nu!(
+            faces,
+            uvs,
+            faces_uvs_backing,
+            faces_uvs_indices,
+            faces_uvs_copy,
+            u32
+        );
     }
 
     #[derive(Debug, Clone, Copy)]
     pub struct NUCopyInfo {
         pub backing_written: u32,
-        pub indices_written: u32
+        pub indices_written: u32,
     }
 
     /// This is a cursor into the flattened values given by the raw_ methods on a frame
     #[diplomat::attr(auto, abi_compatible)]
-    #[derive(Debug, Clone, Copy)]
-    #[derive(bytemuck::AnyBitPattern)]
+    #[derive(Debug, Clone, Copy, bytemuck::AnyBitPattern)]
     pub struct RawSpan {
         pub start: u32,
-        pub length: u32
+        pub length: u32,
     }
 
     #[diplomat::opaque]
     pub struct VerticesIterator<'frame> {
         inner: FoldFrame<'frame>,
-        cursor: fold::VertexIndex
+        cursor: fold::VertexIndex,
     }
 
     impl<'f> VerticesIterator<'f> {
@@ -667,13 +735,13 @@ pub mod ffi {
     #[repr(C)]
     pub struct Edge {
         pub from: u32,
-        pub to: u32
+        pub to: u32,
     }
 
     #[diplomat::opaque]
     pub struct EdgesIterator<'frame> {
         inner: FoldFrame<'frame>,
-        cursor: fold::EdgeIndex
+        cursor: fold::EdgeIndex,
     }
 
     impl<'f> EdgesIterator<'f> {
@@ -723,7 +791,7 @@ pub mod ffi {
     #[diplomat::opaque]
     pub struct FacesIterator<'frame> {
         inner: FoldFrame<'frame>,
-        cursor: fold::FaceIndex
+        cursor: fold::FaceIndex,
     }
 
     impl<'f> FacesIterator<'f> {
@@ -771,7 +839,7 @@ pub mod ffi {
     pub enum FoldFrameInfoQuery {
         VerticesCount,
         EdgeCount,
-        FaceCount
+        FaceCount,
     }
 
     pub enum FoldFrameFloatQuery {
@@ -780,7 +848,7 @@ pub mod ffi {
         /// corresponds to edges_foldAangle
         EdgesFoldAngle,
         /// corresponds to edges_length
-        EdgesLength
+        EdgesLength,
     }
 
     pub enum FoldFrameIntQuery {
@@ -788,7 +856,6 @@ pub mod ffi {
         /// arity of two
         EdgesVertices,
     }
-
 
     pub enum FoldMetadataQuery {
         /// Implies the use of [`query_metadata_string`]
