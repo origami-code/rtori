@@ -1,6 +1,5 @@
 use super::*;
 
-use crate::collections::Lockstep;
 use crate::Frame;
 
 mod metadata;
@@ -16,30 +15,33 @@ mod r#ref;
 pub use r#ref::FrameRef;
 
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
-#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
-pub struct FrameCore<'alloc> {
+#[seeded(de(seed(crate::deser::Seed<Alloc>), bounds(Alloc: Clone)))]
+pub struct FrameCore<Alloc: core::alloc::Allocator> {
     #[serde(flatten)]
-    pub metadata: FrameMetadata<'alloc>,
+    pub metadata: FrameMetadata<Alloc>,
 
     #[serde(flatten)]
-    pub vertices: VertexInformation<'alloc>,
+    pub vertices: VertexInformation<Alloc>,
 
     #[serde(flatten)]
-    pub edges: EdgeInformation<'alloc>,
+    pub edges: EdgeInformation<Alloc>,
 
     #[serde(flatten)]
-    pub faces: FaceInformation<'alloc>,
+    pub faces: FaceInformation<Alloc>,
 
     #[serde(flatten)]
-    pub layering: LayerInformation<'alloc>,
+    pub layering: LayerInformation<Alloc>,
 
-    pub uvs: Lockstep<'alloc, [f32; 2]>,
+    pub uvs: crate::collections::VecU<[f32; 2], Alloc>,
 }
 
-impl<'a> Frame<'a> for &'a FrameCore<'a> {
-    type Vertices = &'a VertexInformation<'a>;
-    type Edges = &'a EdgeInformation<'a>;
-    type Faces = &'a FaceInformation<'a>;
+impl<'a, Alloc> Frame<'a> for &'a FrameCore<Alloc>
+where
+    Alloc: core::alloc::Allocator,
+{
+    type Vertices = &'a VertexInformation<Alloc>;
+    type Edges = &'a EdgeInformation<Alloc>;
+    type Faces = &'a FaceInformation<Alloc>;
 
     fn vertices(&self) -> Self::Vertices {
         &self.vertices

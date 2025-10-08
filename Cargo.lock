@@ -668,6 +668,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "static_assertions",
+ "string-alloc",
 ]
 
 [[package]]
@@ -1856,6 +1857,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42316e70da376f3d113a68d138a60d8a9883c604fe97942721ec2068dab13a9f"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "string-alloc"
+version = "0.0.3"
+source = "git+https://github.com/aabizri/string-alloc.git?branch=main#eaa11deaeecc81417e60b0d7d794b0a03823f1fd"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

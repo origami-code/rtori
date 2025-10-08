@@ -2,15 +2,30 @@ use serde::ser::SerializeSeq;
 use serde_seeded::DeserializeSeeded;
 
 use crate::collections::*;
-use crate::common::Vec;
 
 mod shim;
 
-struct ExtendVec<'alloc, 'a, T: 'a>(&'a mut Vec<'alloc, T>, &'alloc bumpalo::Bump);
+#[macro_export]
+macro_rules! assert_deserializable {
+    (
+        $name:ident,
+        $candidate:ty
+    ) => {
+        const fn $name<Alloc>()
+        where
+            Alloc: core::alloc::Allocator,
+            $candidate: for<'a> serde_seeded::DeserializeSeeded<'a, $crate::deser::Seed<Alloc>>,
+        {
+        }
+    };
+}
 
-impl<'de, 'alloc, 'a, T> serde::de::DeserializeSeed<'de> for ExtendVec<'alloc, 'a, T>
+struct ExtendVec<'a, T: 'a, A: core::alloc::Allocator>(&'a mut alloc::vec::Vec<T, A>, A);
+
+impl<'de, 'a, T, A> serde::de::DeserializeSeed<'de> for ExtendVec<'a, T, A>
 where
-    T: DeserializeSeeded<'de, Seed<'alloc>>,
+    T: DeserializeSeeded<'de, Seed<A>>,
+    A: core::alloc::Allocator,
 {
     type Value = ();
 
@@ -18,11 +33,14 @@ where
     where
         D: serde::de::Deserializer<'de>,
     {
-        struct ExtendVecVisitor<'alloc, 'a, T: 'a>(&'a mut Vec<'alloc, T>, &'alloc bumpalo::Bump);
-
-        impl<'de, 'alloc, 'a, T> serde::de::Visitor<'de> for ExtendVecVisitor<'alloc, 'a, T>
+        struct ExtendVecVisitor<'a, T: 'a, A>(&'a mut alloc::vec::Vec<T, A>, A)
         where
-            T: DeserializeSeeded<'de, Seed<'alloc>>,
+            A: core::alloc::Allocator;
+
+        impl<'de, 'a, T, A> serde::de::Visitor<'de> for ExtendVecVisitor<'a, T, A>
+        where
+            T: DeserializeSeeded<'de, Seed<A>>,
+            A: core::alloc::Allocator,
         {
             type Value = ();
 
@@ -30,9 +48,9 @@ where
                 write!(formatter, "an array of T")
             }
 
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            fn visit_seq<Access>(self, mut seq: Access) -> Result<Self::Value, Access::Error>
             where
-                A: serde::de::SeqAccess<'de>,
+                Access: serde::de::SeqAccess<'de>,
             {
                 // Decrease the number of reallocations if there are many elements
                 if let Some(size_hint) = seq.size_hint() {
@@ -54,13 +72,16 @@ where
     }
 }
 
-pub struct VecNUVisitor<'alloc, T> {
-    allocator: &'alloc bumpalo::Bump,
+pub struct VecNUVisitor<T, A> {
+    allocator: A,
     _marker: core::marker::PhantomData<T>,
 }
 
-impl<'alloc, T> VecNUVisitor<'alloc, T> {
-    pub const fn new(allocator: &'alloc bumpalo::Bump) -> Self {
+impl<T, A> VecNUVisitor<T, A> {
+    pub const fn new(allocator: A) -> Self
+    where
+        A: core::alloc::Allocator,
+    {
         Self {
             allocator,
             _marker: core::marker::PhantomData,
@@ -68,29 +89,36 @@ impl<'alloc, T> VecNUVisitor<'alloc, T> {
     }
 }
 
-impl<'de, 'alloc, T> serde::de::Visitor<'de> for VecNUVisitor<'alloc, T>
+impl<'alloc, T> VecNUVisitor<T, &'alloc bumpalo::Bump> {
+    pub const fn from_bump(allocator: &'alloc bumpalo::Bump) -> Self {
+        Self::new(allocator)
+    }
+}
+
+impl<'de, T, A> serde::de::Visitor<'de> for VecNUVisitor<T, A>
 where
-    T: DeserializeSeeded<'de, Seed<'alloc>> + 'alloc,
+    T: DeserializeSeeded<'de, Seed<A>>,
+    A: core::alloc::Allocator + Clone,
 {
-    type Value = VecNU<'alloc, T>;
+    type Value = VecNU<T, A>;
 
     fn expecting(&self, formatter: &mut alloc::fmt::Formatter) -> alloc::fmt::Result {
         write!(formatter, "an array of arrays")
     }
 
-    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    fn visit_seq<Access>(self, mut seq: Access) -> Result<Self::Value, Access::Error>
     where
-        A: serde::de::SeqAccess<'de>,
+        Access: serde::de::SeqAccess<'de>,
     {
         let size_hint = seq.size_hint().unwrap_or(64);
 
-        let mut indices = Vec::with_capacity_in(size_hint, &self.allocator);
-        let mut backing = Vec::with_capacity_in(size_hint * 4, &self.allocator);
+        let mut indices = alloc::vec::Vec::with_capacity_in(size_hint, self.allocator.clone());
+        let mut backing = alloc::vec::Vec::with_capacity_in(size_hint * 4, self.allocator.clone());
 
         // Each iteration through this loop is one inner array.
         loop {
             let previous_index = backing.len();
-            let res = seq.next_element_seed(ExtendVec(&mut backing, &self.allocator))?;
+            let res = seq.next_element_seed(ExtendVec(&mut backing, self.allocator.clone()))?;
             let length = backing.len() - previous_index;
             indices.push(VecNURange {
                 idx: u32::try_from(previous_index).unwrap(),
@@ -105,13 +133,19 @@ where
     }
 }
 
-pub struct VecVisitor<'alloc, T> {
-    allocator: &'alloc bumpalo::Bump,
+pub struct VecVisitor<T, A>
+where
+    A: core::alloc::Allocator,
+{
+    allocator: A,
     _marker: core::marker::PhantomData<T>,
 }
 
-impl<'alloc, T> VecVisitor<'alloc, T> {
-    pub const fn new(allocator: &'alloc bumpalo::Bump) -> Self {
+impl<'alloc, T, A> VecVisitor<T, A>
+where
+    A: core::alloc::Allocator,
+{
+    pub const fn new(allocator: A) -> Self {
         Self {
             allocator,
             _marker: core::marker::PhantomData,
@@ -119,42 +153,58 @@ impl<'alloc, T> VecVisitor<'alloc, T> {
     }
 }
 
-impl<'de, 'alloc, T> serde::de::Visitor<'de> for VecVisitor<'alloc, T>
+impl<'de, T, A> serde::de::Visitor<'de> for VecVisitor<T, A>
 where
-    T: DeserializeSeeded<'de, Seed<'alloc>> + 'alloc,
+    T: DeserializeSeeded<'de, Seed<A>>,
+    A: core::alloc::Allocator + Clone,
 {
-    type Value = Vec<'alloc, T>;
+    type Value = alloc::vec::Vec<T, A>;
 
     fn expecting(&self, formatter: &mut alloc::fmt::Formatter) -> alloc::fmt::Result {
         write!(formatter, "an array of items")
     }
 
-    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    fn visit_seq<Access>(self, mut seq: Access) -> Result<Self::Value, Access::Error>
     where
-        A: serde::de::SeqAccess<'de>,
+        Access: serde::de::SeqAccess<'de>,
     {
         let size_hint = seq.size_hint().unwrap_or(64);
-        let mut backing = Vec::with_capacity_in(size_hint, &self.allocator);
+        let mut backing = alloc::vec::Vec::with_capacity_in(size_hint, self.allocator.clone());
 
         // Each iteration through this loop is one inner array.
-        while let Some(_) = seq.next_element_seed(ExtendVec(&mut backing, self.allocator))? {}
+        while let Some(_) =
+            seq.next_element_seed(ExtendVec(&mut backing, self.allocator.clone()))?
+        {}
 
         Ok(backing)
     }
 }
 
-pub struct StringVisitor<'alloc> {
-    allocator: &'alloc bumpalo::Bump,
+#[derive(Debug)]
+pub struct StringVisitor<A> {
+    allocator: A,
 }
 
-impl<'alloc> StringVisitor<'alloc> {
-    pub const fn new(allocator: &'alloc bumpalo::Bump) -> Self {
+impl<A> StringVisitor<A> {
+    pub const fn new(allocator: A) -> Self
+    where
+        A: core::alloc::Allocator,
+    {
         Self { allocator }
     }
 }
 
-impl<'de, 'alloc> serde::de::Visitor<'de> for StringVisitor<'alloc> {
-    type Value = bumpalo::collections::String<'alloc>;
+impl<'alloc> StringVisitor<&'alloc bumpalo::Bump> {
+    pub const fn from_bump(allocator: &'alloc bumpalo::Bump) -> Self {
+        Self { allocator }
+    }
+}
+
+impl<'de, A> serde::de::Visitor<'de> for StringVisitor<A>
+where
+    A: core::alloc::Allocator,
+{
+    type Value = string_alloc::String<A>;
 
     fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(formatter, "a string")
@@ -164,56 +214,58 @@ impl<'de, 'alloc> serde::de::Visitor<'de> for StringVisitor<'alloc> {
     where
         E: serde::de::Error,
     {
-        Ok(bumpalo::collections::String::from_str_in(
-            v,
-            &self.allocator,
-        ))
+        Ok(string_alloc::String::from_str_in(v, self.allocator))
     }
 }
 
 #[derive(Copy, Clone)]
-pub struct Seed<'seed>(&'seed bumpalo::Bump);
+pub struct Seed<A>(A);
 
-impl<'seed> Seed<'seed> {
+impl<'seed> Seed<&'seed bumpalo::Bump> {
     pub const fn from_bump(inner: &'seed bumpalo::Bump) -> Self {
         Self(inner)
     }
 }
 
-impl<'seed, 'de, T> DeserializeSeeded<'de, Seed<'seed>> for VecU<'seed, T>
+impl<'de, T, A> DeserializeSeeded<'de, Seed<A>> for VecU<T, A>
 where
-    T: DeserializeSeeded<'de, Seed<'seed>>,
+    T: DeserializeSeeded<'de, Seed<A>>,
+    A: core::alloc::Allocator + Clone,
 {
-    fn deserialize_seeded<D>(seed: &Seed<'seed>, deserializer: D) -> Result<Self, D::Error>
+    fn deserialize_seeded<D>(seed: &Seed<A>, deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         deserializer
-            .deserialize_seq(VecVisitor::new(seed.0))
+            .deserialize_seq(VecVisitor::new(seed.0.clone()))
             .map(|v| Self(v))
     }
 }
 
-impl<'seed, 'de> DeserializeSeeded<'de, Seed<'seed>> for crate::collections::String<'seed> {
-    fn deserialize_seeded<D>(seed: &Seed<'seed>, deserializer: D) -> Result<Self, D::Error>
+impl<'de, Alloc> DeserializeSeeded<'de, Seed<Alloc>> for crate::collections::String<Alloc>
+where
+    Alloc: core::alloc::Allocator + Clone,
+{
+    fn deserialize_seeded<D>(seed: &Seed<Alloc>, deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         deserializer
-            .deserialize_str(StringVisitor::new(seed.0))
+            .deserialize_str(StringVisitor::new(seed.0.clone()))
             .map(|v| Self(v))
     }
 }
 
-impl<'seed, 'de, T> DeserializeSeeded<'de, Seed<'seed>> for VecNU<'seed, T>
+impl<'de, T, A> DeserializeSeeded<'de, Seed<A>> for VecNU<T, A>
 where
-    T: DeserializeSeeded<'de, Seed<'seed>>,
+    T: DeserializeSeeded<'de, Seed<A>>,
+    A: core::alloc::Allocator + Clone,
 {
-    fn deserialize_seeded<D>(seed: &Seed<'seed>, deserializer: D) -> Result<Self, D::Error>
+    fn deserialize_seeded<D>(seed: &Seed<A>, deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        deserializer.deserialize_seq(VecNUVisitor::new(seed.0))
+        deserializer.deserialize_seq(VecNUVisitor::new(seed.0.clone()))
     }
 }
 
@@ -245,11 +297,12 @@ where
     }
 }
 
-impl<'seed, 'de, T> DeserializeSeeded<'de, Seed<'seed>> for crate::collections::SeededOption<T>
+impl<'de, T, A> DeserializeSeeded<'de, Seed<A>> for crate::collections::SeededOption<T>
 where
-    T: DeserializeSeeded<'de, Seed<'seed>>,
+    T: DeserializeSeeded<'de, Seed<A>>,
+    A: core::alloc::Allocator,
 {
-    fn deserialize_seeded<D>(seed: &Seed<'seed>, deserializer: D) -> Result<Self, D::Error>
+    fn deserialize_seeded<D>(seed: &Seed<A>, deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
@@ -260,7 +313,7 @@ where
 }
 
 /*
-impl<'seed, 'de, T> DeserializeSeeded<'de, Seed<'seed>> for Lockstep<'seed, T>
+impl<'seed, 'de, T> DeserializeSeeded<'de, Seed<'seed>> for VecU<T, &'seed bumpalo::Bump>
 where
     T: serde::de::Deserialize<'de>,
 {
@@ -272,7 +325,7 @@ where
     }
 }
 
-impl<'seed, 'de, T> DeserializeSeeded<'de, Seed<'seed>> for LockstepNU<'seed, T>
+impl<'seed, 'de, T> DeserializeSeeded<'de, Seed<'seed>> for VecNU<'seed, T>
 where
     T: serde::de::Deserialize<'de>,
 {
@@ -284,19 +337,19 @@ where
     }
 }*/
 
-static_assertions::assert_impl_all!(Lockstep<'static, u8>: serde_seeded::DeserializeSeeded<'static, crate::deser::Seed<'static>>);
-static_assertions::assert_impl_all!(LockstepNU<'static, u8>: serde_seeded::DeserializeSeeded<'static, crate::deser::Seed<'static>>);
+assert_deserializable!(assert_deserializable_vec_u, VecU<u8, Alloc>);
 
-impl<'alloc, T> serde::Serialize for crate::collections::VecNU<'alloc, T>
+impl<T, A> serde::Serialize for crate::collections::VecNU<T, A>
 where
     T: serde::Serialize,
+    A: core::alloc::Allocator,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         let mut outer_seq = serializer.serialize_seq(Some(self.indices.len()))?;
-        for indices in self {
+        for indices in self.as_slice() {
             outer_seq.serialize_element(indices)?;
         }
         outer_seq.end()
@@ -307,7 +360,8 @@ mod check {
     use super::*;
 
     #[derive(DeserializeSeeded)]
-    #[seeded(de(seed(Seed<'bump>)))]
-    struct Test<'bump>(VecU<'bump, u8>);
-    static_assertions::assert_impl_all!(Test<'static>: serde_seeded::DeserializeSeeded<'static, crate::deser::Seed<'static>>);
+    #[seeded(de(seed(Seed<Alloc>), bounds(Alloc: Clone)))]
+    struct Test<Alloc: core::alloc::Allocator>(VecU<u8, Alloc>);
+
+    assert_deserializable!(assert_deserializable_test, Test<Alloc>);
 }

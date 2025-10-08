@@ -19,22 +19,24 @@ pub use metadata::*;
 use crate::{collections, FrameIndex};
 
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
-#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
-pub struct File<'alloc> {
+#[seeded(de(seed(crate::deser::Seed<Alloc>), bounds(Alloc: Clone)))]
+pub struct File<Alloc: core::alloc::Allocator> {
     #[serde(flatten)]
-    pub file_metadata: FileMetadata<'alloc>,
+    pub file_metadata: FileMetadata<Alloc>,
 
     #[serde(rename = "file_frames")]
-    pub frames: collections::VecU<'alloc, NonKeyFrame<'alloc>>,
+    pub frames: collections::VecU<NonKeyFrame<Alloc>, Alloc>,
 
     #[serde(flatten)]
-    pub key_frame: FrameCore<'alloc>,
+    pub key_frame: FrameCore<Alloc>,
 }
+crate::assert_deserializable!(assert_file, File<Alloc>);
 
-static_assertions::assert_impl_all!(FileMetadata<'static>: serde_seeded::DeserializeSeeded<'static, crate::deser::Seed<'static>>);
-
-impl File<'_> {
-    pub fn frame<'a>(&'a self, index: FrameIndex) -> Option<FrameRef<'a>> {
+impl<Alloc> File<Alloc>
+where
+    Alloc: core::alloc::Allocator,
+{
+    pub fn frame<'a>(&'a self, index: FrameIndex) -> Option<FrameRef<'a, Alloc>> {
         FrameRef::create(&self.frames, &self.key_frame, index)
     }
 
@@ -48,7 +50,7 @@ impl File<'_> {
 macro_rules! implement_member {
     ($member:ident, $type:ty) => {
         fn $member(&self) -> $type {
-            &self.$member
+            crate::collections::AsSlice::as_slice(&self.$member)
         }
     };
 }

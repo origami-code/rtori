@@ -12,9 +12,10 @@ itertools = "0.14.0"
 static_assertions = "1.1.0"
 serde = { version = "1.0.207", default-features = false, features = ["derive", "std"] }
 serde_repr = {version = "0.1.20", default-features = false}
-bumpalo = {version = "3.17.0", features = ["collections", "serde", "boxed"] }
+bumpalo = {version = "3.17.0", features = ["collections", "serde", "boxed", "allocator_api"] }
 serde-seeded = {version = "0.1.0", default-features = false, features = ["derive"]}
 derive_more = {version = "2.0.1", features = ["as_ref", "constructor", "display", "deref", "deref_mut", "from", "from_str", "index", "index_mut", "into", "into_iterator", "try_from", "try_into", "try_unwrap", "unwrap"], default-features = false}
+string-alloc = {version = "0.0.3", default-features = false, features = ["serde"]}
 
 bytemuck = { version= "1.18.0", default-features = false, features = ["derive", "min_const_generics"], optional = true}
 

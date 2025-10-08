@@ -1,4 +1,5 @@
 #![cfg_attr(not(test), no_std)]
+#![feature(allocator_api)]
 //#![feature(impl_trait_in_assoc_type)]
 //#![feature(coroutines)]
 //#![feature(coroutine_trait)]
@@ -48,7 +49,7 @@ mod tests {
         let bump = bumpalo::Bump::new();
         let seed = crate::deser::Seed::from_bump(&bump);
         let mut deser = serde_json::de::Deserializer::from_str(contents);
-        let output = <file::File as serde_seeded::DeserializeSeeded<_>>::deserialize_seeded(
+        let output = <file::File<_> as serde_seeded::DeserializeSeeded<_>>::deserialize_seeded(
             &seed, &mut deser,
         );
         println!("Output: {:#?}", output);

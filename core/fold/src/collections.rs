@@ -1,15 +1,217 @@
-pub use bumpalo;
 pub use serde_seeded;
 
 use itertools::Itertools;
 
+pub type Index = u32;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(
+    feature = "bytemuck",
+    derive(bytemuck::NoUninit, bytemuck::AnyBitPattern)
+)]
+#[repr(transparent)]
+pub struct MaskableIndex(pub Index);
+
+impl MaskableIndex {
+    const EMPTY_INNER: Index = Index::MAX;
+    pub const EMPTY: Self = Self(Self::EMPTY_INNER);
+}
+
+impl From<Option<Index>> for MaskableIndex {
+    fn from(value: Option<Index>) -> Self {
+        value.map(|inner| Self(inner)).unwrap_or(Self::EMPTY)
+    }
+}
+
+impl From<Index> for MaskableIndex {
+    fn from(value: Index) -> Self {
+        Self(value)
+    }
+}
+
+impl Into<Option<Index>> for MaskableIndex {
+    fn into(self) -> Option<Index> {
+        match self.0 {
+            Self::EMPTY_INNER => None,
+            value => Some(value),
+        }
+    }
+}
+
+impl core::default::Default for MaskableIndex {
+    fn default() -> Self {
+        Self::EMPTY
+    }
+}
+
+impl serde::Serialize for MaskableIndex {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        if self.0 == MaskableIndex::EMPTY_INNER {
+            serializer.serialize_none()
+        } else {
+            serializer.serialize_u32(self.0)
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for MaskableIndex {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct MaskableIndexVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for MaskableIndexVisitor {
+            type Value = MaskableIndex;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("a u32 or null")
+            }
+
+            fn visit_u32<E>(self, value: u32) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(MaskableIndex(value))
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(MaskableIndex::EMPTY)
+            }
+
+            fn visit_unit<E>(self) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(MaskableIndex::EMPTY)
+            }
+        }
+
+        deserializer.deserialize_option(MaskableIndexVisitor)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(
+    feature = "bytemuck",
+    derive(bytemuck::NoUninit, bytemuck::AnyBitPattern)
+)]
+#[repr(transparent)]
+pub struct MaskableFloat(pub f32);
+
+impl MaskableFloat {
+    const EMPTY_INNER: f32 = f32::NAN;
+    pub const EMPTY: Self = Self(Self::EMPTY_INNER);
+}
+
+impl From<Option<f32>> for MaskableFloat {
+    fn from(value: Option<f32>) -> Self {
+        value
+            .filter(|val| !val.is_nan())
+            .map(|inner| Self(inner))
+            .unwrap_or(Self::EMPTY)
+    }
+}
+
+impl From<f32> for MaskableFloat {
+    fn from(value: f32) -> Self {
+        Some(value)
+            .filter(|val| !val.is_nan())
+            .map(|inner| Self(inner))
+            .unwrap_or(Self::EMPTY)
+    }
+}
+
+impl Into<Option<f32>> for MaskableFloat {
+    fn into(self) -> Option<f32> {
+        if !self.0.is_nan() {
+            Some(self.0)
+        } else {
+            None
+        }
+    }
+}
+
+impl core::default::Default for MaskableFloat {
+    fn default() -> Self {
+        Self::EMPTY
+    }
+}
+
+impl serde::Serialize for MaskableFloat {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        if self.0.is_nan() {
+            serializer.serialize_none()
+        } else {
+            serializer.serialize_f32(self.0)
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for MaskableFloat {
+    fn deserialize<D>(deserializer: D) -> Result<MaskableFloat, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct MaskableFloatVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for MaskableFloatVisitor {
+            type Value = MaskableFloat;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("a float (f32/f64) or null")
+            }
+
+            fn visit_f32<E>(self, value: f32) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(MaskableFloat::from(value))
+            }
+
+            fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(MaskableFloat::from(value as f32))
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(MaskableFloat::EMPTY)
+            }
+
+            fn visit_unit<E>(self) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(MaskableFloat::EMPTY)
+            }
+        }
+
+        deserializer.deserialize_option(MaskableFloatVisitor)
+    }
+}
+
 #[derive(
-    Debug,
-    Clone,
     PartialEq,
     Eq,
     PartialOrd,
     Ord,
+    Clone,
+    Default,
+    Debug,
     derive_more::Display,
     derive_more::Deref,
     derive_more::DerefMut,
@@ -17,7 +219,9 @@ use itertools::Itertools;
 )]
 #[serde(transparent)]
 #[repr(transparent)]
-pub struct String<'alloc>(pub bumpalo::collections::String<'alloc>);
+pub struct String<Alloc>(pub string_alloc::String<Alloc>)
+where
+    Alloc: core::alloc::Allocator;
 
 #[derive(
     Debug,
@@ -40,21 +244,62 @@ impl<T> Default for SeededOption<T> {
     }
 }
 
+pub trait AsSlice {
+    type Slice<'a>
+    where
+        Self: 'a;
+
+    fn as_slice<'a>(&'a self) -> Self::Slice<'a>;
+}
+
 /// Uniform lockstep vector
 #[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    derive_more::Deref,
-    derive_more::DerefMut,
-    serde::Serialize,
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, derive_more::Deref, derive_more::DerefMut,
 )]
-#[serde(transparent)]
 #[repr(transparent)]
-pub struct VecU<'alloc, T>(pub bumpalo::collections::Vec<'alloc, T>);
+pub struct VecU<T, Alloc: core::alloc::Allocator>(pub alloc::vec::Vec<T, Alloc>);
+
+impl<T, Alloc> core::default::Default for VecU<T, Alloc>
+where
+    Alloc: core::alloc::Allocator + core::default::Default,
+{
+    fn default() -> Self {
+        Self(alloc::vec::Vec::new_in(Alloc::default()))
+    }
+}
+
+impl<T, Alloc> serde::Serialize for VecU<T, Alloc>
+where
+    T: serde::Serialize,
+    Alloc: core::alloc::Allocator,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeSeq;
+        let mut seq = serializer.serialize_seq(Some(self.len()))?;
+        for e in self.iter() {
+            seq.serialize_element(e)?;
+        }
+        seq.end()
+    }
+}
+
+impl<T, Alloc> AsSlice for VecU<T, Alloc>
+where
+    Alloc: core::alloc::Allocator,
+{
+    type Slice<'a>
+        = &'a [T]
+    where
+        T: 'a,
+        Alloc: 'a;
+
+    fn as_slice<'a>(&'a self) -> Self::Slice<'a> {
+        self.0.as_slice()
+    }
+}
 
 #[derive(
     Debug,
@@ -80,12 +325,18 @@ pub struct VecNURange {
 
 /// Non-uniform lockstep
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct VecNU<'alloc, T> {
-    pub backing: bumpalo::collections::Vec<'alloc, T>,
-    pub indices: bumpalo::collections::Vec<'alloc, VecNURange>,
+pub struct VecNU<T, Alloc>
+where
+    Alloc: core::alloc::Allocator,
+{
+    pub backing: alloc::vec::Vec<T, Alloc>,
+    pub indices: alloc::vec::Vec<VecNURange, Alloc>,
 }
 
-impl<'a, T> VecNU<'a, T> {
+impl<T, Alloc> VecNU<T, Alloc>
+where
+    Alloc: core::alloc::Allocator,
+{
     pub fn len(&self) -> usize {
         self.indices.len()
     }
@@ -143,6 +394,70 @@ impl<'a, T> VecNU<'a, T> {
     }
 }
 
+impl<T, Alloc> core::default::Default for VecNU<T, Alloc>
+where
+    Alloc: core::alloc::Allocator + core::default::Default,
+{
+    fn default() -> Self {
+        Self {
+            backing: alloc::vec::Vec::new_in(Alloc::default()),
+            indices: alloc::vec::Vec::new_in(Alloc::default()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct NUSlice<'a, T> {
+    backing: &'a [T],
+
+    // the indices get slices, the backing never
+    indices: &'a [VecNURange],
+}
+
+impl<'a, T> NUSlice<'a, T> {
+    pub const fn new() -> Self {
+        Self {
+            backing: &[],
+            indices: &[],
+        }
+    }
+
+    const fn from_vec<Alloc>(src: &'a VecNU<T, Alloc>) -> Self
+    where
+        Alloc: core::alloc::Allocator,
+    {
+        Self {
+            backing: &src.backing.as_slice(),
+            indices: &src.indices.as_slice(),
+        }
+    }
+
+    pub const fn len(&self) -> usize {
+        self.indices.len()
+    }
+}
+
+impl<'a, T> core::default::Default for NUSlice<'a, T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T, Alloc> AsSlice for VecNU<T, Alloc>
+where
+    Alloc: core::alloc::Allocator,
+{
+    type Slice<'a>
+        = NUSlice<'a, T>
+    where
+        T: 'a,
+        Alloc: 'a;
+
+    fn as_slice<'a>(&'a self) -> Self::Slice<'a> {
+        NUSlice::from_vec(self)
+    }
+}
+
 /// Created by [`VecNU::into_iter`]
 #[derive(Debug, Clone, Copy)]
 pub struct NUIterator<'a, T> {
@@ -190,20 +505,15 @@ impl<'a, T> Iterator for NUIterator<'a, T> {
 impl<T> ExactSizeIterator for NUIterator<'_, T> {}
 impl<T> core::iter::FusedIterator for NUIterator<'_, T> {}
 
-impl<'alloc, T> IntoIterator for &'alloc VecNU<'alloc, T> {
-    type Item = &'alloc [T];
-    type IntoIter = NUIterator<'alloc, T>;
+impl<'a, T> IntoIterator for NUSlice<'a, T> {
+    type Item = &'a [T];
+    type IntoIter = NUIterator<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         NUIterator {
-            backing: self.backing.as_slice(),
-            indices: self.indices.as_slice(),
+            backing: self.backing,
+            indices: self.indices,
             index: 0,
         }
     }
 }
-
-pub type Handful<'alloc, T, const N: usize> = VecU<'alloc, T>;
-
-pub type Lockstep<'alloc, T> = SeededOption<VecU<'alloc, T>>;
-pub type LockstepNU<'alloc, T> = SeededOption<VecNU<'alloc, T>>;

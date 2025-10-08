@@ -1,35 +1,40 @@
-use crate::collections::LockstepNU;
+use crate::collections::VecNU;
 use crate::indices::*;
 
 #[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
-#[seeded(de(seed(crate::deser::Seed<'alloc>)))]
-pub struct FaceInformation<'alloc> {
+#[seeded(de(seed(crate::deser::Seed<Alloc>), bounds(Alloc: Clone)))]
+pub struct FaceInformation<Alloc: core::alloc::Allocator> {
     /// see [crate::FrameFaces::vertices]
     #[serde(rename = "faces_vertices")]
-    pub vertices: LockstepNU<'alloc, VertexIndex>,
+    pub vertices: VecNU<VertexIndex, Alloc>,
 
     /// see [crate::FrameFaces::edges]
     #[serde(rename = "faces_edges")]
-    pub edges: LockstepNU<'alloc, EdgeIndex>,
+    pub edges: VecNU<EdgeIndex, Alloc>,
 
     /// see [crate::FrameFaces::faces]
     #[serde(rename = "faces_faces")]
-    pub faces: LockstepNU<'alloc, Option<FaceIndex>>,
+    pub faces: VecNU<MaskableFaceIndex, Alloc>,
 
     /// see [crate::FrameFaces::uvs]
     #[serde(rename = "rtori:faces_uvs")]
-    pub uvs: LockstepNU<'alloc, u32>,
+    pub uvs: VecNU<u32, Alloc>,
 }
+crate::assert_deserializable!(assert_faces, FaceInformation<Alloc>);
 
+use crate::collections::NUSlice;
 use crate::implement_member;
 
-impl<'a> crate::frame::FrameFaces<'a> for &'a FaceInformation<'a> {
+impl<'a, Alloc> crate::frame::FrameFaces<'a> for &'a FaceInformation<Alloc>
+where
+    Alloc: core::alloc::Allocator + 'a,
+{
     fn count(&self) -> usize {
-        self.vertices.as_ref().map(|c| c.len()).unwrap_or(0)
+        self.vertices.len()
     }
 
-    implement_member!(vertices, &'a LockstepNU<'a, VertexIndex>);
-    implement_member!(edges, &'a LockstepNU<'a, EdgeIndex>);
-    implement_member!(faces, &'a LockstepNU<'a, Option<FaceIndex>>);
-    implement_member!(uvs, &'a LockstepNU<'a, u32>);
+    implement_member!(vertices, NUSlice<'a, VertexIndex>);
+    implement_member!(edges, NUSlice<'a, EdgeIndex>);
+    implement_member!(faces, NUSlice<'a, MaskableFaceIndex>);
+    implement_member!(uvs, NUSlice<'a, u32>);
 }

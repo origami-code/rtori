@@ -1,6 +1,6 @@
 // TODO: add a u32 (u32::MAX) & f32 (a NaN ?) variant which bytemuck convert to the underlying type
 
-use crate::collections::{Lockstep, LockstepNU, SeededOption};
+use crate::collections::{MaskableFloat, NUSlice};
 
 use super::*;
 
@@ -9,27 +9,27 @@ pub trait FrameVertices<'a> {
         0
     }
 
-    fn coords(&self) -> &'a LockstepNU<'a, f32> {
-        &SeededOption(None)
+    fn coords(&self) -> NUSlice<'a, f32> {
+        NUSlice::new()
     }
-    fn adjacent(&self) -> &'a LockstepNU<'a, VertexIndex> {
-        &SeededOption(None)
+    fn adjacent(&self) -> NUSlice<'a, VertexIndex> {
+        NUSlice::new()
     }
-    fn edges(&self) -> &'a LockstepNU<'a, EdgeIndex> {
-        &SeededOption(None)
+    fn edges(&self) -> NUSlice<'a, EdgeIndex> {
+        NUSlice::new()
     }
 
     /// `vertices_faces` in the fold specification
     ///
     /// For each vertex, an array of face IDs for the faces incident to the vertex
     /// Possibly including None (null).
-    fn faces(&self) -> &'a LockstepNU<'a, Option<FaceIndex>> {
-        &SeededOption(None)
+    fn faces(&self) -> NUSlice<'a, MaskableFaceIndex> {
+        NUSlice::new()
     }
 
     ///  `rtori:vertices_mass` in the rtori extension of the fold specification
-    fn rtori_vertices_mass(&self) -> &'a Lockstep<'a, f32> {
-        &SeededOption(None)
+    fn rtori_vertices_mass(&self) -> &'a [f32] {
+        &[]
     }
 }
 
@@ -44,30 +44,30 @@ pub trait FrameEdges<'a> {
     /// This effectively defines the orientation of the edge, from u to v.
     /// (This orientation choice is arbitrary, but is used to define the ordering of edges_faces.)
     /// Recommended in frames having any edges_... property (e.g., to represent mountain-valley assignment).
-    fn vertices(&self) -> &'a Lockstep<'a, EdgeVertexIndices> {
-        &SeededOption(None)
+    fn vertices(&self) -> &'a [EdgeVertexIndices] {
+        &[]
     }
-    fn faces(&self) -> &'a LockstepNU<'a, Option<VertexIndex>> {
-        &SeededOption(None)
+    fn faces(&self) -> NUSlice<'a, MaskableVertexIndex> {
+        NUSlice::new()
     }
-    fn assignment(&self) -> &'a Lockstep<'a, EdgeAssignment> {
-        &SeededOption(None)
+    fn assignment(&self) -> &'a [EdgeAssignment] {
+        &[]
     }
-    fn fold_angle(&self) -> &'a Lockstep<'a, Option<f32>> {
-        &SeededOption(None)
+    fn fold_angle(&self) -> &'a [MaskableFloat] {
+        &[]
     }
-    fn length(&self) -> &'a Lockstep<'a, f32> {
-        &SeededOption(None)
+    fn length(&self) -> &'a [f32] {
+        &[]
     }
 
     /// `rtori:edges_creaseStiffness` in the rtori extension of the fold specification
-    fn crease_stiffness(&self) -> &'a Lockstep<'a, Option<f32>> {
-        &SeededOption(None)
+    fn crease_stiffness(&self) -> &'a [MaskableFloat] {
+        &[]
     }
 
     /// `rtori:edges_axialStiffness` in the rtori extension of the fold specification
-    fn axial_stiffness(&self) -> &'a Lockstep<'a, Option<f32>> {
-        &SeededOption(None)
+    fn axial_stiffness(&self) -> &'a [MaskableFloat] {
+        &[]
     }
 }
 
@@ -77,16 +77,16 @@ pub trait FrameFaces<'a> {
     }
 
     /// the vertices that comprise the face
-    fn vertices(&self) -> &'a LockstepNU<'a, VertexIndex> {
-        &SeededOption(None)
+    fn vertices(&self) -> NUSlice<'a, VertexIndex> {
+        NUSlice::new()
     }
 
     /// For each face, an array of edge IDs for the edges around the face in counterclockwise order.
     /// In addition to the matching cyclic order, faces_vertices and faces_edges should align in start
     /// so that faces_edges[f][i] is the edge connecting faces_vertices[f][i]
     /// and faces_vertices[f][(i+1)%d] where d is the degree of face f.
-    fn edges(&self) -> &'a LockstepNU<'a, EdgeIndex> {
-        &SeededOption(None)
+    fn edges(&self) -> NUSlice<'a, EdgeIndex> {
+        NUSlice::new()
     }
 
     /// For each face, an array of face IDs for the faces sharing edges around the face, possibly including nulls.
@@ -94,14 +94,14 @@ pub trait FrameFaces<'a> {
     ///     f and faces_faces[f][i] should be the faces incident to the edge faces_edges[f][i],
     ///     unless that edge has no face on the other side, in which case faces_faces[f][i] should be null.
     /// Optimized for no more than 8 faces sharing edges with each face
-    fn faces(&self) -> &'a LockstepNU<'a, Option<FaceIndex>> {
-        &SeededOption(None)
+    fn faces(&self) -> NUSlice<'a, MaskableFaceIndex> {
+        NUSlice::new()
     }
 
     /// For each face, an array of uv indices corresponding to the vertices of the same index
     /// That is, for `rtori:faces_uvs[n][a] = k` assigns to the vertex index `faces_edges[n][a]` the uv `rtori:uvs[k]`
-    fn uvs(&self) -> &'a LockstepNU<'a, u32> {
-        &SeededOption(None)
+    fn uvs(&self) -> NUSlice<'a, u32> {
+        NUSlice::new()
     }
 }
 
