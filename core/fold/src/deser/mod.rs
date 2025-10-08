@@ -11,12 +11,21 @@ macro_rules! assert_deserializable {
         $name:ident,
         $candidate:ty
     ) => {
-        const fn $name<Alloc>()
-        where
-            Alloc: core::alloc::Allocator,
-            $candidate: for<'a> serde_seeded::DeserializeSeeded<'a, $crate::deser::Seed<Alloc>>,
-        {
-        }
+        // The const block hides the free function from an accessible namespace
+        const _: () = {
+            // The const fn tests that the given $candidate implements DeserializeSeeded
+            #[doc(hidden)]
+            #[allow(dead_code)]
+            const fn $name<Alloc>()
+            where
+                Alloc: ::core::alloc::Allocator,
+                $candidate:
+                    for<'a> ::serde_seeded::DeserializeSeeded<'a, $crate::deser::Seed<Alloc>>,
+            {
+            }
+
+            let _ = $name::<alloc::alloc::Global>();
+        };
     };
 }
 
@@ -86,12 +95,6 @@ impl<T, A> VecNUVisitor<T, A> {
             allocator,
             _marker: core::marker::PhantomData,
         }
-    }
-}
-
-impl<'alloc, T> VecNUVisitor<T, &'alloc bumpalo::Bump> {
-    pub const fn from_bump(allocator: &'alloc bumpalo::Bump) -> Self {
-        Self::new(allocator)
     }
 }
 
@@ -194,12 +197,6 @@ impl<A> StringVisitor<A> {
     }
 }
 
-impl<'alloc> StringVisitor<&'alloc bumpalo::Bump> {
-    pub const fn from_bump(allocator: &'alloc bumpalo::Bump) -> Self {
-        Self { allocator }
-    }
-}
-
 impl<'de, A> serde::de::Visitor<'de> for StringVisitor<A>
 where
     A: core::alloc::Allocator,
@@ -221,9 +218,9 @@ where
 #[derive(Copy, Clone)]
 pub struct Seed<A>(A);
 
-impl<'seed> Seed<&'seed bumpalo::Bump> {
-    pub const fn from_bump(inner: &'seed bumpalo::Bump) -> Self {
-        Self(inner)
+impl<A: core::alloc::Allocator + Clone> Seed<A> {
+    pub const fn new(allocator: A) -> Self {
+        Self(allocator)
     }
 }
 
@@ -360,7 +357,7 @@ mod check {
     use super::*;
 
     #[derive(DeserializeSeeded)]
-    #[seeded(de(seed(Seed<Alloc>), bounds(Alloc: Clone)))]
+    #[seeded(de(seed(Seed<Alloc>), override_bounds(Alloc: Clone)))]
     struct Test<Alloc: core::alloc::Allocator>(VecU<u8, Alloc>);
 
     assert_deserializable!(assert_deserializable_test, Test<Alloc>);

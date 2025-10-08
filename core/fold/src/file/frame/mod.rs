@@ -14,8 +14,8 @@ pub use inheriting::InheritingFrame;
 mod r#ref;
 pub use r#ref::FrameRef;
 
-#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
-#[seeded(de(seed(crate::deser::Seed<Alloc>), bounds(Alloc: Clone)))]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize, Default)]
+#[seeded(de(seed(crate::deser::Seed<Alloc>), override_bounds(Alloc: Clone)))]
 pub struct FrameCore<Alloc: core::alloc::Allocator> {
     #[serde(flatten)]
     pub metadata: FrameMetadata<Alloc>,

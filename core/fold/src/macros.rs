@@ -22,10 +22,10 @@ macro_rules! iter_partial_optional {
         $variable: expr,
         $field:ident
     ) => {
-        $variable.$field.as_ref().map_or_else(
-            || [].iter(),
-            |v| v.as_slice().iter()
-        ).map(|x| Some(x))
+        {
+            use $crate::collections::AsSlice;
+            $variable.$field.as_slice().into_iter().map(|x| Some(x))
+        }
     };
 
     (
@@ -41,11 +41,11 @@ macro_rules! iter_partial_optional {
             // for those field with a Some
             $crate::macros::izip!(
                 $(
-                    s.$field.as_ref().map_or_else(
+                    s.$field.map_or_else(
                         // No such field
                         || $crate::macros::Either::Right(core::iter::repeat(None)),
                         // Such a field
-                        |v| $crate::macros::Either::Left(v.iter().map(|i| Some(i)))
+                        |v| $crate::macros::Either::Left(v.into_iter().map(|i| Some(i)))
                     )
                 ),+
             ).take_while(|($($field),+)|
@@ -77,22 +77,21 @@ macro_rules! iter_partial {
         $($field:ident),*
     ) => {
         {
+            use $crate::collections::AsSlice;
+
             // So as to not execute the expression more than once ?
             let s = $variable;
 
             if (
                 ($(
-                    s.$field.is_some()
+                    !s.$field.is_empty()
                 )&&+) || ($(
-                    s.$field.is_none()
+                    !s.$field.is_empty()
                 )&&+)
             ) {
                 Some($crate::macros::izip!(
                     $(
-                        $variable.$field.as_ref().map_or_else(
-                            || [].iter(),
-                            |v| v.as_slice().iter()
-                        )
+                        $variable.$field.as_slice().into_iter()
                     ),+
                 ))
             } else {
@@ -122,29 +121,28 @@ macro_rules! iter {
         )
     ) => {
         {
+            use $crate::collections::AsSlice;
+
             // So as to not execute the expression more than once ?
             let s = $variable;
 
             if (
                 ($(
-                    s.$required_field.is_some()
+                    !s.$required_field.is_empty()
                 )&&+) || ($(
-                    s.$required_field.is_none()
+                    !s.$required_field.is_empty()
                 )&&+)
             ) {
                 Some($crate::macros::izip!(
                     $(
-                        s.$required_field.as_ref().map_or_else(
-                            || [].iter(),
-                            |v| v.as_slice().iter()
-                        )
+                        s.$required_field.as_slice().into_iter()
                     ),*,
                     $(
-                        s.$optional_field.as_ref().map_or_else(
+                        s.$optional_field.map_or_else(
                             // No such field
                             || $crate::macros::Either::Right(core::iter::repeat(None)),
                             // Such a field
-                            |v| $crate::macros::Either::Left(v.iter().map(|i| Some(i)))
+                            |v| $crate::macros::Either::Left(v.into_iter().map(|i| Some(i)))
                         )
                     ),*
                 ))
@@ -159,29 +157,66 @@ pub use iter;
 #[cfg(test)]
 mod test {
     #[test]
+    pub fn test_partial_optional_nu() {
+        let edges = crate::EdgeInformation::<alloc::alloc::Global>::default();
+
+        let unary = iter_partial_optional!(&edges, faces);
+        for (_faces) in unary {}
+
+        let binary = iter_partial_optional!(&edges, faces, length);
+        for (_left, _right) in binary {}
+    }
+
+    #[test]
     pub fn test_partial_optional() {
-        let edges = crate::EdgeInformation::default();
+        let edges = crate::EdgeInformation::<alloc::alloc::Global>::default();
 
         let unary = iter_partial_optional!(&edges, vertices);
+        for _vertex in unary {}
+
         let binary = iter_partial_optional!(&edges, vertices, length);
-        for (left, right) in binary {}
+        for (_left, _right) in binary {}
+    }
+
+    #[test]
+    pub fn test_partial_nu() {
+        let edges = crate::EdgeInformation::<alloc::alloc::Global>::default();
+
+        let unary = iter_partial!(&edges, faces);
+        for (_faces) in unary.unwrap() {}
     }
 
     #[test]
     pub fn test_partial() {
-        let edges = crate::EdgeInformation::default();
+        let edges = crate::EdgeInformation::<alloc::alloc::Global>::default();
 
-        let _unary = iter_partial!(&edges, vertices);
+        let unary = iter_partial!(&edges, vertices);
+        for (_vertex) in unary.unwrap() {}
+
         let binary = iter_partial!(&edges, vertices, length);
         for (_left, _right) in binary.unwrap() {}
     }
 
     #[test]
+    pub fn test_iter_nu() {
+        let edges = crate::EdgeInformation::<alloc::alloc::Global>::default();
+
+        let unary_req = iter!(&edges, required(faces), optional());
+        for (_faces) in unary_req.unwrap() {}
+    }
+
+    #[test]
     pub fn test_iter() {
-        let edges = crate::EdgeInformation::default();
+        let edges = crate::EdgeInformation::<alloc::alloc::Global>::default();
 
         let unary_req = iter!(&edges, required(vertices), optional());
-        let binary = iter!(&edges, required(vertices), optional(length, assignments));
-        for (vertex, length, assigment) in binary.unwrap() {}
+        for (_vertex) in unary_req.unwrap() {}
+
+        let multi = iter!(
+            &edges,
+            required(vertices),
+            optional(length, assignment, faces)
+        );
+        for (_vertex, _length, _assigment, _faces) in multi.unwrap() {}
     }
 }

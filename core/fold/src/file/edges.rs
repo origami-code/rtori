@@ -3,8 +3,8 @@ use crate::collections::{MaskableFloat, VecNU, VecU};
 use crate::edges::{EdgeAssignment, EdgeVertexIndices};
 use crate::indices::*;
 
-#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
-#[seeded(de(seed(crate::deser::Seed<Alloc>), bounds(Alloc: Clone)))]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize, Default)]
+#[seeded(de(seed(crate::deser::Seed<Alloc>), override_bounds(Alloc: Clone)))]
 pub struct EdgeInformation<Alloc: core::alloc::Allocator> {
     /// see [crate::FrameEdges::vertices]
     #[serde(rename = "edges_vertices")]

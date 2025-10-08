@@ -2,8 +2,8 @@ use crate::collections::{VecNU, VecU};
 
 use crate::indices::*;
 
-#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
-#[seeded(de(seed(crate::deser::Seed<Alloc>), bounds(Alloc: Clone)))]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize, Default)]
+#[seeded(de(seed(crate::deser::Seed<Alloc>), override_bounds(Alloc: Clone)))]
 pub struct VertexInformation<Alloc: core::alloc::Allocator> {
     #[serde(rename = "vertices_coords")]
     pub coords: VecNU<f32, Alloc>,

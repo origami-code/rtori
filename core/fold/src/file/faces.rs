@@ -1,8 +1,8 @@
 use crate::collections::VecNU;
 use crate::indices::*;
 
-#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
-#[seeded(de(seed(crate::deser::Seed<Alloc>), bounds(Alloc: Clone)))]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize, Default)]
+#[seeded(de(seed(crate::deser::Seed<Alloc>), override_bounds(Alloc: Clone)))]
 pub struct FaceInformation<Alloc: core::alloc::Allocator> {
     /// see [crate::FrameFaces::vertices]
     #[serde(rename = "faces_vertices")]

@@ -301,6 +301,23 @@ where
     }
 }
 
+impl<T, Alloc> VecU<T, Alloc>
+where
+    Alloc: core::alloc::Allocator,
+{
+    pub fn map_or_else<'a, FT, FE, O>(&'a self, map_else: FE, map_then: FT) -> O
+    where
+        FT: FnOnce(&'a [T]) -> O,
+        FE: FnOnce() -> O,
+    {
+        if self.len() > 0 {
+            map_then(self.as_slice())
+        } else {
+            map_else()
+        }
+    }
+}
+
 #[derive(
     Debug,
     Clone,
@@ -337,7 +354,7 @@ impl<T, Alloc> VecNU<T, Alloc>
 where
     Alloc: core::alloc::Allocator,
 {
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.indices.len()
     }
 
@@ -391,6 +408,22 @@ where
         // I'm sure of the length, so I accept the panic behaviour of cast_slice if it was not to match
         let casted = bytemuck::cast_slice::<_, [T; N]>(self.backing.as_slice());
         Some(casted)
+    }
+
+    pub fn map_or_else<'a, FT, FE, O>(&'a self, map_else: FE, map_then: FT) -> O
+    where
+        FT: FnOnce(NUSlice<'a, T>) -> O,
+        FE: FnOnce() -> O,
+    {
+        if self.len() > 0 {
+            map_then(self.as_slice())
+        } else {
+            map_else()
+        }
+    }
+
+    pub const fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 

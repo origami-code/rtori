@@ -1,8 +1,8 @@
 use crate::collections::VecU;
 use crate::layers::{EdgeOrder, FaceOrder};
 
-#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
-#[seeded(de(seed(crate::deser::Seed<Alloc>), bounds(Alloc: Clone)))]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize, Default)]
+#[seeded(de(seed(crate::deser::Seed<Alloc>), override_bounds(Alloc: Clone)))]
 pub struct LayerInformation<Alloc: core::alloc::Allocator> {
     #[serde(rename = "faceOrders")]
     pub face_orders: VecU<FaceOrder, Alloc>,

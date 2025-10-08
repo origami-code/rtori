@@ -43,15 +43,18 @@ pub enum Field {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     fn test_deserialization(contents: &str) {
+        use serde_seeded::DeserializeSeeded;
+
         let bump = bumpalo::Bump::new();
-        let seed = crate::deser::Seed::from_bump(&bump);
+
+        let seed = crate::deser::Seed::new(&bump);
         let mut deser = serde_json::de::Deserializer::from_str(contents);
-        let output = <file::File<_> as serde_seeded::DeserializeSeeded<_>>::deserialize_seeded(
-            &seed, &mut deser,
-        );
+
+        let output = file::File::<_>::deserialize_seeded(&seed, &mut deser);
         println!("Output: {:#?}", output);
     }
 

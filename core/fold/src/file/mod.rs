@@ -18,8 +18,8 @@ pub use metadata::*;
 
 use crate::{collections, FrameIndex};
 
-#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize)]
-#[seeded(de(seed(crate::deser::Seed<Alloc>), bounds(Alloc: Clone)))]
+#[derive(serde_seeded::DeserializeSeeded, Debug, Clone, serde::Serialize, Default)]
+#[seeded(de(seed(crate::deser::Seed<Alloc>), override_bounds(Alloc: Clone)))]
 pub struct File<Alloc: core::alloc::Allocator> {
     #[serde(flatten)]
     pub file_metadata: FileMetadata<Alloc>,
@@ -30,6 +30,7 @@ pub struct File<Alloc: core::alloc::Allocator> {
     #[serde(flatten)]
     pub key_frame: FrameCore<Alloc>,
 }
+
 crate::assert_deserializable!(assert_file, File<Alloc>);
 
 impl<Alloc> File<Alloc>

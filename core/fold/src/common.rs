@@ -1,5 +1,3 @@
-pub use bumpalo::collections::{String, Vec};
-
 #[derive(Debug, Clone)]
 pub struct PropertyNotMatchingError {
     pub container: &'static str,
@@ -33,7 +31,7 @@ pub struct DebugInfo {
 }
 
 pub fn get_property<'a, T>(
-    o: &'a Option<Vec<T>>,
+    o: &'a Option<&'a [T]>,
     idx: usize,
     debug_info: Option<DebugInfo>,
 ) -> PropertyResult<&'a T> {
